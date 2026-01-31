@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink} from "react-router-dom";
 
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
@@ -33,6 +34,9 @@ import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import GpsFixedRoundedIcon from "@mui/icons-material/GpsFixedRounded";
+
+import logoFull from "../../assets/logo-goresam-full.png"
+import logoIcon from "../../assets/logo-goresam-icon.png"
 
 import type { ReactNode } from "react";
 
@@ -198,21 +202,42 @@ export default function Sidebar({
         flexDirection: "column",
       }}
     >
-      <Box sx={{ px: collapsed ? 1.5 : 2.2, py: 2 }}>
-        <Typography
-          sx={{
-            fontWeight: 900,
-            letterSpacing: 0.6,
-            fontSize: 20,
-            textAlign: collapsed ? "center" : "left",
-          }}
-        >
-          {collapsed ? "v" : "ynex"}
-        </Typography>
-        {!collapsed && (
-          <Typography sx={{ opacity: 0.85, fontSize: 12 }}>CRM Dashboard</Typography>
-        )}
-      </Box>
+     <Box
+  component={RouterLink}
+  to="/"
+  sx={{
+    // placa (card) para que el logo resalte
+    mx: collapsed ? 1 : 1.6,
+    my: 1.6,
+    px: collapsed ? 1 : 1.6,
+    py: 1.3,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    backdropFilter: "blur(6px)",
+    border: "1px solid rgba(255,255,255,0.35)",
+    boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textDecoration: "none",
+  }}
+>
+  <Box
+    component="img"
+    src={collapsed ? logoIcon : logoFull}
+    alt="Gobierno Regional San Martín"
+    sx={{
+      height: collapsed ? 38 : 46,
+      width: "auto",
+      maxWidth: "100%",
+      objectFit: "contain",
+      display: "block",
+      transition: "all .2s ease",
+      // un toque de definición
+      filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))",
+    }}
+  />
+</Box>
 
       <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
 
