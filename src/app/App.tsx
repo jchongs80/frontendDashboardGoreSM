@@ -19,6 +19,18 @@ import PoliticasPage from "../features/planeamiento/pages/PoliticasPage";
 import ObjetivosPage from "../features/planeamiento/pages/ObjetivosPage";
 import AccionesPage from "../features/planeamiento/pages/AccionesPage";
 
+// Alineamiento (Módulo 4)
+import AlineamientosInstrumentosPage from "../features/alineamiento/pages/AlineamientosInstrumentosPage";
+import AcuerdosGobernabilidadPoliticasPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasPage";
+
+import AcuerdosGobernabilidadPoliticasResponsablesResultadosPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasResponsablesResultadosPage";
+
+import PdrcObjetivosResponsablesPage from "../features/planeamiento/pages/PdrcObjetivosResponsablesPage";
+import PdrcObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PdrcObjetivosAccionesIndicadoresPage";
+import PeiObjetivosResponsablesPage from "../features/planeamiento/pages/PeiObjetivosResponsablesPage";
+import PeiObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PeiObjetivosAccionesIndicadoresPage";
+
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -53,6 +65,34 @@ export default function App() {
           <Route path="/planeamiento/politicas" element={<PoliticasPage />} />
           <Route path="/planeamiento/objetivos" element={<ObjetivosPage />} />
           <Route path="/planeamiento/acciones" element={<AccionesPage />} />
+
+          {/* Alineamiento */}
+          <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
+          <Route path="/alineamiento/instrumentos" element={<AlineamientosInstrumentosPage />} />
+          {/*<Route path="/ag/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />*/}
+          <Route path="/:codigoInstrumento/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />
+          <Route
+            path="/acuerdos-gobernabilidad/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
+            element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
+          />
+          <Route
+            path="/prcp/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
+            element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
+          />
+          <Route path="/pdrc/oer" element={<PdrcObjetivosResponsablesPage />} />
+          <Route path="/pdrc/oer" element={<PeiObjetivosResponsablesPage />} />
+          <Route path="/:codigoInstrumento/oer" element={<PdrcObjetivosResponsablesPage />} />
+          <Route path="/:codigoInstrumento/oer" element={<PeiObjetivosResponsablesPage />} />
+          <Route
+            path="/pdrc/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
+            element={<PdrcObjetivosAccionesIndicadoresPage />}
+          />
+          <Route path="/pei/oei" element={<PeiObjetivosResponsablesPage />} />
+          <Route
+            path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
+            element={<PeiObjetivosAccionesIndicadoresPage />}
+          />
+
 
         </Route>
 

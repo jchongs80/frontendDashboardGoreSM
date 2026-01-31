@@ -139,6 +139,18 @@ export type UnidadOrganizacionalUpdateDto = {
   estado?: string | null;
 };
 
+export type InstrumentoAccionDto = {
+  idAccion: number;
+  idInstrumento: number;
+  codigoAccion: string;
+  nombre: string;
+  icono?: string | null;
+  url?: string | null;
+  orden?: number | null;
+  estado: string; // "ACTIVO" | "INACTIVO"
+  descripcion?: string | null;
+};
+
 /* =========================
    Actions (usa tus endpoints /api/...)
 ========================= */
@@ -147,11 +159,24 @@ export const CatalogoAction = {
   // LIST (GET)
   getDimensiones: () => api.get<DimensionDto[]>("/api/dimensiones"),
   getFuentesDatos: () => api.get<FuenteDatoDto[]>("/api/fuentesdatos"),
-  getInstrumentos: () => api.get<InstrumentoDto[]>("/api/instrumentos"),
+  getInstrumentos: () => api.get<InstrumentoDto[]>("/api/instrumentos"), 
+  getInstrumentoById: (idInstrumento: number) =>
+  api.get<InstrumentoDto>(`/api/instrumentos/${idInstrumento}`),
   getTiposIndicador: () => api.get<TipoIndicadorDto[]>("/api/tiposindicador"),
   getUnidadesMedida: () => api.get<UnidadMedidaDto[]>("/api/unidadesmedida"),
   getUnidadesOrganizacionales: () => api.get<UnidadOrganizacionalDto[]>("/api/unidades-org"),
+  getInstrumentosEje: () => api.get<InstrumentoDto[]>("/api/instrumentos/GetAllEje"),
 
+  getInstrumentoAcciones: (idInstrumento: number, incluirInactivos = false) =>
+  api.get<InstrumentoAccionDto[]>(
+    `/api/instrumentos/${idInstrumento}/acciones?incluirInactivos=${incluirInactivos}`
+  ),
+  getInstrumentoByCodigo: async (codigo: string) => {
+    const list = await api.get<InstrumentoDto[]>("/api/instrumentos");
+    const x = list.find(i => i.codigo?.toUpperCase() === codigo.toUpperCase());
+    if (!x) throw new Error("Instrumento no encontrado");
+    return x;
+  },
 
   updateDimension: (id: number, payload: ActualizarDimensionDto) =>
     api.put<void>(`/api/dimensiones/${id}`, payload),

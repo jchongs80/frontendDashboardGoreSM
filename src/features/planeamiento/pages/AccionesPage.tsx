@@ -1,68 +1,53 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  Alert,
   Box,
   Button,
+  Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
+  IconButton,
   MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TablePagination,
+  TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
-import CatalogoTablePage, { type ColumnDef } from "../../catalogos/components/CatalogoTablePage";
-import { CatalogoAction, type UnidadOrganizacionalDto } from "../../catalogos/CatalogoAction";
-import { PlaneamientoAction } from "../PlaneamientoAction";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
-/** ===== Tipos locales mínimos (si ya los tienes en PlaneamientoAction, impórtalos) ===== */
-type InstrumentoDto = { idInstrumento: number; codigo?: string | null; nombre: string };
-type EjeDto = { idEje: number; idInstrumento: number; codigo: string; nombre: string; estado: string };
-type PoliticaDto = { idPolitica: number; idInstrumento: number; codigo: string; nombre: string; estado: string; idEje?: number | null };
-type ObjetivoDto = {
-  idObjetivo: number;
-  idInstrumento: number;
-  codigo: string;
-  enunciado: string;
-  estado: string;
-  idEje?: number | null;
-  idPolitica?: number | null;
-};
+import { CatalogoAction, type InstrumentoDto, type UnidadOrganizacionalDto } from "../../catalogos/CatalogoAction";
 
-type AccionListDto = {
-  idAccion: number;
-  idObjetivo: number;
-  codigo: string;
-  enunciado: string;
-  orden?: number | null;
-  estado: string;
+import {
+  PlaneamientoAction,
+  type AccionCreateUpdateDto,
+  type AccionListDto,
+  type ObjetivoListDto,
+} from "../PlaneamientoAction";
 
-  presupuestoEstimado?: number | null;
-  idUnidadResponsable?: number | null;
-
-  // “humanos” si tu backend los manda en lista
-  nombreObjetivo?: string | null;
-  nombreInstrumento?: string | null;
-  nombreUnidadResponsable?: string | null;
-
-  descripcion?: string | null;
-  tipo?: string | null;
-};
-
-type AccionCreateUpdateDto = {
-  idObjetivo: number;
-  codigo: string;
-  enunciado: string;
-  descripcion?: string | null;
-  tipo?: string | null;
-  idUnidadResponsable?: number | null;
-  orden?: number | null;
-  presupuestoEstimado?: number | null;
-  estado: string;
-};
+/** =======================
+ * UI helpers
+ * ======================= */
 
 const pillSx = (estado?: string | null) => ({
   display: "inline-flex",
+  alignItems: "center",
   px: 1,
   py: 0.25,
   borderRadius: 999,
@@ -72,7 +57,7 @@ const pillSx = (estado?: string | null) => ({
   bgcolor: estado === "ACTIVO" ? "rgba(16,185,129,.10)" : "rgba(239,68,68,.10)",
 });
 
-function LabelValue({ label, value }: { label: string; value?: any }) {
+function LabelValue({ label, value }: { label: string; value?: ReactNode }) {
   return (
     <Box sx={{ display: "grid", gap: 0.35 }}>
       <Typography sx={{ fontSize: 12, color: "text.secondary", fontWeight: 800 }}>
@@ -85,280 +70,587 @@ function LabelValue({ label, value }: { label: string; value?: any }) {
   );
 }
 
+function instrumentoLabel(i: InstrumentoDto) {
+  return `${i.codigo} - ${i.nombre}`;
+}
+
+function objetivoLabel(o: ObjetivoListDto) {
+  return `${o.codigo} - ${o.enunciado}`;
+}
+
+function safeStr(v?: string | null) {
+  return (v ?? "").toString();
+}
+
+const EMPTY_FORM: AccionCreateUpdateDto = {
+  idObjetivo: 0,
+  codigo: "",
+  enunciado: "",
+  descripcion: "",
+  tipo: "",
+  idUnidadResponsable: null,
+  orden: null,
+  presupuestoEstimado: null,
+  estado: "ACTIVO",
+};
+
+function normalizePayload(p: AccionCreateUpdateDto): AccionCreateUpdateDto {
+  const desc = safeStr(p.descripcion).trim();
+  const tipo = safeStr(p.tipo).trim();
+  return {
+    ...p,
+    descripcion: desc === "" ? null : desc,
+    tipo: tipo === "" ? null : tipo,
+  };
+}
+
+/** =======================
+ * Page
+ * ======================= */
+
 export default function AccionesPage() {
-  const [rows, setRows] = useState<AccionListDto[]>([]);
+  // master
   const [instrumentos, setInstrumentos] = useState<InstrumentoDto[]>([]);
-  const [ejes, setEjes] = useState<EjeDto[]>([]);
-  const [politicas, setPoliticas] = useState<PoliticaDto[]>([]);
-  const [objetivos, setObjetivos] = useState<ObjetivoDto[]>([]);
   const [unidades, setUnidades] = useState<UnidadOrganizacionalDto[]>([]);
+  const [loadingMaster, setLoadingMaster] = useState(false);
+  const [errorMaster, setErrorMaster] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [qMaster, setQMaster] = useState("");
+  const [pageMaster, setPageMaster] = useState(0);
+  const [rppMaster, setRppMaster] = useState(10);
 
-  // VIEW
+  // expand / detail
+  const [expandedInstrumentoId, setExpandedInstrumentoId] = useState<number | null>(null);
+
+  const [accionesByInstrumento, setAccionesByInstrumento] = useState<Record<number, AccionListDto[]>>({});
+  const [objetivosByInstrumento, setObjetivosByInstrumento] = useState<Record<number, ObjetivoListDto[]>>({});
+
+  const [detailLoading, setDetailLoading] = useState<Record<number, boolean>>({});
+  const [detailError, setDetailError] = useState<Record<number, string | null>>({});
+
+  // dialogs
   const [openView, setOpenView] = useState(false);
   const [viewRow, setViewRow] = useState<AccionListDto | null>(null);
 
-  // EDIT
   const [openEdit, setOpenEdit] = useState(false);
-  const [editing, setEditing] = useState<AccionListDto | null>(null);
+  const [editInstrumentoId, setEditInstrumentoId] = useState<number>(0);
+  const [editingRow, setEditingRow] = useState<AccionListDto | null>(null);
+  const [formEdit, setFormEdit] = useState<AccionCreateUpdateDto>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-
-  // CREATE
-  const emptyCreate: AccionCreateUpdateDto = {
-    idObjetivo: 0,
-    codigo: "",
-    enunciado: "",
-    descripcion: "",
-    tipo: "",
-    idUnidadResponsable: null,
-    orden: null,
-    presupuestoEstimado: null,
-    estado: "ACTIVO",
-  };
-
   const [openCreate, setOpenCreate] = useState(false);
+  const [createInstrumentoId, setCreateInstrumentoId] = useState<number>(0);
+  const [formCreate, setFormCreate] = useState<AccionCreateUpdateDto>(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createForm, setCreateForm] = useState<AccionCreateUpdateDto>(emptyCreate);
 
+  /** =======================
+   * Load master
+   * ======================= */
 
-  // filtros (cascada) solo para el modal de edición
-  const [selInstrumento, setSelInstrumento] = useState<number>(0);
-  const [selEje, setSelEje] = useState<number | null>(null);
-  const [selPolitica, setSelPolitica] = useState<number | null>(null);
-
-  const [form, setForm] = useState<AccionCreateUpdateDto>({
-    idObjetivo: 0,
-    codigo: "",
-    enunciado: "",
-    descripcion: "",
-    tipo: "",
-    idUnidadResponsable: null,
-    orden: null,
-    presupuestoEstimado: null,
-    estado: "ACTIVO",
-  });
-
-  const load = useCallback(async () => {
+  const loadMaster = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoadingMaster(true);
+      setErrorMaster(null);
 
-      const [data, inst, ej, pol, obj, uni] = await Promise.all([
-        PlaneamientoAction.getAcciones() as Promise<AccionListDto[]>,
-        CatalogoAction.getInstrumentos() as Promise<InstrumentoDto[]>,
-        PlaneamientoAction.getEjesEstrategicos() as Promise<EjeDto[]>,
-        PlaneamientoAction.getPoliticas() as Promise<PoliticaDto[]>,
-        PlaneamientoAction.getObjetivos() as Promise<ObjetivoDto[]>,
-        CatalogoAction.getUnidadesOrganizacionales(), // OJO: usa idUnidad
+      const [inst, uni] = await Promise.all([
+        CatalogoAction.getInstrumentos(),
+        CatalogoAction.getUnidadesOrganizacionales(),
       ]);
 
-      setRows(data);
       setInstrumentos(inst);
-      setEjes(ej);
-      setPoliticas(pol);
-      setObjetivos(obj);
       setUnidades(uni);
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando Acciones");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error cargando instrumentos";
+      setErrorMaster(msg);
     } finally {
-      setLoading(false);
+      setLoadingMaster(false);
     }
   }, []);
 
-  useEffect(() => void load(), [load]);
-
-  // cascadas para combos del modal
-  const ejesPorInstrumento = useMemo(() => {
-    if (!selInstrumento) return ejes;
-    return ejes.filter((x) => x.idInstrumento === selInstrumento);
-  }, [ejes, selInstrumento]);
-
-  const politicasPorInstrumentoYEje = useMemo(() => {
-    let list = politicas;
-    if (selInstrumento) list = list.filter((x) => x.idInstrumento === selInstrumento);
-    if (selEje) list = list.filter((x) => (x.idEje ?? null) === selEje);
-    return list;
-  }, [politicas, selInstrumento, selEje]);
-
-  const objetivosPorCascada = useMemo(() => {
-    let list = objetivos;
-    if (selInstrumento) list = list.filter((x) => x.idInstrumento === selInstrumento);
-    if (selEje) list = list.filter((x) => (x.idEje ?? null) === selEje);
-    if (selPolitica) list = list.filter((x) => (x.idPolitica ?? null) === selPolitica);
-    return list;
-  }, [objetivos, selInstrumento, selEje, selPolitica]);
-
-  // resets cascada: si cambias instrumento, baja todo
   useEffect(() => {
-    // cuando cambia instrumento, resetea eje/política/objetivo
-    setSelEje(null);
-    setSelPolitica(null);
-    if (openCreate) setCreateForm((p) => ({ ...p, idObjetivo: 0 }));
-    else setForm((p) => ({ ...p, idObjetivo: 0 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selInstrumento]);
+    void loadMaster();
+  }, [loadMaster]);
 
-  useEffect(() => {
-    // cuando cambia eje, resetea política/objetivo
-    setSelPolitica(null);
-    if (openCreate) setCreateForm((p) => ({ ...p, idObjetivo: 0 }));
-    else setForm((p) => ({ ...p, idObjetivo: 0 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selEje]);
+  /** =======================
+   * Detail loaders
+   * ======================= */
+
+  const loadDetalleInstrumento = useCallback(async (idInstrumento: number, force = false) => {
+    const alreadyAcc = accionesByInstrumento[idInstrumento];
+    const alreadyObj = objetivosByInstrumento[idInstrumento];
+
+    if (!force && Array.isArray(alreadyAcc) && Array.isArray(alreadyObj)) return;
+
+    try {
+      setDetailLoading((p) => ({ ...p, [idInstrumento]: true }));
+      setDetailError((p) => ({ ...p, [idInstrumento]: null }));
+
+      const [acc, obj] = await Promise.all([
+        PlaneamientoAction.getAccionesByInstrumento(idInstrumento),
+        PlaneamientoAction.getObjetivosByInstrumento(idInstrumento),
+      ]);
+
+      setAccionesByInstrumento((p) => ({ ...p, [idInstrumento]: acc }));
+      setObjetivosByInstrumento((p) => ({ ...p, [idInstrumento]: obj }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error cargando acciones/objetivos";
+      setDetailError((p) => ({ ...p, [idInstrumento]: msg }));
+    } finally {
+      setDetailLoading((p) => ({ ...p, [idInstrumento]: false }));
+    }
+  }, [accionesByInstrumento, objetivosByInstrumento]);
+
+  const toggleExpand = (idInstrumento: number) => {
+    setExpandedInstrumentoId((prev) => (prev === idInstrumento ? null : idInstrumento));
+  };
 
   useEffect(() => {
-    // cuando cambia política, resetea objetivo
-    if (openCreate) setCreateForm((p) => ({ ...p, idObjetivo: 0 }));
-    else setForm((p) => ({ ...p, idObjetivo: 0 }));
-  }, [selPolitica]);
+    if (expandedInstrumentoId) {
+      void loadDetalleInstrumento(expandedInstrumentoId, false);
+    }
+  }, [expandedInstrumentoId, loadDetalleInstrumento]);
 
-  const columns = useMemo<ColumnDef<AccionListDto>[]>(() => [
-    { key: "codigo", header: "Código", sortable: true, width: 120 },
-    { key: "enunciado", header: "Acción", sortable: true },
-    { key: "nombreObjetivo", header: "Objetivo", width: 260 },
-    { key: "nombreInstrumento", header: "Instrumento", width: 220 },
-    { key: "nombreUnidadResponsable", header: "Unidad Resp.", width: 220 },
-    { key: "orden", header: "Orden", width: 90 },
-    {
-      key: "estado",
-      header: "Estado",
-      sortable: true,
-      width: 110,
-      render: (r) => <Box sx={pillSx(r.estado)}>{r.estado}</Box>,
-    },
-  ], []);
+  /** =======================
+   * Master filtering / paging
+   * ======================= */
 
-  const onView = (r: AccionListDto) => {
-    setViewRow(r);
+  const instrumentosFiltrados = useMemo(() => {
+    const q = qMaster.trim().toLowerCase();
+    if (!q) return instrumentos;
+
+    return instrumentos.filter((i) => {
+      const blob = [i.codigo, i.nombre, i.nivel ?? "", i.horizonteTemporal ?? "", i.estado ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return blob.includes(q);
+    });
+  }, [instrumentos, qMaster]);
+
+  const instrumentosPaginados = useMemo(() => {
+    const start = pageMaster * rppMaster;
+    return instrumentosFiltrados.slice(start, start + rppMaster);
+  }, [instrumentosFiltrados, pageMaster, rppMaster]);
+
+  /** =======================
+   * Maps / combos
+   * ======================= */
+
+  const unidadesMap = useMemo(() => {
+    const map: Record<number, UnidadOrganizacionalDto> = {};
+    for (const u of unidades) map[u.idUnidad] = u;
+    return map;
+  }, [unidades]);
+
+  const objetivosFor = (idInstrumento: number) => objetivosByInstrumento[idInstrumento] ?? [];
+  const accionesFor = (idInstrumento: number) => accionesByInstrumento[idInstrumento] ?? [];
+
+  /** =======================
+   * Dialog handlers
+   * ======================= */
+
+  const openViewDialog = (row: AccionListDto) => {
+    setViewRow(row);
     setOpenView(true);
   };
 
-  const onEdit = async (r: AccionListDto) => {
+  const openCreateForInstrumento = async (idInstrumento: number) => {
+    setCreateError(null);
+    setCreateInstrumentoId(idInstrumento);
+    setFormCreate({ ...EMPTY_FORM });
+
+    setOpenCreate(true);
+
+    // asegurar objetivos cargados (y de paso acciones si quieres cache)
+    await loadDetalleInstrumento(idInstrumento, false);
+  };
+
+  const openEditDialog = async (idInstrumento: number, row: AccionListDto) => {
     setSaveError(null);
-    setEditing(r);
+    setEditInstrumentoId(idInstrumento);
+    setEditingRow(row);
 
-    // si tienes endpoint detail, podrías traer descripcion/tipo/etc
-    let detail = r;
-    try {
-      // opcional: PlaneamientoAction.getAccionById(r.idAccion)
-    } catch {
-      /* no-op */
-    }
-
-    // Inferimos la cascada a partir del objetivo (si existe en lista)
-    const obj = objetivos.find((x) => x.idObjetivo === detail.idObjetivo);
-    const instId = obj?.idInstrumento ?? 0;
-    const ejeId = obj?.idEje ?? null;
-    const polId = obj?.idPolitica ?? null;
-
-    setSelInstrumento(instId);
-    setSelEje(ejeId);
-    setSelPolitica(polId);
-
-    setForm({
-      idObjetivo: detail.idObjetivo,
-      codigo: detail.codigo ?? "",
-      enunciado: detail.enunciado ?? "",
-      descripcion: detail.descripcion ?? "",
-      tipo: detail.tipo ?? "",
-      idUnidadResponsable: detail.idUnidadResponsable ?? null,
-      orden: detail.orden ?? null,
-      presupuestoEstimado: detail.presupuestoEstimado ?? null,
-      estado: detail.estado ?? "ACTIVO",
+    setFormEdit({
+      idObjetivo: row.idObjetivo,
+      codigo: row.codigo ?? "",
+      enunciado: row.enunciado ?? "",
+      descripcion: "",
+      tipo: "",
+      idUnidadResponsable: row.idUnidadResponsable ?? null,
+      orden: row.orden ?? null,
+      presupuestoEstimado: row.presupuestoEstimado ?? null,
+      estado: row.estado ?? "ACTIVO",
     });
 
     setOpenEdit(true);
+
+    await loadDetalleInstrumento(idInstrumento, false);
   };
 
-  const requiredOk =
-    form.idObjetivo > 0 &&
-    form.codigo.trim() !== "" &&
-    form.enunciado.trim() !== "";
-
-  const save = async () => {
-    if (!editing) return;
-
-    try {
-      setSaving(true);
-      setSaveError(null);
-
-      await PlaneamientoAction.updateAccion(editing.idAccion, form);
-      setOpenEdit(false);
-      await load();
-    } catch (e: any) {
-      setSaveError(e?.message ?? "No se pudo guardar");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getObjetivoLabel = (id: number) => {
-    const obj = objetivos.find((x) => x.idObjetivo === id);
-    if (!obj) return `#${id}`;
-    return `${obj.codigo} - ${obj.enunciado}`;
-  };
-
-
-  const onNew = () => {
-  setCreateError(null);
-  setCreateForm(emptyCreate);
-
-  // reset cascada
-  setSelInstrumento(0);
-  setSelEje(null);
-  setSelPolitica(null);
-
-  setOpenCreate(true);
-  };
+  /** =======================
+   * Create / Save
+   * ======================= */
 
   const requiredCreateOk =
-    createForm.idObjetivo > 0 &&
-    createForm.codigo.trim() !== "" &&
-    createForm.enunciado.trim() !== "";
+    formCreate.idObjetivo > 0 &&
+    formCreate.codigo.trim() !== "" &&
+    formCreate.enunciado.trim() !== "" &&
+    createInstrumentoId > 0;
 
   const create = async () => {
     try {
       setCreating(true);
       setCreateError(null);
 
-      await PlaneamientoAction.createAccion(createForm);
+      const payload = normalizePayload(formCreate);
+      await PlaneamientoAction.createAccion(payload);
 
       setOpenCreate(false);
-      await load();
-    } catch (e: any) {
-      setCreateError(e?.message ?? "No se pudo registrar");
+
+      // refrescar detalle del instrumento
+      setExpandedInstrumentoId(createInstrumentoId);
+      await loadDetalleInstrumento(createInstrumentoId, true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "No se pudo registrar";
+      setCreateError(msg);
     } finally {
       setCreating(false);
     }
   };
 
-  return (
-    <>
-      <CatalogoTablePage
-        title="Planeamiento: Acciones Estratégicas"
-        subtitle="Acciones vinculadas a objetivos. Edición con cascada Instrumento → Eje → Política → Objetivo."
-        rows={rows}
-        loading={loading}
-        error={error}
-        columns={columns}
-        getRowId={(r) => r.idAccion}
-        searchKeys={["codigo", "enunciado", "nombreObjetivo", "nombreInstrumento", "nombreUnidadResponsable", "estado"]}
-        onRefresh={load}
-        allowEdit
-        onView={onView}
-        onEdit={onEdit}
-        onNew={onNew}
-        newLabel="Nuevo"
-      />
+  const requiredEditOk =
+    formEdit.idObjetivo > 0 &&
+    formEdit.codigo.trim() !== "" &&
+    formEdit.enunciado.trim() !== "" &&
+    editInstrumentoId > 0;
 
-      {/* VIEW */}
+  const saveEdit = async () => {
+    if (!editingRow) return;
+
+    try {
+      setSaving(true);
+      setSaveError(null);
+
+      const payload = normalizePayload(formEdit);
+      await PlaneamientoAction.updateAccion(editingRow.idAccion, payload);
+
+      setOpenEdit(false);
+
+      await loadDetalleInstrumento(editInstrumentoId, true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "No se pudo guardar";
+      setSaveError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** =======================
+   * Render
+   * ======================= */
+
+  return (
+    <Box sx={{ p: 2.5 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.2,
+          mb: 2,
+          p: 2.2,
+          borderRadius: 2.5,
+          border: "1px solid #E7ECF3",
+          bgcolor: "background.paper",
+          boxShadow: "0 10px 30px rgba(16,24,40,.06)",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+          <Box>
+            <Typography sx={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.3 }}>
+              Planeamiento: Acciones por Instrumento
+            </Typography>
+            <Typography sx={{ color: "text.secondary", mt: 0.4 }}>
+              Maestro: Instrumentos. Expande un instrumento para ver/crear/editar acciones.
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Chip
+              label={`${instrumentosFiltrados.length} instrumentos`}
+              variant="outlined"
+              sx={{ fontWeight: 900 }}
+            />
+
+            <Tooltip title="Refrescar">
+              <span>
+                <IconButton onClick={loadMaster} disabled={loadingMaster}>
+                  <RefreshRoundedIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        <TextField
+          value={qMaster}
+          onChange={(e) => {
+            setQMaster(e.target.value);
+            setPageMaster(0);
+          }}
+          placeholder="Buscar instrumento (código / nombre / nivel / horizonte)..."
+          InputProps={{
+            startAdornment: (
+              <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
+                <SearchRoundedIcon fontSize="small" />
+              </Box>
+            ),
+          }}
+          fullWidth
+        />
+
+        {errorMaster && (
+          <Alert severity="error" sx={{ fontWeight: 700 }}>
+            {errorMaster}
+          </Alert>
+        )}
+      </Box>
+
+      {/* Master Table */}
+      <Box
+        sx={{
+          borderRadius: 2.5,
+          border: "1px solid #E7ECF3",
+          bgcolor: "background.paper",
+          overflow: "hidden",
+          boxShadow: "0 10px 30px rgba(16,24,40,.05)",
+        }}
+      >
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: "rgba(17, 24, 39, 0.02)" }}>
+              <TableCell width={54} />
+              <TableCell sx={{ fontWeight: 900 }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Nombre</TableCell>
+              <TableCell sx={{ fontWeight: 900 }} width={160}>
+                Nivel
+              </TableCell>
+              <TableCell sx={{ fontWeight: 900 }} width={140}>
+                Horizonte
+              </TableCell>
+              <TableCell sx={{ fontWeight: 900 }} width={120}>
+                Estado
+              </TableCell>
+              <TableCell sx={{ fontWeight: 900 }} width={180} align="right">
+                Acciones
+              </TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {instrumentosPaginados.map((inst) => {
+              const expanded = expandedInstrumentoId === inst.idInstrumento;
+
+              const det = accionesFor(inst.idInstrumento);
+              const detLoading = detailLoading[inst.idInstrumento] ?? false;
+              const detErr = detailError[inst.idInstrumento] ?? null;
+
+              return (
+                <Fragment key={inst.idInstrumento}>
+                  <TableRow hover>
+                    <TableCell>
+                      <IconButton onClick={() => toggleExpand(inst.idInstrumento)} size="small">
+                        {expanded ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
+                      </IconButton>
+                    </TableCell>
+
+                    <TableCell sx={{ fontWeight: 900 }}>{inst.codigo}</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{inst.nombre}</TableCell>
+                    <TableCell>{inst.nivel ?? "—"}</TableCell>
+                    <TableCell>{inst.horizonteTemporal ?? "—"}</TableCell>
+
+                    <TableCell>
+                      <Box sx={pillSx(inst.estado)}>{inst.estado}</Box>
+                    </TableCell>
+
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<AddRoundedIcon />}
+                        sx={{ fontWeight: 900, borderRadius: 2 }}
+                        onClick={() => void openCreateForInstrumento(inst.idInstrumento)}
+                      >
+                        Crear
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+
+                  <TableRow>
+                    <TableCell colSpan={7} sx={{ p: 0, borderBottom: expanded ? "1px solid #EEF2F7" : "none" }}>
+                      <Collapse in={expanded} timeout="auto" unmountOnExit>
+                        <Box sx={{ p: 2 }}>
+                          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                            <Box sx={{ display: "grid" }}>
+                              <Typography sx={{ fontWeight: 950 }}>Acciones del instrumento</Typography>
+                              <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+                                {instrumentoLabel(inst)}
+                              </Typography>
+                            </Box>
+
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <Chip label={`${det.length} acciones`} variant="outlined" sx={{ fontWeight: 900 }} />
+
+                              <Tooltip title="Refrescar acciones/objetivos">
+                                <span>
+                                  <IconButton
+                                    onClick={() => void loadDetalleInstrumento(inst.idInstrumento, true)}
+                                    disabled={detLoading}
+                                  >
+                                    <RefreshRoundedIcon />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+
+                              <Button
+                                variant="contained"
+                                startIcon={<AddRoundedIcon />}
+                                sx={{ fontWeight: 900, borderRadius: 2 }}
+                                onClick={() => void openCreateForInstrumento(inst.idInstrumento)}
+                              >
+                                Nueva acción
+                              </Button>
+                            </Box>
+                          </Box>
+
+                          <Divider sx={{ my: 1.5 }} />
+
+                          {detErr && (
+                            <Alert severity="error" sx={{ mb: 1.5, fontWeight: 700 }}>
+                              {detErr}
+                            </Alert>
+                          )}
+
+                          {detLoading ? (
+                            <Typography sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              Cargando acciones...
+                            </Typography>
+                          ) : det.length === 0 ? (
+                            <Typography sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              No hay acciones registradas para este instrumento.
+                            </Typography>
+                          ) : (
+                            <Box sx={{ borderRadius: 2, border: "1px solid #EEF2F7", overflow: "hidden" }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow sx={{ bgcolor: "rgba(17, 24, 39, 0.02)" }}>
+                                    <TableCell sx={{ fontWeight: 900 }} width={140}>
+                                      Código
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }}>Enunciado</TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={260}>
+                                      Objetivo
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={220}>
+                                      Unidad Resp.
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={90}>
+                                      Orden
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={140}>
+                                      Presupuesto
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={120}>
+                                      Estado
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }} width={140} align="right">
+                                      Acciones
+                                    </TableCell>
+                                  </TableRow>
+                                </TableHead>
+
+                                <TableBody>
+                                  {det.map((a) => (
+                                    <TableRow key={a.idAccion} hover>
+                                      <TableCell sx={{ fontWeight: 900 }}>{a.codigo}</TableCell>
+                                      <TableCell sx={{ fontWeight: 800 }}>{a.enunciado}</TableCell>
+                                      <TableCell>{a.nombreObjetivo ?? `#${a.idObjetivo}`}</TableCell>
+                                      <TableCell>{a.nombreUnidadResponsable ?? "—"}</TableCell>
+                                      <TableCell>{a.orden ?? "—"}</TableCell>
+                                      <TableCell>
+                                        {a.presupuestoEstimado == null ? "—" : a.presupuestoEstimado}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Box sx={pillSx(a.estado)}>{a.estado}</Box>
+                                      </TableCell>
+
+                                      <TableCell align="right">
+                                        <Tooltip title="Ver">
+                                          <IconButton onClick={() => openViewDialog(a)} size="small">
+                                            <VisibilityRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Editar">
+                                          <IconButton
+                                            onClick={() => void openEditDialog(inst.idInstrumento, a)}
+                                            size="small"
+                                          >
+                                            <EditRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </Box>
+                          )}
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
+              );
+            })}
+
+            {instrumentosPaginados.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ py: 6 }}>
+                  <Typography sx={{ textAlign: "center", color: "text.secondary", fontWeight: 800 }}>
+                    {loadingMaster ? "Cargando..." : "Sin instrumentos para mostrar"}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+
+        <TablePagination
+          component="div"
+          count={instrumentosFiltrados.length}
+          page={pageMaster}
+          onPageChange={(_, p) => setPageMaster(p)}
+          rowsPerPage={rppMaster}
+          onRowsPerPageChange={(e) => {
+            setRppMaster(parseInt(e.target.value, 10));
+            setPageMaster(0);
+          }}
+          rowsPerPageOptions={[5, 10, 20, 50]}
+          labelRowsPerPage="Filas por página:"
+        />
+      </Box>
+
+      {/* =======================
+          VIEW DIALOG
+      ======================= */}
       <Dialog open={openView} onClose={() => setOpenView(false)} fullWidth maxWidth="md">
-        <DialogTitle sx={{ fontWeight: 900 }}>Detalle de Acción</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 950, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          Detalle de Acción
+          <IconButton onClick={() => setOpenView(false)}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+
         <DialogContent sx={{ pt: 1.5 }}>
           {viewRow ? (
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
@@ -370,108 +662,57 @@ export default function AccionesPage() {
                 <LabelValue label="Enunciado" value={viewRow.enunciado} />
               </Box>
 
-              <LabelValue label="Objetivo" value={viewRow.nombreObjetivo ?? getObjetivoLabel(viewRow.idObjetivo)} />
-              <LabelValue label="Instrumento" value={viewRow.nombreInstrumento ?? "—"} />
-              <LabelValue label="Unidad Responsable" value={viewRow.nombreUnidadResponsable ?? "—"} />
+              <LabelValue label="Objetivo" value={viewRow.nombreObjetivo ?? `#${viewRow.idObjetivo}`} />
+              <LabelValue label="Instrumento" value={viewRow.nombreInstrumento ?? (viewRow.idInstrumento ? `#${viewRow.idInstrumento}` : "—")} />
+              <LabelValue label="Unidad Resp." value={viewRow.nombreUnidadResponsable ?? "—"} />
 
-              <LabelValue label="Presupuesto estimado" value={viewRow.presupuestoEstimado ?? "—"} />
-              <LabelValue label="Tipo" value={viewRow.tipo ?? "—"} />
-              <LabelValue label="Id Acción" value={viewRow.idAccion} />
-
-              <Box sx={{ gridColumn: "1 / -1" }}>
-                <LabelValue label="Descripción" value={viewRow.descripcion ?? "—"} />
-              </Box>
+              <LabelValue label="Presupuesto" value={viewRow.presupuestoEstimado ?? "—"} />
             </Box>
           ) : (
             <Typography color="text.secondary">—</Typography>
           )}
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setOpenView(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT */}
+      {/* =======================
+          EDIT DIALOG
+      ======================= */}
       <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 900 }}>Editar Acción</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 950 }}>Editar Acción</DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 1.5 }}>
-            {/* Cascada */}
             <TextField
-              label="Instrumento"
+              label="Objetivo"
               select
-              value={selInstrumento}
-              onChange={(e) => setSelInstrumento(Number(e.target.value))}
+              value={formEdit.idObjetivo}
+              onChange={(e) => setFormEdit((p) => ({ ...p, idObjetivo: Number(e.target.value) }))}
               fullWidth
             >
-              <MenuItem value={0} disabled>Seleccione...</MenuItem>
-              {instrumentos.map((x) => (
-                <MenuItem key={x.idInstrumento} value={x.idInstrumento}>
-                  {(x.codigo ? `${x.codigo} - ` : "") + x.nombre}
+              <MenuItem value={0} disabled>
+                Seleccione...
+              </MenuItem>
+              {objetivosFor(editInstrumentoId).map((o) => (
+                <MenuItem key={o.idObjetivo} value={o.idObjetivo}>
+                  {objetivoLabel(o)}
                 </MenuItem>
               ))}
             </TextField>
 
-            <TextField
-              label="Eje (opcional)"
-              select
-              value={selEje ?? ""}
-              onChange={(e) => setSelEje(e.target.value === "" ? null : Number(e.target.value))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="">—</MenuItem>
-              {ejesPorInstrumento.map((x) => (
-                <MenuItem key={x.idEje} value={x.idEje}>
-                  {x.codigo} - {x.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Política (opcional)"
-              select
-              value={selPolitica ?? ""}
-              onChange={(e) => setSelPolitica(e.target.value === "" ? null : Number(e.target.value))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="">—</MenuItem>
-              {politicasPorInstrumentoYEje.map((x) => (
-                <MenuItem key={x.idPolitica} value={x.idPolitica}>
-                  {x.codigo} - {x.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Objetivo (requerido)"
-              select
-              value={form.idObjetivo || ""}
-              onChange={(e) => setForm((p) => ({ ...p, idObjetivo: Number(e.target.value) }))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="" disabled>Seleccione...</MenuItem>
-              {objetivosPorCascada.map((x) => (
-                <MenuItem key={x.idObjetivo} value={x.idObjetivo}>
-                  {x.codigo} - {x.enunciado}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {/* Campos */}
             <TextField
               label="Código"
-              value={form.codigo}
-              onChange={(e) => setForm((p) => ({ ...p, codigo: e.target.value }))}
+              value={formEdit.codigo}
+              onChange={(e) => setFormEdit((p) => ({ ...p, codigo: e.target.value }))}
               fullWidth
             />
 
             <TextField
               label="Enunciado"
-              value={form.enunciado}
-              onChange={(e) => setForm((p) => ({ ...p, enunciado: e.target.value }))}
+              value={formEdit.enunciado}
+              onChange={(e) => setFormEdit((p) => ({ ...p, enunciado: e.target.value }))}
               fullWidth
               multiline
               minRows={2}
@@ -480,9 +721,9 @@ export default function AccionesPage() {
             <TextField
               label="Unidad Responsable (opcional)"
               select
-              value={form.idUnidadResponsable ?? ""}
+              value={formEdit.idUnidadResponsable ?? ""}
               onChange={(e) =>
-                setForm((p) => ({
+                setFormEdit((p) => ({
                   ...p,
                   idUnidadResponsable: e.target.value === "" ? null : Number(e.target.value),
                 }))
@@ -490,41 +731,32 @@ export default function AccionesPage() {
               fullWidth
             >
               <MenuItem value="">—</MenuItem>
-              {unidades.map((x) => (
-                // OJO: TU DTO REAL usa idUnidad (no idUnidadOrganizacional)
-                <MenuItem key={x.idUnidad} value={x.idUnidad}>
-                  {(x.codigo ? `${x.codigo} - ` : "") + x.nombre}
+              {unidades.map((u) => (
+                <MenuItem key={u.idUnidad} value={u.idUnidad}>
+                  {u.codigo} - {u.nombre}
                 </MenuItem>
               ))}
             </TextField>
 
             <TextField
-              label="Tipo (opcional)"
-              select
-              value={form.tipo ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value }))}
-              fullWidth
-            >
-              <MenuItem value="">—</MenuItem>
-              <MenuItem value="ACTIVIDAD">ACTIVIDAD</MenuItem>
-              <MenuItem value="PROYECTO">PROYECTO</MenuItem>
-              <MenuItem value="INICIATIVA">INICIATIVA</MenuItem>
-            </TextField>
-
-            <TextField
               label="Orden"
               type="number"
-              value={form.orden ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, orden: e.target.value === "" ? null : Number(e.target.value) }))}
+              value={formEdit.orden ?? ""}
+              onChange={(e) =>
+                setFormEdit((p) => ({
+                  ...p,
+                  orden: e.target.value === "" ? null : Number(e.target.value),
+                }))
+              }
               fullWidth
             />
 
             <TextField
               label="Presupuesto estimado"
               type="number"
-              value={form.presupuestoEstimado ?? ""}
+              value={formEdit.presupuestoEstimado ?? ""}
               onChange={(e) =>
-                setForm((p) => ({
+                setFormEdit((p) => ({
                   ...p,
                   presupuestoEstimado: e.target.value === "" ? null : Number(e.target.value),
                 }))
@@ -533,9 +765,16 @@ export default function AccionesPage() {
             />
 
             <TextField
-              label="Descripción"
-              value={form.descripcion ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, descripcion: e.target.value }))}
+              label="Tipo (opcional)"
+              value={safeStr(formEdit.tipo)}
+              onChange={(e) => setFormEdit((p) => ({ ...p, tipo: e.target.value }))}
+              fullWidth
+            />
+
+            <TextField
+              label="Descripción (opcional)"
+              value={safeStr(formEdit.descripcion)}
+              onChange={(e) => setFormEdit((p) => ({ ...p, descripcion: e.target.value }))}
               fullWidth
               multiline
               minRows={2}
@@ -544,8 +783,8 @@ export default function AccionesPage() {
             <TextField
               label="Estado"
               select
-              value={form.estado}
-              onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))}
+              value={formEdit.estado}
+              onChange={(e) => setFormEdit((p) => ({ ...p, estado: e.target.value }))}
               fullWidth
             >
               <MenuItem value="ACTIVO">ACTIVO</MenuItem>
@@ -553,103 +792,58 @@ export default function AccionesPage() {
             </TextField>
 
             {saveError && (
-              <Typography sx={{ color: "error.main", fontWeight: 800 }}>
+              <Alert severity="error" sx={{ fontWeight: 800 }}>
                 {saveError}
-              </Typography>
+              </Alert>
             )}
           </Box>
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenEdit(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={save} variant="contained" disabled={!requiredOk || saving}>
+          <Button onClick={() => setOpenEdit(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={saveEdit} variant="contained" disabled={!requiredEditOk || saving}>
             {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      
-      {/* CREATE */}
+      {/* =======================
+          CREATE DIALOG
+      ======================= */}
       <Dialog open={openCreate} onClose={() => setOpenCreate(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 900 }}>Nueva Acción</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 950 }}>Nueva Acción</DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 1.5 }}>
-            {/* Cascada */}
             <TextField
-              label="Instrumento"
+              label="Objetivo"
               select
-              value={selInstrumento}
-              onChange={(e) => setSelInstrumento(Number(e.target.value))}
+              value={formCreate.idObjetivo}
+              onChange={(e) => setFormCreate((p) => ({ ...p, idObjetivo: Number(e.target.value) }))}
               fullWidth
             >
-              <MenuItem value={0} disabled>Seleccione...</MenuItem>
-              {instrumentos.map((x) => (
-                <MenuItem key={x.idInstrumento} value={x.idInstrumento}>
-                  {(x.codigo ? `${x.codigo} - ` : "") + x.nombre}
+              <MenuItem value={0} disabled>
+                Seleccione...
+              </MenuItem>
+              {objetivosFor(createInstrumentoId).map((o) => (
+                <MenuItem key={o.idObjetivo} value={o.idObjetivo}>
+                  {objetivoLabel(o)}
                 </MenuItem>
               ))}
             </TextField>
 
-            <TextField
-              label="Eje (opcional)"
-              select
-              value={selEje ?? ""}
-              onChange={(e) => setSelEje(e.target.value === "" ? null : Number(e.target.value))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="">—</MenuItem>
-              {ejesPorInstrumento.map((x) => (
-                <MenuItem key={x.idEje} value={x.idEje}>
-                  {x.codigo} - {x.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Política (opcional)"
-              select
-              value={selPolitica ?? ""}
-              onChange={(e) => setSelPolitica(e.target.value === "" ? null : Number(e.target.value))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="">—</MenuItem>
-              {politicasPorInstrumentoYEje.map((x) => (
-                <MenuItem key={x.idPolitica} value={x.idPolitica}>
-                  {x.codigo} - {x.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Objetivo (requerido)"
-              select
-              value={createForm.idObjetivo || ""}
-              onChange={(e) => setCreateForm((p) => ({ ...p, idObjetivo: Number(e.target.value) }))}
-              fullWidth
-              disabled={!selInstrumento}
-            >
-              <MenuItem value="" disabled>Seleccione...</MenuItem>
-              {objetivosPorCascada.map((x) => (
-                <MenuItem key={x.idObjetivo} value={x.idObjetivo}>
-                  {x.codigo} - {x.enunciado}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {/* Campos */}
             <TextField
               label="Código"
-              value={createForm.codigo}
-              onChange={(e) => setCreateForm((p) => ({ ...p, codigo: e.target.value }))}
+              value={formCreate.codigo}
+              onChange={(e) => setFormCreate((p) => ({ ...p, codigo: e.target.value }))}
               fullWidth
             />
 
             <TextField
               label="Enunciado"
-              value={createForm.enunciado}
-              onChange={(e) => setCreateForm((p) => ({ ...p, enunciado: e.target.value }))}
+              value={formCreate.enunciado}
+              onChange={(e) => setFormCreate((p) => ({ ...p, enunciado: e.target.value }))}
               fullWidth
               multiline
               minRows={2}
@@ -658,9 +852,9 @@ export default function AccionesPage() {
             <TextField
               label="Unidad Responsable (opcional)"
               select
-              value={createForm.idUnidadResponsable ?? ""}
+              value={formCreate.idUnidadResponsable ?? ""}
               onChange={(e) =>
-                setCreateForm((p) => ({
+                setFormCreate((p) => ({
                   ...p,
                   idUnidadResponsable: e.target.value === "" ? null : Number(e.target.value),
                 }))
@@ -668,41 +862,32 @@ export default function AccionesPage() {
               fullWidth
             >
               <MenuItem value="">—</MenuItem>
-              {unidades.map((x) => (
-                // OJO: TU DTO REAL usa idUnidad (no idUnidadOrganizacional)
-                <MenuItem key={x.idUnidad} value={x.idUnidad}>
-                  {(x.codigo ? `${x.codigo} - ` : "") + x.nombre}
+              {unidades.map((u) => (
+                <MenuItem key={u.idUnidad} value={u.idUnidad}>
+                  {u.codigo} - {u.nombre}
                 </MenuItem>
               ))}
             </TextField>
 
             <TextField
-              label="Tipo (opcional)"
-              select
-              value={createForm.tipo ?? ""}
-              onChange={(e) => setCreateForm((p) => ({ ...p, tipo: e.target.value }))}
-              fullWidth
-            >
-              <MenuItem value="">—</MenuItem>
-              <MenuItem value="ACTIVIDAD">ACTIVIDAD</MenuItem>
-              <MenuItem value="PROYECTO">PROYECTO</MenuItem>
-              <MenuItem value="INICIATIVA">INICIATIVA</MenuItem>
-            </TextField>
-
-            <TextField
               label="Orden"
               type="number"
-              value={createForm.orden ?? ""}
-              onChange={(e) => setCreateForm((p) => ({ ...p, orden: e.target.value === "" ? null : Number(e.target.value) }))}
+              value={formCreate.orden ?? ""}
+              onChange={(e) =>
+                setFormCreate((p) => ({
+                  ...p,
+                  orden: e.target.value === "" ? null : Number(e.target.value),
+                }))
+              }
               fullWidth
             />
 
             <TextField
               label="Presupuesto estimado"
               type="number"
-              value={createForm.presupuestoEstimado ?? ""}
+              value={formCreate.presupuestoEstimado ?? ""}
               onChange={(e) =>
-                setForm((p) => ({
+                setFormCreate((p) => ({
                   ...p,
                   presupuestoEstimado: e.target.value === "" ? null : Number(e.target.value),
                 }))
@@ -711,9 +896,16 @@ export default function AccionesPage() {
             />
 
             <TextField
-              label="Descripción"
-              value={createForm.descripcion ?? ""}
-              onChange={(e) => setCreateForm((p) => ({ ...p, descripcion: e.target.value }))}
+              label="Tipo (opcional)"
+              value={safeStr(formCreate.tipo)}
+              onChange={(e) => setFormCreate((p) => ({ ...p, tipo: e.target.value }))}
+              fullWidth
+            />
+
+            <TextField
+              label="Descripción (opcional)"
+              value={safeStr(formCreate.descripcion)}
+              onChange={(e) => setFormCreate((p) => ({ ...p, descripcion: e.target.value }))}
               fullWidth
               multiline
               minRows={2}
@@ -722,8 +914,8 @@ export default function AccionesPage() {
             <TextField
               label="Estado"
               select
-              value={createForm.estado}
-              onChange={(e) => setCreateForm((p) => ({ ...p, estado: e.target.value }))}
+              value={formCreate.estado}
+              onChange={(e) => setFormCreate((p) => ({ ...p, estado: e.target.value }))}
               fullWidth
             >
               <MenuItem value="ACTIVO">ACTIVO</MenuItem>
@@ -731,23 +923,31 @@ export default function AccionesPage() {
             </TextField>
 
             {createError && (
-              <Typography sx={{ color: "error.main", fontWeight: 800 }}>
+              <Alert severity="error" sx={{ fontWeight: 800 }}>
                 {createError}
+              </Alert>
+            )}
+
+            {formCreate.idUnidadResponsable && unidadesMap[formCreate.idUnidadResponsable] && (
+              <Typography sx={{ color: "text.secondary", fontWeight: 700, fontSize: 12.5 }}>
+                Unidad seleccionada:{" "}
+                <b>
+                  {unidadesMap[formCreate.idUnidadResponsable].codigo} - {unidadesMap[formCreate.idUnidadResponsable].nombre}
+                </b>
               </Typography>
             )}
           </Box>
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenCreate(false)} disabled={creating}>Cancelar</Button>
+          <Button onClick={() => setOpenCreate(false)} disabled={creating}>
+            Cancelar
+          </Button>
           <Button onClick={create} variant="contained" disabled={!requiredCreateOk || creating}>
-            {creating ? "Guardando..." : "Guardar"}
+            {creating ? "Registrando..." : "Registrar"}
           </Button>
         </DialogActions>
       </Dialog>
-
-
-
-    </>
+    </Box>
   );
 }

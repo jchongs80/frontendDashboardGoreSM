@@ -1,4 +1,5 @@
 // src/shared/api.ts
+
 export type ApiResponse<T> = {
   success?: boolean;
   message?: string;
@@ -6,7 +7,7 @@ export type ApiResponse<T> = {
   errors?: string[];
 };
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "";
+const API_URL = import.meta.env?.VITE_API_URL ?? "";
 
 function getToken(): string | null {
   return (
@@ -22,14 +23,29 @@ function clip(text: string, max = 450): string {
   return t.length > max ? `${t.slice(0, max)}…` : t;
 }
 
-function buildErrorMessage(payload: any, fallback: string): string {
-  const msg =
-    payload?.message ||
-    (Array.isArray(payload?.errors) && payload.errors.length
-      ? payload.errors.join(" | ")
-      : null);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-  if (msg) return msg;
+function buildErrorMessage(payload: unknown, fallback: string): string {
+  if (isRecord(payload)) {
+    const msg = payload["message"];
+    const errors = payload["errors"];
+
+    if (typeof msg === "string" && msg.trim().length) {
+    if (Array.isArray(errors) && errors.length) {
+      const parts = errors.filter((x) => typeof x === "string") as string[];
+      if (parts.length) return clip(`${msg}: ${parts.join(" | ")}`);
+    }
+    return clip(msg);
+  }
+
+
+    if (Array.isArray(errors) && errors.length) {
+      const parts = errors.filter((x) => typeof x === "string") as string[];
+      if (parts.length) return parts.join(" | ");
+    }
+  }
 
   if (typeof payload === "string" && payload.trim().length) {
     return clip(payload);
@@ -38,13 +54,29 @@ function buildErrorMessage(payload: any, fallback: string): string {
   return fallback;
 }
 
+async function parseResponseBody(res: Response): Promise<unknown> {
+  if (res.status === 204) return undefined;
+
+  const contentType = res.headers.get("content-type") || "";
+
+  try {
+    if (contentType.includes("application/json")) return await res.json();
+    return await res.text();
+  } catch {
+    try {
+      return await res.text();
+    } catch {
+      return null;
+    }
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
 
-  const url =
-    API_URL && API_URL.endsWith("/") && path.startsWith("/")
-      ? `${API_URL.slice(0, -1)}${path}`
-      : `${API_URL}${path}`;
+  const base = (API_URL ?? "").replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  const url = base ? `${base}${p}` : p;
 
   const isFormData =
     typeof FormData !== "undefined" && init?.body instanceof FormData;
@@ -58,32 +90,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (res.status === 204) return undefined as unknown as T;
-
-  const contentType = res.headers.get("content-type") || "";
-  let payload: any = null;
-
-  try {
-    if (contentType.includes("application/json")) payload = await res.json();
-    else payload = await res.text();
-  } catch {
-    try {
-      payload = await res.text();
-    } catch {
-      payload = null;
-    }
-  }
+  const payload = await parseResponseBody(res);
 
   if (!res.ok) {
     throw new Error(buildErrorMessage(payload, `HTTP ${res.status} - ${path}`));
   }
 
   // Wrapper ApiResponseDto<T>
-  if (payload && typeof payload === "object" && "success" in payload) {
-    if (payload.success === false) {
+  if (isRecord(payload) && "success" in payload) {
+    const success = payload["success"];
+    if (success === false) {
       throw new Error(buildErrorMessage(payload, "Error inesperado"));
     }
-    return payload.data as T;
+    return (payload["data"] as T) ?? (undefined as unknown as T);
   }
 
   // JSON “plano”
@@ -92,15 +111,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: any) =>
+
+  post: <T>(path: string, body?: unknown) =>
     request<T>(path, {
       method: "POST",
       body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
     }),
-  put: <T>(path: string, body?: any) =>
+
+  put: <T>(path: string, body?: unknown) =>
     request<T>(path, {
       method: "PUT",
       body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
     }),
+
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };

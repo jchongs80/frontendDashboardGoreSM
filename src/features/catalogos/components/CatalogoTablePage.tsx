@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -26,6 +26,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import type { ReactNode } from "react";
 
 type Order = "asc" | "desc";
 
@@ -34,7 +35,7 @@ export type ColumnDef<T> = {
   header: string;
   width?: number | string;
   sortable?: boolean;
-  render?: (row: T) => React.ReactNode;
+  render?: (row: T) => ReactNode;
 };
 
 type Props<T> = {
@@ -48,7 +49,6 @@ type Props<T> = {
   searchKeys: (keyof T)[];
   onRefresh: () => void;
 
-  // acciones
   allowEdit?: boolean;
   onView: (row: T) => void;
   onEdit?: (row: T) => void;
@@ -57,7 +57,56 @@ type Props<T> = {
   newLabel?: string;
   hideNew?: boolean;
 
+  // ✅ acciones adicionales por fila (ej: botón ⋮ con menú)
+  renderRowActions?: (row: T) => ReactNode;
 };
+
+// --------- helpers sin any ----------
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function getValue<T>(row: T, key: keyof T): unknown {
+  if (!isRecord(row)) return undefined;
+  return row[String(key)];
+}
+
+function toComparableString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v.toLowerCase();
+  if (typeof v === "number" || typeof v === "boolean") return String(v).toLowerCase();
+  if (v instanceof Date) return v.toISOString().toLowerCase();
+  try {
+    return String(v).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function toReactNode(v: unknown): ReactNode {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string" || typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? "Sí" : "No";
+  if (v instanceof Date) return v.toLocaleDateString();
+
+  // Si es objeto/array, mejor algo controlado para no reventar UI
+  if (typeof v === "object") {
+    try {
+      const json = JSON.stringify(v);
+      // evita columnas enormes
+      return json.length > 120 ? `${json.slice(0, 117)}...` : json;
+    } catch {
+      return "[objeto]";
+    }
+  }
+
+  // fallback
+  try {
+    return String(v);
+  } catch {
+    return "";
+  }
+}
 
 export default function CatalogoTablePage<T>({
   title,
@@ -75,6 +124,7 @@ export default function CatalogoTablePage<T>({
   onNew,
   newLabel,
   hideNew,
+  renderRowActions,
 }: Props<T>) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
@@ -83,30 +133,29 @@ export default function CatalogoTablePage<T>({
   const [orderBy, setOrderBy] = useState<string>(columns[0]?.key ?? "");
   const [order, setOrder] = useState<Order>("asc");
 
-  useEffect(() => setPage(0), [query]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
 
     return rows.filter((r) =>
       searchKeys.some((k) => {
-        const v = (r as any)[k];
-        return v != null && String(v).toLowerCase().includes(q);
+        const v = getValue(r, k);
+        return toComparableString(v).includes(q);
       })
     );
   }, [rows, query, searchKeys]);
 
   const sorted = useMemo(() => {
     if (!orderBy) return filtered;
+
     const copy = [...filtered];
 
-    copy.sort((a: any, b: any) => {
-      const av = a[orderBy];
-      const bv = b[orderBy];
+    copy.sort((a, b) => {
+      const av = isRecord(a) ? a[orderBy] : undefined;
+      const bv = isRecord(b) ? b[orderBy] : undefined;
 
-      const as = av == null ? "" : String(av).toLowerCase();
-      const bs = bv == null ? "" : String(bv).toLowerCase();
+      const as = toComparableString(av);
+      const bs = toComparableString(bv);
 
       if (as < bs) return order === "asc" ? -1 : 1;
       if (as > bs) return order === "asc" ? 1 : -1;
@@ -150,7 +199,10 @@ export default function CatalogoTablePage<T>({
         <Toolbar sx={{ gap: 1.5, px: 2 }}>
           <TextField
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (page !== 0) setPage(0);
+            }}
             size="small"
             placeholder="Buscar..."
             sx={{ width: { xs: "100%", sm: 420 } }}
@@ -165,13 +217,8 @@ export default function CatalogoTablePage<T>({
 
           <Box sx={{ flex: 1 }} />
 
-          {/* ✅ AQUÍ va tu botón */}
           {!hideNew && onNew && (
-            <Button
-              variant="contained"
-              startIcon={<AddRoundedIcon />}
-              onClick={onNew}
-            >
+            <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={onNew}>
               {newLabel ?? "Nuevo"}
             </Button>
           )}
@@ -184,18 +231,9 @@ export default function CatalogoTablePage<T>({
             </span>
           </Tooltip>
 
-          <Chip
-            label={`${filtered.length} registros`}
-            variant="outlined"
-            sx={{ borderRadius: 999 }}
-          />
-
-
-          
-
+          <Chip label={`${filtered.length} registros`} variant="outlined" sx={{ borderRadius: 999 }} />
         </Toolbar>
 
-        
         <TableContainer>
           <Table stickyHeader size="small">
             <TableHead>
@@ -218,7 +256,7 @@ export default function CatalogoTablePage<T>({
                     )}
                   </TableCell>
                 ))}
-                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 120 }}>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 160 }}>
                   Acción
                 </TableCell>
               </TableRow>
@@ -269,13 +307,15 @@ export default function CatalogoTablePage<T>({
                 !error &&
                 paged.map((row) => (
                   <TableRow
-                    key={getRowId(row)}
+                    key={String(getRowId(row))}
                     hover
                     sx={{ "& td": { borderBottom: "1px solid #F0F3F8" } }}
                   >
                     {columns.map((c) => (
                       <TableCell key={c.key}>
-                        {c.render ? c.render(row) : (row as any)[c.key]}
+                        {c.render
+                          ? c.render(row)
+                          : toReactNode(isRecord(row) ? (row as Record<string, unknown>)[c.key] : undefined)}
                       </TableCell>
                     ))}
 
@@ -286,11 +326,7 @@ export default function CatalogoTablePage<T>({
                         </IconButton>
                       </Tooltip>
 
-                      <Tooltip
-                        title={
-                          allowEdit ? "Editar" : "Solo lectura (backend sin endpoint PUT)"
-                        }
-                      >
+                      <Tooltip title={allowEdit ? "Editar" : "Solo lectura (backend sin endpoint PUT)"}>
                         <span>
                           <IconButton
                             size="small"
@@ -301,6 +337,8 @@ export default function CatalogoTablePage<T>({
                           </IconButton>
                         </span>
                       </Tooltip>
+
+                      {renderRowActions?.(row)}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Divider,
@@ -95,25 +95,33 @@ export default function Sidebar({
     { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
   ];
 
+  const alineamientoItems: SidebarItem[] = [
+    { text: "Alineamientos Instrumentos", icon: <AccountTreeRoundedIcon />, path: "/alineamiento/instrumentos" },
+  ];
+
   const isCatalogActive = useMemo(
     () => location.pathname.startsWith("/catalogos"),
     [location.pathname]
   );
-
-  const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
-
-  
   const isPlaneamientoActive = useMemo(
     () => location.pathname.startsWith("/planeamiento"),
     [location.pathname]
   );
+  const isAlineamientoActive = useMemo(
+    () => location.pathname.startsWith("/alineamiento"),
+    [location.pathname]
+  );
 
+  const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
   const [openPlaneamiento, setOpenPlaneamiento] = useState<boolean>(isPlaneamientoActive);
-// si navegas a una ruta /catalogos/... abre el menú automáticamente
-  //if (isCatalogActive && !openCatalogs) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    //setTimeout(() => setOpenCatalogs(true), 0);
-  //}
+  const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
+
+  // ✅ sincroniza apertura al cambiar de ruta
+  useEffect(() => {
+    if (isCatalogActive) setOpenCatalogs(true);
+    if (isPlaneamientoActive) setOpenPlaneamiento(true);
+    if (isAlineamientoActive) setOpenAlineamiento(true);
+  }, [isCatalogActive, isPlaneamientoActive, isAlineamientoActive]);
 
   const go = (path: string) => {
     navigate(path);
@@ -190,7 +198,6 @@ export default function Sidebar({
         flexDirection: "column",
       }}
     >
-      {/* Brand */}
       <Box sx={{ px: collapsed ? 1.5 : 2.2, py: 2 }}>
         <Typography
           sx={{
@@ -217,35 +224,32 @@ export default function Sidebar({
         </Box>
       )}
 
-      {/* NAV */}
-      <Box sx={{
-            px: collapsed ? 1 : 1.2,
-            pt: 1,
-            pb: 1.2,
-            overflowY: "auto",
-            flex: 1,
-
-            /* 🔽 Scrollbar fino y sutil */
-            scrollbarWidth: "thin", // Firefox
-            scrollbarColor: "rgba(255,255,255,0.22) transparent", // Firefox
-
-            "&::-webkit-scrollbar": { width: 6 }, // Chrome/Edge
-            "&::-webkit-scrollbar-track": { background: "transparent" },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "rgba(255,255,255,0.18)",
-              borderRadius: 999,
-            },
-            "&::-webkit-scrollbar-thumb:hover": {
-              backgroundColor: "rgba(255,255,255,0.28)",
-            },
-          }}>
+      <Box
+        sx={{
+          px: collapsed ? 1 : 1.2,
+          pt: 1,
+          pb: 1.2,
+          overflowY: "auto",
+          flex: 1,
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.22) transparent",
+          "&::-webkit-scrollbar": { width: 6 },
+          "&::-webkit-scrollbar-track": { background: "transparent" },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "rgba(255,255,255,0.18)",
+            borderRadius: 999,
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            backgroundColor: "rgba(255,255,255,0.28)",
+          },
+        }}
+      >
         <List disablePadding>
-          {/* Items principales arriba */}
           <NavButton text="Dashboards" icon={<DashboardRoundedIcon />} path="/" />
           <NavButton text="Pages" icon={<DescriptionRoundedIcon />} path="/pages" />
           <NavButton text="Task" icon={<TaskAltRoundedIcon />} path="/task" />
 
-          {/* Catálogos (padre) */}
+          {/* Catálogos */}
           <Box sx={{ mt: 0.8 }}>
             <ListItemButton
               onClick={() => setOpenCatalogs((p) => !p)}
@@ -283,7 +287,6 @@ export default function Sidebar({
               )}
             </ListItemButton>
 
-            {/* Submenu */}
             {!collapsed && (
               <Collapse in={openCatalogs} timeout={180} unmountOnExit>
                 <Box
@@ -303,97 +306,122 @@ export default function Sidebar({
             )}
           </Box>
 
-          
-          {/* Planeamiento (padre) */}
+          {/* Planeamiento */}
           <Box sx={{ mt: 0.8 }}>
-            {collapsed ? (
-              <Tooltip title="Planeamiento" placement="right">
-                <Box>
-                  <ListItemButton
-                    onClick={() => go("/planeamiento/indicadores")}
-                    sx={{
-                      mb: 0.6,
-                      borderRadius: 2,
-                      color: "rgba(255,255,255,0.92)",
-                      justifyContent: "center",
-                      backgroundColor: isPlaneamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
-                      "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                      px: 1.2,
-                      py: 1.05,
-                      minHeight: 44,
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: "auto",
-                        color: "inherit",
-                        opacity: 0.95,
-                        justifyContent: "center",
-                      }}
-                    >
-                      <AccountTreeRoundedIcon />
-                    </ListItemIcon>
-                  </ListItemButton>
-                </Box>
-              </Tooltip>
-            ) : (
-              <>
-                <ListItemButton
-                  onClick={() => setOpenPlaneamiento((p) => !p)}
-                  sx={{
-                    mb: 0.6,
-                    borderRadius: 2,
-                    color: "rgba(255,255,255,0.92)",
-                    justifyContent: "flex-start",
-                    backgroundColor: isPlaneamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
-                    "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                    px: 1.6,
-                    py: 1.05,
-                    minHeight: 44,
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 36,
-                      color: "inherit",
-                      opacity: 0.95,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <AccountTreeRoundedIcon />
-                  </ListItemIcon>
+            <ListItemButton
+              onClick={() => setOpenPlaneamiento((p) => !p)}
+              sx={{
+                mb: 0.6,
+                borderRadius: 2,
+                color: "rgba(255,255,255,0.92)",
+                justifyContent: collapsed ? "center" : "flex-start",
+                backgroundColor: isPlaneamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
+                "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
+                px: collapsed ? 1.2 : 1.6,
+                py: 1.05,
+                minHeight: 44,
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: collapsed ? "auto" : 36,
+                  color: "inherit",
+                  opacity: 0.95,
+                  justifyContent: "center",
+                }}
+              >
+                <AccountTreeRoundedIcon />
+              </ListItemIcon>
 
+              {!collapsed && (
+                <>
                   <ListItemText
                     primary="Planeamiento"
                     primaryTypographyProps={{ fontSize: 13.5, fontWeight: 800 }}
                   />
-
                   {openPlaneamiento ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-                </ListItemButton>
+                </>
+              )}
+            </ListItemButton>
 
-                {/* Submenu */}
-                <Collapse in={openPlaneamiento} timeout={180} unmountOnExit>
-                  <Box
-                    sx={{
-                      ml: 1.8,
-                      pl: 1.2,
-                      borderLeft: "1px solid rgba(255,255,255,0.22)",
-                    }}
-                  >
-                    <List disablePadding sx={{ mt: 0.6 }}>
-                      {planeamientoItems.map((it) => (
-                        <NavButton key={it.text} {...it} nested />
-                      ))}
-                    </List>
-                  </Box>
-                </Collapse>
-              </>
+            {!collapsed && (
+              <Collapse in={openPlaneamiento} timeout={180} unmountOnExit>
+                <Box
+                  sx={{
+                    ml: 1.8,
+                    pl: 1.2,
+                    borderLeft: "1px solid rgba(255,255,255,0.22)",
+                  }}
+                >
+                  <List disablePadding sx={{ mt: 0.6 }}>
+                    {planeamientoItems.map((it) => (
+                      <NavButton key={it.text} {...it} nested />
+                    ))}
+                  </List>
+                </Box>
+              </Collapse>
             )}
           </Box>
 
-<Divider sx={{ my: 1.4, borderColor: "rgba(255,255,255,0.12)" }} />
+          {/* Alineamiento */}
+          <Box sx={{ mt: 0.8 }}>
+            <ListItemButton
+              onClick={() => setOpenAlineamiento((p) => !p)}
+              sx={{
+                mb: 0.6,
+                borderRadius: 2,
+                color: "rgba(255,255,255,0.92)",
+                justifyContent: collapsed ? "center" : "flex-start",
+                backgroundColor: isAlineamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
+                "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
+                px: collapsed ? 1.2 : 1.6,
+                py: 1.05,
+                minHeight: 44,
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: collapsed ? "auto" : 36,
+                  color: "inherit",
+                  opacity: 0.95,
+                  justifyContent: "center",
+                }}
+              >
+                <AccountTreeRoundedIcon />
+              </ListItemIcon>
 
-          {/* Resto */}
+              {!collapsed && (
+                <>
+                  <ListItemText
+                    primary="Alineamiento"
+                    primaryTypographyProps={{ fontSize: 13.5, fontWeight: 800 }}
+                  />
+                  {openAlineamiento ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
+                </>
+              )}
+            </ListItemButton>
+
+            {!collapsed && (
+              <Collapse in={openAlineamiento} timeout={180} unmountOnExit>
+                <Box
+                  sx={{
+                    ml: 1.8,
+                    pl: 1.2,
+                    borderLeft: "1px solid rgba(255,255,255,0.22)",
+                  }}
+                >
+                  <List disablePadding sx={{ mt: 0.6 }}>
+                    {alineamientoItems.map((it) => (
+                      <NavButton key={it.text} {...it} nested />
+                    ))}
+                  </List>
+                </Box>
+              </Collapse>
+            )}
+          </Box>
+
+          <Divider sx={{ my: 1.4, borderColor: "rgba(255,255,255,0.12)" }} />
+
           {mainItems
             .filter((x) => !["Dashboards", "Pages", "Task"].includes(x.text))
             .map((it) => (
@@ -402,7 +430,6 @@ export default function Sidebar({
         </List>
       </Box>
 
-      {/* Footer mini */}
       <Box sx={{ px: collapsed ? 1 : 2, pb: 2, opacity: 0.85, fontSize: 12 }}>
         <Divider sx={{ mb: 1.5, borderColor: "rgba(255,255,255,0.12)" }} />
         {!collapsed ? (
@@ -416,7 +443,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile */}
       {!isMdUp && (
         <Drawer
           variant="temporary"
@@ -429,7 +455,6 @@ export default function Sidebar({
         </Drawer>
       )}
 
-      {/* Desktop */}
       {isMdUp && (
         <Drawer
           variant="permanent"

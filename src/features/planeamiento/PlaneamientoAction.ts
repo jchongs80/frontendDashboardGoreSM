@@ -355,20 +355,89 @@ export type ResultadoListDto = {
 
 export type UnidadOrgDto = {
   idUnidadOrganizacional: number;
-  codigo?: string | null;
+  codigo: string;
   nombre: string;
   estado?: string | null;
 };
 
+// Lo que realmente devuelve el backend (Aplicacion/DTOs/Catalogos/UnidadOrganizacionalDto.cs)
+type UnidadOrgRawDto = {
+  idUnidad: number;
+  codigo: string;
+  nombre: string;
+  estado?: string | null;
+};
 
+export type PoliticaResponsableDto = {
+  idUnidad: number;
+  codigoUnidad: string;
+  nombreUnidad: string;
+  estado?: string | null; // "ACTIVO"/"INACTIVO" si lo mandas
+};
 
+export type PoliticaConResponsablesDto = {
+  idPolitica: number;
+  idInstrumento: number;
+  codigo: string;
+  politica: string; // <- IMPORTANTE (viene del backend)
+  estado: string;
+  responsables: PoliticaResponsableDto[];
+};
 
+export type PoliticaResponsableCreateDto = {
+  idUnidad: number;
+};
+// ====== Objetivos + Responsables (N a N) - Vista PDRC ======
+
+export type ObjetivoResponsableDto = {
+  idUnidad: number;
+  codigoUnidad: string;
+  nombreUnidad: string;
+  estado?: string | null;
+};
+
+export type ObjetivoConResponsablesDto = {
+  idObjetivo: number;
+  idInstrumento: number;
+  codigo: string;
+
+  // backend puede devolver "objetivo" o "enunciado" (según tu implementación)
+  oer?: string | null;
+  enunciado?: string | null;
+  objetivo?: string | null;
+
+  estado: string;
+  responsables: ObjetivoResponsableDto[];
+};
+
+export type ObjetivoResponsableCreateDto = {
+  idUnidad: number;
+};
 
 /** =========
  * Actions
  * ========= */
 
 export const PlaneamientoAction = {
+  // ==========================================================
+  // Objetivos + Responsables (N a N) - Vista PDRC
+  // ==========================================================
+  getObjetivosConResponsablesByInstrumento: (idInstrumento: number, incluirInactivos = false) =>
+    api.get<ObjetivoConResponsablesDto[]>(
+      `/api/objetivosestrategicos/instrumento/${idInstrumento}/responsables?incluirInactivos=${incluirInactivos}`
+    ),
+
+  getResponsablesByObjetivo: (idObjetivo: number, incluirInactivos = false) =>
+    api.get<ObjetivoResponsableDto[]>(
+      `/api/objetivosestrategicos/${idObjetivo}/responsables?incluirInactivos=${incluirInactivos}`
+    ),
+
+  addResponsableToObjetivo: (idObjetivo: number, payload: ObjetivoResponsableCreateDto) =>
+    api.post<void>(`/api/objetivosestrategicos/${idObjetivo}/responsables`, payload),
+
+  removeResponsableFromObjetivo: (idObjetivo: number, idUnidad: number) =>
+    api.del<void>(`/api/objetivosestrategicos/${idObjetivo}/responsables/${idUnidad}`),
+
   // Indicadores
   getIndicadores: () => api.get<IndicadorListDto[]>("/api/indicadores"),
   getIndicadorById: (id: number) => api.get<IndicadorDetailDto>(`/api/indicadores/${id}`),
@@ -383,6 +452,11 @@ export const PlaneamientoAction = {
     api.put<void>(`/api/indicadoresinstrumentos/${id}`, payload),
   createIndicadoresInstrumentos: (payload: IndicadorInstrumentoCreateUpdateDto)=>
     api.post<void>("/api/indicadoresinstrumentos",payload),
+
+  getIndicadoresInstrumentosByInstrumento: (idInstrumento: number) =>
+  api.get<IndicadorInstrumentoListDto[]>(
+    `/api/indicadoresinstrumentos/instrumento/${idInstrumento}`
+  ),
 
   // Metas
   getIndicadoresMetas: () => api.get<IndicadorMetaListDto[]>("/api/indicadoresmetas"),
@@ -413,8 +487,10 @@ export const PlaneamientoAction = {
   getAcciones: () => api.get<AccionListDto[]>("/api/accionesestrategicas"),
   updateAccion: (id: number, payload: AccionCreateUpdateDto) =>
     api.put<void>(`/api/accionesestrategicas/${id}`, payload),
-  createAccion: (payload: AccionCreateUpdateDto)=>
-    api.post<void>("/api/accionesestrategicos", payload),
+  //createAccion: (payload: AccionCreateUpdateDto)=>
+  //  api.post<void>("/api/accionesestrategicos", payload),
+createAccion: (payload: AccionCreateUpdateDto) =>
+  api.post<void>("/api/accionesestrategicas", payload),
 
   // Ejes
   getEjesByInstrumento: (idInstrumento: number) =>
@@ -459,7 +535,38 @@ export const PlaneamientoAction = {
     api.get<ResultadoListDto[]>(`/api/resultadosconcertados/accion/${idAccion}`),
 
   // Unidades Org (ojo: ruta es /api/unidades-org)
-  getUnidadesOrg: () => api.get<UnidadOrgDto[]>(`/api/unidades-org`),
+  //getUnidadesOrg: () => api.get<UnidadOrgDto[]>(`/api/unidades-org`),
+  getUnidadesOrg: async () => {
+    const raw = await api.get<UnidadOrgRawDto[]>(`/api/unidades-org`);
 
+
+    // normalizamos a la forma que usa el frontend
+    return raw.map((u) => ({
+      idUnidadOrganizacional: u.idUnidad,
+      codigo: u.codigo,
+      nombre: u.nombre,
+      estado: u.estado ?? "ACTIVO",
+    })) as UnidadOrgDto[];
+    
+  },
+
+  // ==========================================================
+  // Políticas + Responsables (N a N) - Vista AG
+  // ==========================================================
+  getPoliticasConResponsablesByInstrumento: (idInstrumento: number, incluirInactivos = false) =>
+    api.get<PoliticaConResponsablesDto[]>(
+      `/api/politicas/instrumento/${idInstrumento}/responsables?incluirInactivos=${incluirInactivos}`
+    ),
+
+  getResponsablesByPolitica: (idPolitica: number, incluirInactivos = false) =>
+    api.get<PoliticaResponsableDto[]>(
+      `/api/politicas/${idPolitica}/responsables?incluirInactivos=${incluirInactivos}`
+    ),
+
+  addResponsableToPolitica: (idPolitica: number, payload: PoliticaResponsableCreateDto) =>
+    api.post<void>(`/api/politicas/${idPolitica}/responsables`, payload),
+
+  removeResponsableFromPolitica: (idPolitica: number, idUnidad: number) =>
+    api.del<void>(`/api/politicas/${idPolitica}/responsables/${idUnidad}`),
 
 };

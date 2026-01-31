@@ -1,100 +1,67 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Box,
   Button,
+  Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
   IconButton,
+  InputAdornment,
+  LinearProgress,
   MenuItem,
+  Paper,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TablePagination,
   TableRow,
   TextField,
+  Toolbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
+
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
-import CatalogoTablePage, { type ColumnDef } from "../../catalogos/components/CatalogoTablePage";
-import { CatalogoAction } from "../../catalogos/CatalogoAction";
 import { api } from "../../../shared/api";
+import { CatalogoAction, type DimensionDto, type InstrumentoDto } from "../../catalogos/CatalogoAction";
 import {
   PlaneamientoAction,
   type IndicadorListDto,
-  type IndicadorInstrumentoCreateUpdateDto,
   type IndicadorInstrumentoListDto,
+  type IndicadorInstrumentoCreateUpdateDto,
   type EjeEstrategicoListDto,
   type PoliticaListDto,
   type ObjetivoListDto,
   type AccionListDto,
+  type IntervencionListDto,
+  type ResultadoListDto,
+  type UnidadOrgDto,
 } from "../PlaneamientoAction";
 
-/** ===== Tipos para catálogos/planeamiento que no están en PlaneamientoAction.ts ===== */
-type InstrumentoDto = {
-  idInstrumento?: number; // camel
-  IdInstrumento?: number; // Pascal
-  codigo?: string | null;
-  Codigo?: string | null;
-  nombre?: string;
-  Nombre?: string;
-  estado?: string | null;
-  Estado?: string | null;
-};
+/** ========= Helpers (sin any) ========= */
+type AnyRow = Record<string, unknown>;
 
-type DimensionDto = {
-  idDimension: number;
-  codigo: string;
-  nombre: string;
-  estado: string;
-};
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  return "Ocurrió un error inesperado.";
+}
 
-type UnidadOrgDto = {
-  idUnidadOrganizacional: number;
-  codigo?: string | null;
-  nombre: string;
-  estado?: string | null;
-};
-
-type IntervencionListDto = {
-  idIntervencion: number;
-  idAccion: number;
-  codigo: string;
-  enunciado: string;
-  orden?: number | null;
-  estado: string;
-  idObjetivo?: number | null;
-  idPolitica?: number | null;
-  idInstrumento?: number | null;
-  idUnidadResponsable?: number | null;
-  nombreAccion?: string | null;
-  nombreObjetivo?: string | null;
-  nombrePolitica?: string | null;
-  nombreInstrumento?: string | null;
-  nombreUnidadResponsable?: string | null;
-};
-
-type ResultadoListDto = {
-  idResultado: number;
-  codigo: string;
-  descripcion: string;
-  idInstrumento: number;
-  idPolitica?: number | null;
-  idObjetivo?: number | null;
-  idAccion?: number | null;
-  nombreInstrumento?: string | null;
-  nombrePolitica?: string | null;
-  nombreObjetivo?: string | null;
-  nombreAccion?: string | null;
-};
-
-/** ===== UI helpers ===== */
 const pillSx = (estado?: string | null) => ({
   display: "inline-flex",
   px: 1,
@@ -106,7 +73,7 @@ const pillSx = (estado?: string | null) => ({
   bgcolor: estado === "ACTIVO" ? "rgba(16,185,129,.10)" : "rgba(239,68,68,.10)",
 });
 
-function LabelValue({ label, value }: { label: string; value?: any }) {
+function LabelValue({ label, value }: { label: string; value?: ReactNode }) {
   return (
     <Box sx={{ display: "grid", gap: 0.35 }}>
       <Typography sx={{ fontSize: 12, color: "text.secondary", fontWeight: 800 }}>
@@ -132,12 +99,26 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   );
 }
 
-/** ===== Picker Dialog reusable (inline) ===== */
+/** ========= Picker reusable (sin any) ========= */
+type PickerMode =
+  | "indicador"
+  | "instrumento"
+  | "dimension"
+  | "eje"
+  | "politica"
+  | "objetivo"
+  | "accion"
+  | "intervencion"
+  | "resultado"
+  | "unidad";
+
+type PickTarget = "create" | "edit";
+
 type PickerColumnDef<T> = {
-  key: keyof T | string;
+  key: string;
   header: string;
   width?: number;
-  render?: (row: T) => any;
+  render?: (row: T) => ReactNode;
 };
 
 type PickerDialogProps<T> = {
@@ -147,7 +128,7 @@ type PickerDialogProps<T> = {
   rows: T[];
   columns: PickerColumnDef<T>[];
   getRowId: (row: T) => number | string;
-  searchKeys: (keyof T | string)[];
+  searchKeys: string[];
   onClose: () => void;
   onSelect: (row: T) => void;
 };
@@ -172,8 +153,9 @@ function PickerDialog<T>({
     if (!term) return rows;
 
     return rows.filter((r) => {
+      const rec = r as unknown as AnyRow;
       for (const k of searchKeys) {
-        const v = (r as any)[k as any];
+        const v = rec[k];
         if (v === null || v === undefined) continue;
         if (String(v).toLowerCase().includes(term)) return true;
       }
@@ -199,13 +181,7 @@ function PickerDialog<T>({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      fullWidth
-      maxWidth="md"
-      PaperProps={{ sx: { overflow: "visible" } }}
-    >
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md" PaperProps={{ sx: { overflow: "visible" } }}>
       <DialogTitle
         sx={{
           fontWeight: 1000,
@@ -239,12 +215,7 @@ function PickerDialog<T>({
             fullWidth
             size="small"
           />
-          <Button
-            variant="outlined"
-            startIcon={<ClearRoundedIcon />}
-            onClick={() => setQ("")}
-            sx={{ whiteSpace: "nowrap" }}
-          >
+          <Button variant="outlined" startIcon={<ClearRoundedIcon />} onClick={() => setQ("")} sx={{ whiteSpace: "nowrap" }}>
             Limpiar
           </Button>
         </Box>
@@ -254,36 +225,43 @@ function PickerDialog<T>({
             <TableHead>
               <TableRow>
                 {columns.map((c) => (
-                  <TableCell key={String(c.key)} sx={{ fontWeight: 1000, width: c.width }}>
+                  <TableCell key={c.key} sx={{ fontWeight: 1000, width: c.width }}>
                     {c.header}
                   </TableCell>
                 ))}
-                <TableCell sx={{ width: 120 }} />
+                <TableCell sx={{ fontWeight: 1000, width: 110 }}>Acción</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
-              {paged.map((r) => (
-                <TableRow key={String(getRowId(r))} hover>
-                  {columns.map((c) => (
-                    <TableCell key={String(c.key)}>
-                      {c.render ? c.render(r) : String((r as any)[c.key] ?? "")}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right">
-                    <Button variant="contained" size="small" onClick={() => handleSelect(r)}>
-                      Elegir
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
 
-              {paged.length === 0 ? (
+            <TableBody>
+              {paged.map((r) => {
+                const rec = r as unknown as AnyRow;
+                return (
+                  <TableRow key={String(getRowId(r))} hover>
+                    {columns.map((c) => (
+                      <TableCell key={c.key}>
+                        {c.render ? c.render(r) : (rec[c.key] as ReactNode)}
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      <Button variant="contained" size="small" onClick={() => handleSelect(r)}>
+                        Seleccionar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+
+              {paged.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={columns.length + 1}>
-                    <Typography color="text.secondary">Sin resultados.</Typography>
+                    <Box sx={{ py: 4, textAlign: "center" }}>
+                      <Typography sx={{ fontWeight: 900 }}>Sin resultados</Typography>
+                      <Typography sx={{ color: "text.secondary" }}>Prueba con otro criterio de búsqueda.</Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
-              ) : null}
+              )}
             </TableBody>
           </Table>
 
@@ -301,56 +279,65 @@ function PickerDialog<T>({
           />
         </Box>
       </DialogContent>
-
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={handleClose}>Cerrar</Button>
-      </DialogActions>
     </Dialog>
   );
 }
 
-type PickMode =
-  | "indicador"
-  | "instrumento"
-  | "dimension"
-  | "eje"
-  | "politica"
-  | "objetivo"
-  | "accion"
-  | "intervencion"
-  | "resultado"
-  | "unidad";
-
-type PickTarget = "create" | "edit";
-
+/** ========= Page ========= */
 export default function IndicadoresInstrumentosPage() {
-  const [rows, setRows] = useState<IndicadorInstrumentoListDto[]>([]);
-  const [indicadores, setIndicadores] = useState<IndicadorListDto[]>([]);
+  /** ===== Catálogos base ===== */
   const [instrumentos, setInstrumentos] = useState<InstrumentoDto[]>([]);
-
+  const [indicadores, setIndicadores] = useState<IndicadorListDto[]>([]);
   const [dimensiones, setDimensiones] = useState<DimensionDto[]>([]);
-  const [unidades, setUnidades] = useState<UnidadOrgDto[]>([]);
+
   const [ejes, setEjes] = useState<EjeEstrategicoListDto[]>([]);
   const [politicas, setPoliticas] = useState<PoliticaListDto[]>([]);
   const [objetivos, setObjetivos] = useState<ObjetivoListDto[]>([]);
   const [acciones, setAcciones] = useState<AccionListDto[]>([]);
   const [intervenciones, setIntervenciones] = useState<IntervencionListDto[]>([]);
   const [resultados, setResultados] = useState<ResultadoListDto[]>([]);
+  const [unidades, setUnidades] = useState<UnidadOrgDto[]>([]);
 
+  /** ===== UI maestro ===== */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** VIEW */
+  const [qMaster, setQMaster] = useState("");
+  const [pageMaster, setPageMaster] = useState(0);
+  const [rppMaster, setRppMaster] = useState(10);
+
+  /** ===== Expand / detail ===== */
+  const [expandedInstrumentoId, setExpandedInstrumentoId] = useState<number | null>(null);
+  const [qDetail, setQDetail] = useState("");
+
+  const [detailByInstrumento, setDetailByInstrumento] = useState<Record<number, IndicadorInstrumentoListDto[]>>({});
+  const [detailLoadingByInstrumento, setDetailLoadingByInstrumento] = useState<Record<number, boolean>>({});
+  const [detailErrorByInstrumento, setDetailErrorByInstrumento] = useState<Record<number, string | null>>({});
+
+  /** ===== dialogs (view/edit/create) ===== */
   const [openView, setOpenView] = useState(false);
   const [viewRow, setViewRow] = useState<IndicadorInstrumentoListDto | null>(null);
 
-  /** EDIT */
   const [openEdit, setOpenEdit] = useState(false);
-  const [editing, setEditing] = useState<IndicadorInstrumentoListDto | null>(null);
+  const [editingRow, setEditingRow] = useState<IndicadorInstrumentoListDto | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  /** CREATE */
+  const [openCreate, setOpenCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  /** ===== Picker state ===== */
+  const [pickOpen, setPickOpen] = useState(false);
+  const [pickMode, setPickMode] = useState<PickerMode>("indicador");
+  const [pickTarget, setPickTarget] = useState<PickTarget>("create");
+  const [pickTitle, setPickTitle] = useState("");
+  const [pickSubtitle, setPickSubtitle] = useState<string | undefined>(undefined);
+  const [pickRows, setPickRows] = useState<unknown[]>([]);
+  const [pickColumns, setPickColumns] = useState<PickerColumnDef<unknown>[]>([]);
+  const [pickSearchKeys, setPickSearchKeys] = useState<string[]>([]);
+
+  /** ===== Form models (create/edit) ===== */
   const emptyForm: IndicadorInstrumentoCreateUpdateDto = {
     idIndicador: 0,
     idInstrumento: 0,
@@ -369,210 +356,245 @@ export default function IndicadoresInstrumentosPage() {
     estado: "ACTIVO",
   };
 
-  const [openCreate, setOpenCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [createForm, setCreateForm] = useState<IndicadorInstrumentoCreateUpdateDto>(emptyForm);
+  const [formEdit, setFormEdit] = useState<IndicadorInstrumentoCreateUpdateDto>(emptyForm);
+  const [formCreate, setFormCreate] = useState<IndicadorInstrumentoCreateUpdateDto>(emptyForm);
 
-  const [form, setForm] = useState<IndicadorInstrumentoCreateUpdateDto>(emptyForm);
+  /** Si agregas/edita desde un instrumento, se bloquea la selección en el modal */
+  const [lockedInstrumentoId, setLockedInstrumentoId] = useState<number | null>(null);
 
-  /** Picker state */
-  const [pickOpen, setPickOpen] = useState(false);
-  const [pickMode, setPickMode] = useState<PickMode>("indicador");
-  const [pickTarget, setPickTarget] = useState<PickTarget>("create");
-  const [pickTitle, setPickTitle] = useState("");
-  const [pickSubtitle, setPickSubtitle] = useState<string | undefined>(undefined);
-  const [pickRows, setPickRows] = useState<any[]>([]);
-  const [pickColumns, setPickColumns] = useState<PickerColumnDef<any>[]>([]);
-  const [pickSearchKeys, setPickSearchKeys] = useState<(string)[]>([]);
+  /** ===== labels ===== */
+  const instrumentoLabel = useCallback(
+    (id: number): string => {
+      const it = instrumentos.find((x) => x.idInstrumento === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [instrumentos]
+  );
 
-  const normalizeInstrumentId = (x: InstrumentoDto): number =>
-    (x.idInstrumento ?? x.IdInstrumento ?? 0) as number;
+  const indicadorLabel = useCallback(
+    (id: number): string => {
+      const it = indicadores.find((x) => x.idIndicador === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [indicadores]
+  );
 
-  const instrumentoLabel = (id: number) => {
-    const x = instrumentos.find((a) => normalizeInstrumentId(a) === id);
-    if (!x) return `#${id}`;
-    const codigo = (x.codigo ?? x.Codigo ?? "") as string;
-    const nombre = (x.nombre ?? x.Nombre ?? "") as string;
-    return `${codigo ? `${codigo} - ` : ""}${nombre}`;
-  };
+  const dimensionLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = dimensiones.find((x) => x.idDimension === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [dimensiones]
+  );
 
-  const indicadorLabel = (id: number) => {
-    const x = indicadores.find((a) => a.idIndicador === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`;
-  };
+  const ejeLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = ejes.find((x) => x.idEje === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [ejes]
+  );
 
-  const dimensionLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = dimensiones.find((d) => d.idDimension === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`;
-  };
+  const politicaLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = politicas.find((x) => x.idPolitica === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [politicas]
+  );
 
-  const ejeLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = ejes.find((d) => d.idEje === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`;
-  };
+  const objetivoLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = objetivos.find((x) => x.idObjetivo === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.enunciado}`;
+    },
+    [objetivos]
+  );
 
-  const politicaLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = politicas.find((d) => d.idPolitica === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`;
-  };
+  const accionLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = acciones.find((x) => x.idAccion === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.enunciado}`;
+    },
+    [acciones]
+  );
 
-  const objetivoLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = objetivos.find((d) => d.idObjetivo === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.enunciado}`;
-  };
+  const intervencionLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = intervenciones.find((x) => x.idIntervencion === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.enunciado}`;
+    },
+    [intervenciones]
+  );
 
-  const accionLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = acciones.find((d) => d.idAccion === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.enunciado}`;
-  };
+  const resultadoLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = resultados.find((x) => x.idResultado === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.descripcion}`;
+    },
+    [resultados]
+  );
 
-  const intervencionLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = intervenciones.find((d) => d.idIntervencion === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.enunciado}`;
-  };
+  const unidadLabel = useCallback(
+    (id?: number | null): string => {
+      if (!id) return "";
+      const it = unidades.find((x) => x.idUnidadOrganizacional === id);
+      if (!it) return `#${id}`;
+      return `${it.codigo ? `${it.codigo} - ` : ""}${it.nombre}`;
+    },
+    [unidades]
+  );
 
-  const resultadoLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = resultados.find((d) => d.idResultado === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.descripcion}`;
-  };
-
-  const unidadLabel = (id?: number | null) => {
-    if (!id) return "";
-    const x = unidades.find((d) => d.idUnidadOrganizacional === id);
-    if (!x) return `#${id}`;
-    return `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`;
-  };
-
-  /** ===== Loads ===== */
-  const loadBaseCatalogs = useCallback(async () => {
-    // Dimensiones, Unidades, etc. (carga ligera)
-    const [dims, unds] = await Promise.all([
-      api.get<DimensionDto[]>("/api/dimensiones"),
-      api.get<UnidadOrgDto[]>("/api/unidades-org?soloActivas=false"),
-    ]);
-
-    setDimensiones(dims ?? []);
-    setUnidades(unds ?? []);
+  /** ===== API: detalle por instrumento ===== */
+  const fetchDetalleInstrumento = useCallback(async (idInstrumento: number) => {
+    // Ajusta la ruta si tu backend usa otra
+    return api.get<IndicadorInstrumentoListDto[]>(`/api/indicadoresinstrumentos/instrumento/${idInstrumento}`);
   }, []);
 
-  const loadPlaneamientoCatalogs = useCallback(async () => {
-    // Ejes/Políticas/Objetivos/Acciones (ya existen actions)
-    const [e, p, o, a] = await Promise.all([
-      PlaneamientoAction.getEjesEstrategicos(),
-      PlaneamientoAction.getPoliticas(),
-      PlaneamientoAction.getObjetivos(),
-      PlaneamientoAction.getAcciones(),
-    ]);
+  const loadDetalleInstrumento = useCallback(
+    async (idInstrumento: number, force = false) => {
+      if (!idInstrumento) return;
+      if (!force && detailByInstrumento[idInstrumento]) return;
 
-    setEjes(e ?? []);
-    setPoliticas(p ?? []);
-    setObjetivos(o ?? []);
-    setAcciones(a ?? []);
-  }, []);
+      setDetailLoadingByInstrumento((p) => ({ ...p, [idInstrumento]: true }));
+      setDetailErrorByInstrumento((p) => ({ ...p, [idInstrumento]: null }));
 
-  const loadOtherPlaneamiento = useCallback(async () => {
-    const [ints, res] = await Promise.all([
-      api.get<IntervencionListDto[]>("/api/IntervencionesPrioritarias"),
-      api.get<ResultadoListDto[]>("/api/ResultadosConcertados"),
-    ]);
-    setIntervenciones(ints ?? []);
-    setResultados(res ?? []);
-  }, []);
+      try {
+        const data = (await fetchDetalleInstrumento(idInstrumento)) ?? [];
 
-  const load = useCallback(async () => {
+        // Enriquecer nombres si no vienen del backend
+        const enriched = data.map((r) => ({
+          ...r,
+          nombreIndicador: r.nombreIndicador ?? indicadorLabel(r.idIndicador),
+          nombreInstrumento: r.nombreInstrumento ?? instrumentoLabel(r.idInstrumento),
+        }));
+
+        setDetailByInstrumento((p) => ({ ...p, [idInstrumento]: enriched }));
+      } catch (e: unknown) {
+        setDetailByInstrumento((p) => ({ ...p, [idInstrumento]: [] }));
+        setDetailErrorByInstrumento((p) => ({ ...p, [idInstrumento]: getErrorMessage(e) }));
+      } finally {
+        setDetailLoadingByInstrumento((p) => ({ ...p, [idInstrumento]: false }));
+      }
+    },
+    [detailByInstrumento, fetchDetalleInstrumento, indicadorLabel, instrumentoLabel]
+  );
+
+  /** ===== Load base ===== */
+  const loadAll = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [data, ind, inst] = await Promise.all([
-        PlaneamientoAction.getIndicadoresInstrumentos(),
+      const [
+        inst,
+        inds,
+        dims,
+        e,
+        p,
+        o,
+        a,
+        ints,
+        res,
+        unds,
+      ] = await Promise.all([
+        CatalogoAction.getInstrumentos(),
         PlaneamientoAction.getIndicadores(),
-        CatalogoAction.getInstrumentos() as Promise<InstrumentoDto[]>,
+        CatalogoAction.getDimensiones(),
+        PlaneamientoAction.getEjesEstrategicos(),
+        PlaneamientoAction.getPoliticas(),
+        PlaneamientoAction.getObjetivos(),
+        PlaneamientoAction.getAcciones(),
+        PlaneamientoAction.getIntervenciones(),
+        PlaneamientoAction.getResultados(),
+        PlaneamientoAction.getUnidadesOrg(),
       ]);
 
-      // Mapas para “enriquecer” nombres sin depender del state (evita #id por timing)
-      const indMap = new Map<number, string>();
-      ind.forEach((x) => indMap.set(x.idIndicador, `${x.codigo ? `${x.codigo} - ` : ""}${x.nombre}`));
-
-      const instMap = new Map<number, string>();
-      (inst ?? []).forEach((x) => {
-        const id = normalizeInstrumentId(x);
-        const codigo = (x.codigo ?? x.Codigo ?? "") as string;
-        const nombre = (x.nombre ?? x.Nombre ?? "") as string;
-        instMap.set(id, `${codigo ? `${codigo} - ` : ""}${nombre}`);
-      });
-
-      const enriched = (data ?? []).map((r) => ({
-        ...r,
-        nombreIndicador: r.nombreIndicador ?? indMap.get(r.idIndicador) ?? `#${r.idIndicador}`,
-        nombreInstrumento: r.nombreInstrumento ?? instMap.get(r.idInstrumento) ?? `#${r.idInstrumento}`,
-      }));
-
-      setRows(enriched);
-      setIndicadores(ind ?? []);
       setInstrumentos(inst ?? []);
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando Indicadores - Instrumentos");
-      setRows([]);
+      setIndicadores(inds ?? []);
+      setDimensiones(dims ?? []);
+      setEjes(e ?? []);
+      setPoliticas(p ?? []);
+      setObjetivos(o ?? []);
+      setAcciones(a ?? []);
+      setIntervenciones(ints ?? []);
+      setResultados(res ?? []);
+      setUnidades(unds ?? []);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [loadBaseCatalogs, loadPlaneamientoCatalogs, loadOtherPlaneamiento]);
-
-  useEffect(() => {
-    // Carga de catálogos “once”
-    (async () => {
-      try {
-        await Promise.allSettled([loadBaseCatalogs(), loadPlaneamientoCatalogs(), loadOtherPlaneamiento()]);
-      } catch {
-        // si algo falla aquí, igual dejaremos que el load principal muestre el error cuando toque
-      } finally {
-        await load();
-      }
-    })();
-  }, [load, loadBaseCatalogs, loadPlaneamientoCatalogs, loadOtherPlaneamiento]);
-
-  /** ===== Columns table ===== */
-  const columns = useMemo<ColumnDef<IndicadorInstrumentoListDto>[]>(() => {
-    return [
-      { key: "idIndicadorInstrumento", header: "ID", width: 80 },
-      { key: "nombreIndicador", header: "Indicador", sortable: true, width: 360 },
-      { key: "nombreInstrumento", header: "Instrumento", sortable: true, width: 280 },
-      { key: "codigoEnInstrumento", header: "Código en instrumento", width: 220 },
-      { key: "orden", header: "Orden", width: 90 },
-      {
-        key: "esIndicadorPrincipal",
-        header: "Principal",
-        width: 110,
-        render: (r) => (r.esIndicadorPrincipal ? "Sí" : "No"),
-      },
-      {
-        key: "estado",
-        header: "Estado",
-        width: 110,
-        render: (r) => <Box sx={pillSx(r.estado)}>{r.estado}</Box>,
-      },
-    ];
   }, []);
 
-  /** ===== Open pick helper ===== */
-  const openPicker = (mode: PickMode, target: PickTarget) => {
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  /** ===== master list ===== */
+  const instrumentosFiltered = useMemo(() => {
+    const term = qMaster.trim().toLowerCase();
+    if (!term) return instrumentos;
+
+    return instrumentos.filter((x) => {
+      const a = x.codigo.toLowerCase();
+      const b = x.nombre.toLowerCase();
+      const c = (x.nivel ?? "").toLowerCase();
+      const d = (x.horizonteTemporal ?? "").toLowerCase();
+      return a.includes(term) || b.includes(term) || c.includes(term) || d.includes(term);
+    });
+  }, [instrumentos, qMaster]);
+
+  const instrumentosPaged = useMemo(() => {
+    const start = pageMaster * rppMaster;
+    return instrumentosFiltered.slice(start, start + rppMaster);
+  }, [instrumentosFiltered, pageMaster, rppMaster]);
+
+  /** ===== detail rows for expanded ===== */
+  const detailRows = useMemo(() => {
+    if (!expandedInstrumentoId) return [];
+    const base = detailByInstrumento[expandedInstrumentoId] ?? [];
+    const term = qDetail.trim().toLowerCase();
+    if (!term) return base;
+
+    return base.filter((r) => {
+      const a = String(r.nombreIndicador ?? "").toLowerCase();
+      const b = String(r.codigoEnInstrumento ?? "").toLowerCase();
+      const c = String(r.estado ?? "").toLowerCase();
+      return a.includes(term) || b.includes(term) || c.includes(term);
+    });
+  }, [expandedInstrumentoId, detailByInstrumento, qDetail]);
+
+  /** ===== expand handler ===== */
+  const toggleExpand = async (idInstrumento: number) => {
+    if (expandedInstrumentoId === idInstrumento) {
+      setExpandedInstrumentoId(null);
+      setQDetail("");
+      return;
+    }
+    setExpandedInstrumentoId(idInstrumento);
+    setQDetail("");
+    await loadDetalleInstrumento(idInstrumento);
+  };
+
+  /** ===== pickers ===== */
+  const openPicker = (mode: PickerMode, target: PickTarget) => {
     setPickMode(mode);
     setPickTarget(target);
 
@@ -581,7 +603,7 @@ export default function IndicadoresInstrumentosPage() {
       setPickSubtitle("Busca por código o nombre.");
       setPickRows(indicadores);
       setPickColumns([
-        { key: "codigo", header: "Código", width: 150 },
+        { key: "codigo", header: "Código", width: 140 },
         { key: "nombre", header: "Nombre" },
         { key: "estado", header: "Estado", width: 110 },
       ]);
@@ -595,18 +617,14 @@ export default function IndicadoresInstrumentosPage() {
       setPickSubtitle("Busca por código o nombre.");
       setPickRows(instrumentos);
       setPickColumns([
-        { key: "codigo", header: "Código", width: 150, render: (r: InstrumentoDto) => String(r.codigo ?? r.Codigo ?? "") },
-        { key: "nombre", header: "Nombre", render: (r: InstrumentoDto) => String(r.nombre ?? r.Nombre ?? "") },
-        { key: "estado", header: "Estado", width: 110, render: (r: InstrumentoDto) => String(r.estado ?? r.Estado ?? "") },
+        { key: "codigo", header: "Código", width: 140 },
+        { key: "nombre", header: "Nombre" },
+        { key: "estado", header: "Estado", width: 110 },
       ]);
-      setPickSearchKeys(["codigo", "Codigo", "nombre", "Nombre", "estado", "Estado"]);
+      setPickSearchKeys(["codigo", "nombre", "estado", "nivel", "horizonteTemporal"]);
       setPickOpen(true);
       return;
     }
-
-    // Para la cascada, filtramos según instrumento seleccionado (si aplica)
-    const current = target === "create" ? createForm : form;
-    const idInst = current.idInstrumento;
 
     if (mode === "dimension") {
       setPickTitle("Seleccionar Dimensión");
@@ -620,6 +638,10 @@ export default function IndicadoresInstrumentosPage() {
       setPickOpen(true);
       return;
     }
+
+    // filtros contextuales (para ejes/políticas/objetivos/acciones/intervenciones/resultados)
+    const current = target === "create" ? formCreate : formEdit;
+    const idInst = current.idInstrumento;
 
     if (mode === "eje") {
       const list = idInst ? ejes.filter((x) => x.idInstrumento === idInst) : ejes;
@@ -648,7 +670,7 @@ export default function IndicadoresInstrumentosPage() {
         { key: "nombre", header: "Nombre" },
         { key: "estado", header: "Estado", width: 110 },
       ]);
-      setPickSearchKeys(["codigo", "nombre", "estado", "nombreEje", "nombreInstrumento", "nombreDimension"]);
+      setPickSearchKeys(["codigo", "nombre", "estado", "nombreEje", "nombreInstrumento"]);
       setPickOpen(true);
       return;
     }
@@ -666,21 +688,20 @@ export default function IndicadoresInstrumentosPage() {
         { key: "enunciado", header: "Enunciado" },
         { key: "estado", header: "Estado", width: 110 },
       ]);
-      setPickSearchKeys(["codigo", "enunciado", "estado", "nombrePolitica", "nombreEje", "nombreInstrumento"]);
+      setPickSearchKeys(["codigo", "enunciado", "estado", "nombrePolitica", "nombreEje"]);
       setPickOpen(true);
       return;
     }
 
     if (mode === "accion") {
       let list = acciones;
-      if (current.idObjetivo) list = list.filter((x) => x.idObjetivo === current.idObjetivo);
-      else {
-        // si no hay objetivo, intentamos filtrar por instrumento/política/eje
-        if (idInst) list = list.filter((x) => (x.idInstrumento ?? null) === idInst || !x.idInstrumento);
-        if (current.idPolitica) list = list.filter((x) => (x.idPolitica ?? null) === current.idPolitica || !x.idPolitica);
-        if (current.idEje) list = list.filter((x) => (x.idEje ?? null) === current.idEje || !x.idEje);
+      if (current.idObjetivo) {
+        list = list.filter((x) => x.idObjetivo === current.idObjetivo);
+      } else {
+        if (idInst) list = list.filter((x) => (x.idInstrumento ?? null) === idInst || x.idInstrumento === null);
+        if (current.idPolitica) list = list.filter((x) => (x.idPolitica ?? null) === current.idPolitica || x.idPolitica === null);
+        if (current.idEje) list = list.filter((x) => (x.idEje ?? null) === current.idEje || x.idEje === null);
       }
-
       setPickTitle("Seleccionar Acción Estratégica");
       setPickSubtitle("Tip: si eliges objetivo, el filtro será exacto.");
       setPickRows(list);
@@ -689,7 +710,7 @@ export default function IndicadoresInstrumentosPage() {
         { key: "enunciado", header: "Enunciado" },
         { key: "estado", header: "Estado", width: 110 },
       ]);
-      setPickSearchKeys(["codigo", "enunciado", "estado", "nombreObjetivo", "nombreInstrumento", "nombreUnidadResponsable"]);
+      setPickSearchKeys(["codigo", "enunciado", "estado", "nombreObjetivo", "nombreInstrumento"]);
       setPickOpen(true);
       return;
     }
@@ -706,7 +727,7 @@ export default function IndicadoresInstrumentosPage() {
         { key: "enunciado", header: "Enunciado" },
         { key: "estado", header: "Estado", width: 110 },
       ]);
-      setPickSearchKeys(["codigo", "enunciado", "estado", "nombreAccion", "nombreObjetivo", "nombrePolitica", "nombreInstrumento"]);
+      setPickSearchKeys(["codigo", "enunciado", "estado", "nombreAccion", "nombreInstrumento"]);
       setPickOpen(true);
       return;
     }
@@ -722,7 +743,7 @@ export default function IndicadoresInstrumentosPage() {
         { key: "codigo", header: "Código", width: 140 },
         { key: "descripcion", header: "Descripción" },
       ]);
-      setPickSearchKeys(["codigo", "descripcion", "nombreInstrumento", "nombrePolitica", "nombreObjetivo", "nombreAccion"]);
+      setPickSearchKeys(["codigo", "descripcion", "nombreInstrumento", "nombreAccion"]);
       setPickOpen(true);
       return;
     }
@@ -742,7 +763,7 @@ export default function IndicadoresInstrumentosPage() {
   };
 
   const clearCascadeAfterInstrumento = (target: PickTarget) => {
-    const setter = target === "create" ? setCreateForm : setForm;
+    const setter = target === "create" ? setFormCreate : setFormEdit;
     setter((p) => ({
       ...p,
       idDimension: null,
@@ -756,8 +777,8 @@ export default function IndicadoresInstrumentosPage() {
     }));
   };
 
-  const clearCascadeAfterEje = (target: PickTarget) => {
-    const setter = target === "create" ? setCreateForm : setForm;
+  const clearAfterEje = (target: PickTarget) => {
+    const setter = target === "create" ? setFormCreate : setFormEdit;
     setter((p) => ({
       ...p,
       idPolitica: null,
@@ -765,12 +786,11 @@ export default function IndicadoresInstrumentosPage() {
       idAccion: null,
       idIntervencion: null,
       idResultado: null,
-      idUnidadResponsable: p.idUnidadResponsable ?? null,
     }));
   };
 
-  const clearCascadeAfterPolitica = (target: PickTarget) => {
-    const setter = target === "create" ? setCreateForm : setForm;
+  const clearAfterPolitica = (target: PickTarget) => {
+    const setter = target === "create" ? setFormCreate : setFormEdit;
     setter((p) => ({
       ...p,
       idObjetivo: null,
@@ -780,8 +800,8 @@ export default function IndicadoresInstrumentosPage() {
     }));
   };
 
-  const clearCascadeAfterObjetivo = (target: PickTarget) => {
-    const setter = target === "create" ? setCreateForm : setForm;
+  const clearAfterObjetivo = (target: PickTarget) => {
+    const setter = target === "create" ? setFormCreate : setFormEdit;
     setter((p) => ({
       ...p,
       idAccion: null,
@@ -790,8 +810,8 @@ export default function IndicadoresInstrumentosPage() {
     }));
   };
 
-  const clearCascadeAfterAccion = (target: PickTarget) => {
-    const setter = target === "create" ? setCreateForm : setForm;
+  const clearAfterAccion = (target: PickTarget) => {
+    const setter = target === "create" ? setFormCreate : setFormEdit;
     setter((p) => ({
       ...p,
       idIntervencion: null,
@@ -799,17 +819,117 @@ export default function IndicadoresInstrumentosPage() {
     }));
   };
 
-  /** ===== Handlers ===== */
-  const onView = (r: IndicadorInstrumentoListDto) => {
+  const handlePick = (row: unknown) => {
+    const setter = pickTarget === "create" ? setFormCreate : setFormEdit;
+
+    switch (pickMode) {
+      case "indicador": {
+        const r = row as IndicadorListDto;
+        setter((p) => ({ ...p, idIndicador: r.idIndicador }));
+        return;
+      }
+      case "instrumento": {
+        const r = row as InstrumentoDto;
+        setter((p) => ({ ...p, idInstrumento: r.idInstrumento }));
+        clearCascadeAfterInstrumento(pickTarget);
+        return;
+      }
+      case "dimension": {
+        const r = row as DimensionDto;
+        setter((p) => ({ ...p, idDimension: r.idDimension }));
+        return;
+      }
+      case "eje": {
+        const r = row as EjeEstrategicoListDto;
+        setter((p) => ({ ...p, idEje: r.idEje, idInstrumento: r.idInstrumento }));
+        clearAfterEje(pickTarget);
+        return;
+      }
+      case "politica": {
+        const r = row as PoliticaListDto;
+        setter((p) => ({
+          ...p,
+          idPolitica: r.idPolitica,
+          idInstrumento: r.idInstrumento,
+          idEje: r.idEje ?? p.idEje ?? null,
+        }));
+        clearAfterPolitica(pickTarget);
+        return;
+      }
+      case "objetivo": {
+        const r = row as ObjetivoListDto;
+        setter((p) => ({
+          ...p,
+          idObjetivo: r.idObjetivo,
+          idInstrumento: r.idInstrumento,
+          idEje: r.idEje ?? p.idEje ?? null,
+          idPolitica: r.idPolitica ?? p.idPolitica ?? null,
+          idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
+        }));
+        clearAfterObjetivo(pickTarget);
+        return;
+      }
+      case "accion": {
+        const r = row as AccionListDto;
+        setter((p) => ({
+          ...p,
+          idAccion: r.idAccion,
+          idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
+          idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
+          idInstrumento: r.idInstrumento ?? p.idInstrumento,
+          idPolitica: r.idPolitica ?? p.idPolitica ?? null,
+          idEje: r.idEje ?? p.idEje ?? null,
+        }));
+        clearAfterAccion(pickTarget);
+        return;
+      }
+      case "intervencion": {
+        const r = row as IntervencionListDto;
+        setter((p) => ({
+          ...p,
+          idIntervencion: r.idIntervencion,
+          idAccion: r.idAccion ?? p.idAccion ?? null,
+          idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
+          idPolitica: r.idPolitica ?? p.idPolitica ?? null,
+          idInstrumento: r.idInstrumento ?? p.idInstrumento,
+          idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
+        }));
+        return;
+      }
+      case "resultado": {
+        const r = row as ResultadoListDto;
+        setter((p) => ({
+          ...p,
+          idResultado: r.idResultado,
+          idAccion: r.idAccion ?? p.idAccion ?? null,
+          idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
+          idPolitica: r.idPolitica ?? p.idPolitica ?? null,
+          idInstrumento: r.idInstrumento,
+        }));
+        return;
+      }
+case "unidad": {
+  const r = row as UnidadOrgDto;
+  setter((p) => ({ ...p, idUnidadResponsable: r.idUnidadOrganizacional }));
+  setPickOpen(false);
+  return;
+}
+
+    }
+  };
+
+  /** ===== modal open/close ===== */
+  const openViewDialog = (r: IndicadorInstrumentoListDto) => {
     setViewRow(r);
     setOpenView(true);
   };
 
-  const onEdit = (r: IndicadorInstrumentoListDto) => {
+  const openEditDialog = (r: IndicadorInstrumentoListDto) => {
     setSaveError(null);
-    setEditing(r);
+    setEditingRow(r);
+    setLockedInstrumentoId(r.idInstrumento);
 
-    setForm({
+    setFormEdit({
       idIndicador: r.idIndicador,
       idInstrumento: r.idInstrumento,
       codigoEnInstrumento: r.codigoEnInstrumento ?? "",
@@ -822,35 +942,49 @@ export default function IndicadoresInstrumentosPage() {
       idIntervencion: r.idIntervencion ?? null,
       idUnidadResponsable: r.idUnidadResponsable ?? null,
       orden: r.orden ?? null,
-      esIndicadorPrincipal: !!r.esIndicadorPrincipal,
+      esIndicadorPrincipal: r.esIndicadorPrincipal,
       observaciones: r.observaciones ?? "",
-      estado: r.estado ?? "ACTIVO",
+      estado: r.estado,
     });
 
     setOpenEdit(true);
   };
 
-  const onNew = () => {
+  const openCreateGlobal = () => {
     setCreateError(null);
-    setCreateForm(emptyForm);
+    setLockedInstrumentoId(null);
+    setFormCreate(emptyForm);
     setOpenCreate(true);
   };
 
-  const requiredOk = form.idIndicador > 0 && form.idInstrumento > 0;
-  const requiredCreateOk = createForm.idIndicador > 0 && createForm.idInstrumento > 0;
+  const openCreateForInstrumento = async (idInstrumento: number) => {
+    setCreateError(null);
+    setLockedInstrumentoId(idInstrumento);
+    setFormCreate({ ...emptyForm, idInstrumento, estado: "ACTIVO" });
+    setOpenCreate(true);
+    await loadDetalleInstrumento(idInstrumento);
+  };
 
-  const save = async () => {
-    if (!editing) return;
+  /** ===== save/create ===== */
+  const canSaveEdit = formEdit.idIndicador > 0 && formEdit.idInstrumento > 0;
+  const canCreate = formCreate.idIndicador > 0 && formCreate.idInstrumento > 0;
+
+  const saveEdit = async () => {
+    if (!editingRow) return;
+
     try {
       setSaving(true);
       setSaveError(null);
 
-      await PlaneamientoAction.updateIndicadoresInstrumentos(editing.idIndicadorInstrumento, form);
+      await PlaneamientoAction.updateIndicadoresInstrumentos(editingRow.idIndicadorInstrumento, formEdit);
 
       setOpenEdit(false);
-      await load();
-    } catch (e: any) {
-      setSaveError(e?.message ?? "No se pudo guardar");
+      setEditingRow(null);
+      setLockedInstrumentoId(null);
+
+      await loadDetalleInstrumento(formEdit.idInstrumento, true);
+    } catch (e: unknown) {
+      setSaveError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -861,26 +995,39 @@ export default function IndicadoresInstrumentosPage() {
       setCreating(true);
       setCreateError(null);
 
-      await PlaneamientoAction.createIndicadoresInstrumentos(createForm);
+      await PlaneamientoAction.createIndicadoresInstrumentos(formCreate);
+
+      const instId = formCreate.idInstrumento;
 
       setOpenCreate(false);
-      await load();
-    } catch (e: any) {
-      setCreateError(e?.message ?? "No se pudo registrar");
+      setLockedInstrumentoId(null);
+
+      await loadDetalleInstrumento(instId, true);
+      setExpandedInstrumentoId(instId);
+    } catch (e: unknown) {
+      setCreateError(getErrorMessage(e));
     } finally {
       setCreating(false);
     }
   };
 
-  /** ===== Render: shared form section ===== */
-  const renderRelacionForm = (target: PickTarget) => {
-    const data = target === "create" ? createForm : form;
-    const setter = target === "create" ? setCreateForm : setForm;
+  const setFormError = (target: PickTarget, msg: string) => {
+  if (target === "create") setCreateError(msg);
+  else setSaveError(msg);
+};
+
+  /** ===== form renderer ===== */
+  const renderForm = (target: PickTarget) => {
+    const data = target === "create" ? formCreate : formEdit;
+    const setter = target === "create" ? setFormCreate : setFormEdit;
+
+    const isLockedInstrument = lockedInstrumentoId !== null && lockedInstrumentoId === data.idInstrumento;
 
     return (
       <Box sx={{ display: "grid", gap: 1.5 }}>
-        <SectionTitle title="Relación base" subtitle="Selecciona Indicador e Instrumento con buscador (no combo gigante)." />
+        <SectionTitle title="Relación base" subtitle="Selecciona Indicador e Instrumento (si está bloqueado, es porque vienes desde un Instrumento)." />
 
+        {/* Indicador */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Indicador"
@@ -890,17 +1037,13 @@ export default function IndicadoresInstrumentosPage() {
             InputLabelProps={{ shrink: true }}
             InputProps={{ readOnly: true }}
           />
-          <Button
-            variant="outlined"
-            startIcon={<SearchRoundedIcon />}
-            onClick={() => openPicker("indicador", target)}
-            sx={{ whiteSpace: "nowrap" }}
-          >
+          <Button variant="outlined" startIcon={<SearchRoundedIcon />} onClick={() => openPicker("indicador", target)} sx={{ whiteSpace: "nowrap" }}>
             Buscar
           </Button>
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+        {/* Instrumento */}
+        <Box sx={{ display: "grid", gridTemplateColumns: isLockedInstrument ? "1fr" : "1fr auto", gap: 1 }}>
           <TextField
             label="Instrumento"
             value={data.idInstrumento ? instrumentoLabel(data.idInstrumento) : ""}
@@ -908,15 +1051,13 @@ export default function IndicadoresInstrumentosPage() {
             fullWidth
             InputLabelProps={{ shrink: true }}
             InputProps={{ readOnly: true }}
+            helperText={isLockedInstrument ? "Instrumento fijado por selección." : undefined}
           />
-          <Button
-            variant="outlined"
-            startIcon={<SearchRoundedIcon />}
-            onClick={() => openPicker("instrumento", target)}
-            sx={{ whiteSpace: "nowrap" }}
-          >
-            Buscar
-          </Button>
+          {!isLockedInstrument ? (
+            <Button variant="outlined" startIcon={<SearchRoundedIcon />} onClick={() => openPicker("instrumento", target)} sx={{ whiteSpace: "nowrap" }}>
+              Buscar
+            </Button>
+          ) : null}
         </Box>
 
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 1.5 }}>
@@ -926,14 +1067,11 @@ export default function IndicadoresInstrumentosPage() {
             onChange={(e) => setter((p) => ({ ...p, codigoEnInstrumento: e.target.value }))}
             fullWidth
           />
-
           <TextField
             label="Orden"
             type="number"
             value={data.orden ?? ""}
-            onChange={(e) =>
-              setter((p) => ({ ...p, orden: e.target.value === "" ? null : Number(e.target.value) }))
-            }
+            onChange={(e) => setter((p) => ({ ...p, orden: e.target.value === "" ? null : Number(e.target.value) }))}
             fullWidth
           />
         </Box>
@@ -975,9 +1113,10 @@ export default function IndicadoresInstrumentosPage() {
 
         <SectionTitle
           title="Ubicación en Planeamiento (opcional)"
-          subtitle="Selecciona valores jerárquicos. Si cambias instrumento/eje/política/objetivo/acción, se limpiará lo que ya no aplica."
+          subtitle="Si cambias Instrumento/Eje/Política/Objetivo/Acción, se limpia lo que ya no aplica."
         />
 
+        {/* Dimensión */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Dimensión"
@@ -992,6 +1131,7 @@ export default function IndicadoresInstrumentosPage() {
           </Button>
         </Box>
 
+        {/* Eje */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Eje"
@@ -1007,11 +1147,12 @@ export default function IndicadoresInstrumentosPage() {
               startIcon={<SearchRoundedIcon />}
               onClick={() => {
                 if (!data.idInstrumento) {
-                  (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
+                  setFormError(target, "Primero selecciona un instrumento.");
                   return;
                 }
-                openPicker("eje", target);
+                openPicker("eje",target);
               }}
+
             >
               Buscar
             </Button>
@@ -1019,7 +1160,7 @@ export default function IndicadoresInstrumentosPage() {
               variant="text"
               onClick={() => {
                 setter((p) => ({ ...p, idEje: null }));
-                clearCascadeAfterEje(target);
+                clearAfterEje(target);
               }}
             >
               Limpiar
@@ -1027,6 +1168,7 @@ export default function IndicadoresInstrumentosPage() {
           </Box>
         </Box>
 
+        {/* Política */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Política"
@@ -1040,13 +1182,14 @@ export default function IndicadoresInstrumentosPage() {
             <Button
               variant="outlined"
               startIcon={<SearchRoundedIcon />}
-              onClick={() => {
-                if (!data.idInstrumento) {
-                  (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
-                  return;
-                }
-                openPicker("politica", target);
-              }}
+            onClick={() => {
+              if (!data.idInstrumento) {
+                setFormError(target, "Primero selecciona un instrumento.");
+                return;
+              }
+              openPicker("politica", target);
+            }}
+
             >
               Buscar
             </Button>
@@ -1054,7 +1197,7 @@ export default function IndicadoresInstrumentosPage() {
               variant="text"
               onClick={() => {
                 setter((p) => ({ ...p, idPolitica: null }));
-                clearCascadeAfterPolitica(target);
+                clearAfterPolitica(target);
               }}
             >
               Limpiar
@@ -1062,6 +1205,7 @@ export default function IndicadoresInstrumentosPage() {
           </Box>
         </Box>
 
+        {/* Objetivo */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Objetivo"
@@ -1075,13 +1219,14 @@ export default function IndicadoresInstrumentosPage() {
             <Button
               variant="outlined"
               startIcon={<SearchRoundedIcon />}
-              onClick={() => {
-                if (!data.idInstrumento) {
-                  (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
-                  return;
-                }
-                openPicker("objetivo", target);
-              }}
+            onClick={() => {
+              if (!data.idInstrumento) {
+                setFormError(target, "Primero selecciona un instrumento.");
+                return;
+              }
+              openPicker("objetivo", target);
+            }}
+
             >
               Buscar
             </Button>
@@ -1089,7 +1234,7 @@ export default function IndicadoresInstrumentosPage() {
               variant="text"
               onClick={() => {
                 setter((p) => ({ ...p, idObjetivo: null }));
-                clearCascadeAfterObjetivo(target);
+                clearAfterObjetivo(target);
               }}
             >
               Limpiar
@@ -1097,6 +1242,7 @@ export default function IndicadoresInstrumentosPage() {
           </Box>
         </Box>
 
+        {/* Acción */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Acción"
@@ -1112,11 +1258,12 @@ export default function IndicadoresInstrumentosPage() {
               startIcon={<SearchRoundedIcon />}
               onClick={() => {
                 if (!data.idInstrumento) {
-                  (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
+                  setFormError(target, "Primero selecciona un instrumento.");
                   return;
                 }
                 openPicker("accion", target);
               }}
+
             >
               Buscar
             </Button>
@@ -1124,7 +1271,7 @@ export default function IndicadoresInstrumentosPage() {
               variant="text"
               onClick={() => {
                 setter((p) => ({ ...p, idAccion: null }));
-                clearCascadeAfterAccion(target);
+                clearAfterAccion(target);
               }}
             >
               Limpiar
@@ -1132,6 +1279,7 @@ export default function IndicadoresInstrumentosPage() {
           </Box>
         </Box>
 
+        {/* Intervención */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Intervención"
@@ -1146,16 +1294,18 @@ export default function IndicadoresInstrumentosPage() {
             startIcon={<SearchRoundedIcon />}
             onClick={() => {
               if (!data.idInstrumento) {
-                (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
+                setFormError(target, "Primero selecciona un instrumento.");
                 return;
               }
               openPicker("intervencion", target);
             }}
+
           >
             Buscar
           </Button>
         </Box>
 
+        {/* Resultado */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
             label="Resultado"
@@ -1170,19 +1320,21 @@ export default function IndicadoresInstrumentosPage() {
             startIcon={<SearchRoundedIcon />}
             onClick={() => {
               if (!data.idInstrumento) {
-                (target === "create" ? setCreateError : setSaveError)("Primero selecciona un instrumento.");
+                setFormError(target, "Primero selecciona un instrumento.");
                 return;
               }
               openPicker("resultado", target);
             }}
+
           >
             Buscar
           </Button>
         </Box>
 
+        {/* Unidad responsable */}
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
           <TextField
-            label="Unidad Responsable"
+            label="Unidad responsable"
             value={unidadLabel(data.idUnidadResponsable)}
             placeholder="—"
             fullWidth
@@ -1197,139 +1349,280 @@ export default function IndicadoresInstrumentosPage() {
     );
   };
 
-  /** ===== Picker select handler ===== */
-  const handlePick = (row: any) => {
-    const setter = pickTarget === "create" ? setCreateForm : setForm;
-
-    if (pickMode === "indicador") {
-      setter((p) => ({ ...p, idIndicador: row.idIndicador }));
-      return;
-    }
-
-    if (pickMode === "instrumento") {
-      const id = normalizeInstrumentId(row as InstrumentoDto);
-      setter((p) => ({ ...p, idInstrumento: id }));
-      clearCascadeAfterInstrumento(pickTarget);
-      return;
-    }
-
-    if (pickMode === "dimension") {
-      setter((p) => ({ ...p, idDimension: row.idDimension }));
-      return;
-    }
-
-    if (pickMode === "eje") {
-      const r = row as EjeEstrategicoListDto;
-      setter((p) => ({
-        ...p,
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idEje: r.idEje,
-        // si el eje ya trae nombreDimension, normalmente también trae idDimension en detail;
-        // aquí lo dejamos solo si el form ya lo tenía.
-      }));
-      clearCascadeAfterEje(pickTarget);
-      return;
-    }
-
-    if (pickMode === "politica") {
-      const r = row as PoliticaListDto;
-      setter((p) => ({
-        ...p,
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idEje: r.idEje ?? p.idEje ?? null,
-        idPolitica: r.idPolitica,
-      }));
-      clearCascadeAfterPolitica(pickTarget);
-      return;
-    }
-
-    if (pickMode === "objetivo") {
-      const r = row as ObjetivoListDto;
-      setter((p) => ({
-        ...p,
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idEje: r.idEje ?? p.idEje ?? null,
-        idPolitica: r.idPolitica ?? p.idPolitica ?? null,
-        idObjetivo: r.idObjetivo,
-        idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
-      }));
-      clearCascadeAfterObjetivo(pickTarget);
-      return;
-    }
-
-    if (pickMode === "accion") {
-      const r = row as AccionListDto;
-      setter((p) => ({
-        ...p,
-        idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
-        idAccion: r.idAccion,
-        idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
-        // si vienen ids opcionales, los usamos
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idPolitica: r.idPolitica ?? p.idPolitica ?? null,
-        idEje: r.idEje ?? p.idEje ?? null,
-      }));
-      clearCascadeAfterAccion(pickTarget);
-      return;
-    }
-
-    if (pickMode === "intervencion") {
-      const r = row as IntervencionListDto;
-      setter((p) => ({
-        ...p,
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idPolitica: r.idPolitica ?? p.idPolitica ?? null,
-        idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
-        idAccion: r.idAccion ?? p.idAccion ?? null,
-        idIntervencion: r.idIntervencion,
-        idUnidadResponsable: r.idUnidadResponsable ?? p.idUnidadResponsable ?? null,
-      }));
-      return;
-    }
-
-    if (pickMode === "resultado") {
-      const r = row as ResultadoListDto;
-      setter((p) => ({
-        ...p,
-        idInstrumento: r.idInstrumento ?? p.idInstrumento,
-        idPolitica: r.idPolitica ?? p.idPolitica ?? null,
-        idObjetivo: r.idObjetivo ?? p.idObjetivo ?? null,
-        idAccion: r.idAccion ?? p.idAccion ?? null,
-        idResultado: r.idResultado,
-      }));
-      return;
-    }
-
-    if (pickMode === "unidad") {
-      const r = row as UnidadOrgDto;
-      setter((p) => ({ ...p, idUnidadResponsable: r.idUnidadOrganizacional }));
-      return;
-    }
-  };
-
   /** ===== UI ===== */
   return (
     <>
-      <CatalogoTablePage
-        title="Planeamiento: Indicadores - Instrumentos"
-        subtitle="Relación del indicador con el instrumento. Esto alimenta las Metas."
-        rows={rows}
-        loading={loading}
-        error={error}
-        columns={columns}
-        getRowId={(r) => r.idIndicadorInstrumento}
-        searchKeys={["nombreIndicador", "nombreInstrumento", "codigoEnInstrumento", "estado"]}
-        onRefresh={load}
-        allowEdit
-        onView={onView}
-        onEdit={onEdit}
-        onNew={onNew}
-        newLabel="Nuevo"
-      />
+      <Box sx={{ mb: 2 }}>
+        <Typography sx={{ fontSize: 22, fontWeight: 1000 }}>
+          Planeamiento: Indicadores por Instrumento
+        </Typography>
+        <Typography sx={{ color: "text.secondary", mt: 0.25 }}>
+          Maestro: Instrumentos. Expande un instrumento para gestionar sus indicadores.
+        </Typography>
+      </Box>
 
-      {/* VIEW */}
+      <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #EEF2F7", overflow: "hidden" }}>
+        <Toolbar sx={{ gap: 1.5, px: 2 }}>
+          <TextField
+            value={qMaster}
+            onChange={(e) => {
+              setQMaster(e.target.value);
+              setPageMaster(0);
+            }}
+            size="small"
+            placeholder="Buscar instrumento (código / nombre / nivel / horizonte)..."
+            sx={{ width: { xs: "100%", sm: 540 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Box sx={{ flex: 1 }} />
+
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreateGlobal}>
+            Asignar indicador
+          </Button>
+
+          <Tooltip title="Refrescar todo">
+            <span>
+              <IconButton onClick={() => void loadAll()} disabled={loading}>
+                <RefreshRoundedIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Chip label={`${instrumentosFiltered.length} instrumentos`} variant="outlined" sx={{ borderRadius: 999 }} />
+        </Toolbar>
+
+        {loading ? <LinearProgress /> : null}
+
+        {error ? (
+          <Box sx={{ px: 2, py: 2 }}>
+            <Typography sx={{ color: "error.main", fontWeight: 900 }}>{error}</Typography>
+            <Button onClick={() => void loadAll()} variant="contained" sx={{ mt: 1 }}>
+              Reintentar
+            </Button>
+          </Box>
+        ) : null}
+
+        <TableContainer>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ width: 52, bgcolor: "#FAFBFD" }} />
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 140 }}>Código</TableCell>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD" }}>Nombre</TableCell>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 160 }}>Nivel</TableCell>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 160 }}>Horizonte</TableCell>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 120 }}>Estado</TableCell>
+                <TableCell sx={{ fontWeight: 900, bgcolor: "#FAFBFD", width: 240 }}>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {instrumentosPaged.map((inst) => {
+                const idInst = inst.idInstrumento;
+                const isOpen = expandedInstrumentoId === idInst;
+
+                const detLoading = !!detailLoadingByInstrumento[idInst];
+                const detErr = detailErrorByInstrumento[idInst];
+                const count = (detailByInstrumento[idInst]?.length ?? 0);
+
+                return (
+                  <React.Fragment key={idInst}>
+                    <TableRow hover sx={{ "& > td": { borderBottom: "none" } }}>
+                      <TableCell>
+                        <IconButton size="small" onClick={() => void toggleExpand(idInst)}>
+                          {isOpen ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
+                        </IconButton>
+                      </TableCell>
+
+                      <TableCell sx={{ fontWeight: 900 }}>{inst.codigo}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{inst.nombre}</TableCell>
+                      <TableCell>{inst.nivel ?? "—"}</TableCell>
+                      <TableCell>{inst.horizonteTemporal ?? "—"}</TableCell>
+                      <TableCell>
+                        <Box sx={pillSx(inst.estado)}>{inst.estado}</Box>
+                      </TableCell>
+
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                          <Chip label={`${count} indicadores`} size="small" variant="outlined" sx={{ borderRadius: 999 }} />
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddRoundedIcon />}
+                            onClick={() => void openCreateForInstrumento(idInst)}
+                          >
+                            Agregar
+                          </Button>
+
+                          <Tooltip title="Refrescar detalle">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => void loadDetalleInstrumento(idInst, true)}
+                                disabled={detLoading}
+                              >
+                                <RefreshRoundedIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+
+                    <TableRow>
+                      <TableCell colSpan={7} sx={{ py: 0, borderBottom: "1px solid", borderColor: "divider" }}>
+                        <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                          <Box sx={{ px: 2, py: 2, bgcolor: "#FBFCFE" }}>
+                            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", mb: 1.5 }}>
+                              <Box sx={{ minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 1000 }}>
+                                  Indicadores del instrumento: {inst.codigo} - {inst.nombre}
+                                </Typography>
+                                <Typography sx={{ fontSize: 12.5, color: "text.secondary", fontWeight: 700 }}>
+                                  Administra (ver/editar/agregar) sin salir del instrumento.
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ flex: 1 }} />
+
+                              <TextField
+                                value={qDetail}
+                                onChange={(e) => setQDetail(e.target.value)}
+                                size="small"
+                                placeholder="Buscar en indicadores..."
+                                sx={{ width: { xs: "100%", sm: 340 } }}
+                                InputProps={{
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <SearchRoundedIcon fontSize="small" />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                              />
+                            </Box>
+
+                            {detLoading ? <LinearProgress sx={{ mb: 1.25 }} /> : null}
+
+                            {detErr ? (
+                              <Box sx={{ mb: 1.25 }}>
+                                <Typography sx={{ color: "error.main", fontWeight: 900 }}>{detErr}</Typography>
+                                <Button variant="contained" onClick={() => void loadDetalleInstrumento(idInst, true)} sx={{ mt: 1 }}>
+                                  Reintentar
+                                </Button>
+                              </Box>
+                            ) : null}
+
+                            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 90 }}>ID</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD" }}>Indicador</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 220 }}>Código en instrumento</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 90 }}>Orden</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 110 }}>Principal</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 110 }}>Estado</TableCell>
+                                    <TableCell sx={{ fontWeight: 1000, bgcolor: "#FAFBFD", width: 140 }}>Acción</TableCell>
+                                  </TableRow>
+                                </TableHead>
+
+                                <TableBody>
+                                  {detailRows.map((r) => (
+                                    <TableRow key={r.idIndicadorInstrumento} hover>
+                                      <TableCell>{r.idIndicadorInstrumento}</TableCell>
+                                      <TableCell sx={{ fontWeight: 800 }}>
+                                        {r.nombreIndicador ?? indicadorLabel(r.idIndicador)}
+                                      </TableCell>
+                                      <TableCell>{r.codigoEnInstrumento ?? "—"}</TableCell>
+                                      <TableCell>{r.orden ?? "—"}</TableCell>
+                                      <TableCell>{r.esIndicadorPrincipal ? "Sí" : "No"}</TableCell>
+                                      <TableCell>
+                                        <Box sx={pillSx(r.estado)}>{r.estado}</Box>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Tooltip title="Ver">
+                                          <IconButton size="small" onClick={() => openViewDialog(r)}>
+                                            <VisibilityRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Editar">
+                                          <IconButton size="small" onClick={() => openEditDialog(r)}>
+                                            <EditRoundedIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+
+                                  {!detLoading && !detErr && detailRows.length === 0 && (
+                                    <TableRow>
+                                      <TableCell colSpan={7}>
+                                        <Box sx={{ py: 3, textAlign: "center" }}>
+                                          <Typography sx={{ fontWeight: 1000 }}>Sin indicadores</Typography>
+                                          <Typography sx={{ color: "text.secondary" }}>
+                                            Usa “Agregar” para asignar un indicador a este instrumento.
+                                          </Typography>
+                                        </Box>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </Box>
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
+
+              {!loading && !error && instrumentosPaged.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <Box sx={{ py: 5, textAlign: "center" }}>
+                      <Typography sx={{ fontWeight: 1000, mb: 0.5 }}>Sin resultados</Typography>
+                      <Typography sx={{ color: "text.secondary" }}>
+                        Ajusta tu búsqueda de instrumentos.
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          <TablePagination
+            component="div"
+            count={instrumentosFiltered.length}
+            page={pageMaster}
+            onPageChange={(_, p) => setPageMaster(p)}
+            rowsPerPage={rppMaster}
+            onRowsPerPageChange={(e) => {
+              setRppMaster(parseInt(e.target.value, 10));
+              setPageMaster(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20, 50]}
+          />
+        </TableContainer>
+      </Paper>
+
+      {/* ===== VIEW ===== */}
       <Dialog open={openView} onClose={() => setOpenView(false)} fullWidth maxWidth="md" PaperProps={{ sx: { overflow: "visible" } }}>
-        <DialogTitle sx={{ fontWeight: 1000 }}>Detalle</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 1000, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          Detalle
+          <IconButton onClick={() => setOpenView(false)} size="small">
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+
         <DialogContent sx={{ pt: 1.5 }}>
           {viewRow ? (
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
@@ -1368,74 +1661,136 @@ export default function IndicadoresInstrumentosPage() {
             <Typography color="text.secondary">—</Typography>
           )}
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setOpenView(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
-      {/* EDIT */}
-      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="md" PaperProps={{ sx: { overflow: "visible" } }}>
+      {/* ===== EDIT ===== */}
+      <Dialog
+        open={openEdit}
+        onClose={() => {
+          setOpenEdit(false);
+          setLockedInstrumentoId(null);
+        }}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { overflow: "visible" } }}
+      >
         <DialogTitle sx={{ fontWeight: 1000, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           Editar
-          <IconButton onClick={() => setOpenEdit(false)} size="small">
+          <IconButton
+            onClick={() => {
+              setOpenEdit(false);
+              setLockedInstrumentoId(null);
+            }}
+            size="small"
+          >
             <CloseRoundedIcon />
           </IconButton>
         </DialogTitle>
+
         <DialogContent sx={{ pt: 1.5 }}>
-          {renderRelacionForm("edit")}
-          {saveError ? <Typography sx={{ mt: 1.5, color: "error.main", fontWeight: 900 }}>{saveError}</Typography> : null}
+          {renderForm("edit")}
+          {saveError ? (
+            <Typography sx={{ mt: 1.5, color: "error.main", fontWeight: 900 }}>
+              {saveError}
+            </Typography>
+          ) : null}
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenEdit(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={save} variant="contained" disabled={!requiredOk || saving}>
+          <Button
+            onClick={() => {
+              setOpenEdit(false);
+              setLockedInstrumentoId(null);
+            }}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={() => void saveEdit()} variant="contained" disabled={!canSaveEdit || saving}>
             {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* CREATE */}
-      <Dialog open={openCreate} onClose={() => setOpenCreate(false)} fullWidth maxWidth="md" PaperProps={{ sx: { overflow: "visible" } }}>
+      {/* ===== CREATE ===== */}
+      <Dialog
+        open={openCreate}
+        onClose={() => {
+          setOpenCreate(false);
+          setLockedInstrumentoId(null);
+        }}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { overflow: "visible" } }}
+      >
         <DialogTitle sx={{ fontWeight: 1000, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           Nuevo Indicador - Instrumento
-          <IconButton onClick={() => setOpenCreate(false)} size="small">
+          <IconButton
+            onClick={() => {
+              setOpenCreate(false);
+              setLockedInstrumentoId(null);
+            }}
+            size="small"
+          >
             <CloseRoundedIcon />
           </IconButton>
         </DialogTitle>
+
         <DialogContent sx={{ pt: 1.5 }}>
-          {renderRelacionForm("create")}
-          {createError ? <Typography sx={{ mt: 1.5, color: "error.main", fontWeight: 900 }}>{createError}</Typography> : null}
+          {renderForm("create")}
+          {createError ? (
+            <Typography sx={{ mt: 1.5, color: "error.main", fontWeight: 900 }}>
+              {createError}
+            </Typography>
+          ) : null}
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenCreate(false)} disabled={creating}>Cancelar</Button>
-          <Button onClick={create} variant="contained" disabled={!requiredCreateOk || creating}>
+          <Button
+            onClick={() => {
+              setOpenCreate(false);
+              setLockedInstrumentoId(null);
+            }}
+            disabled={creating}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={() => void create()} variant="contained" disabled={!canCreate || creating}>
             {creating ? "Registrando..." : "Registrar"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* PICKER */}
+      {/* ===== PICKER ===== */}
       <PickerDialog
         open={pickOpen}
         title={pickTitle}
         subtitle={pickSubtitle}
         rows={pickRows}
         columns={pickColumns}
-        searchKeys={pickSearchKeys as any}
-        getRowId={(r: any) =>
-          r.idIndicador ??
-          (r.idInstrumento ?? r.IdInstrumento) ??
-          r.idDimension ??
-          r.idEje ??
-          r.idPolitica ??
-          r.idObjetivo ??
-          r.idAccion ??
-          r.idIntervencion ??
-          r.idResultado ??
-          r.idUnidadOrganizacional ??
-          "row"
-        }
+        searchKeys={pickSearchKeys}
+        getRowId={(r) => {
+          const rec = r as unknown as AnyRow;
+          return (
+            (rec["idIndicador"] as number | undefined) ??
+            (rec["idInstrumento"] as number | undefined) ??
+            (rec["idDimension"] as number | undefined) ??
+            (rec["idEje"] as number | undefined) ??
+            (rec["idPolitica"] as number | undefined) ??
+            (rec["idObjetivo"] as number | undefined) ??
+            (rec["idAccion"] as number | undefined) ??
+            (rec["idIntervencion"] as number | undefined) ??
+            (rec["idResultado"] as number | undefined) ??
+            (rec["idUnidadOrganizacional"] as number | undefined) ??
+            "row"
+          );
+        }}
         onClose={() => setPickOpen(false)}
-        onSelect={(r: any) => handlePick(r)}
+        onSelect={(r) => handlePick(r)}
       />
     </>
   );

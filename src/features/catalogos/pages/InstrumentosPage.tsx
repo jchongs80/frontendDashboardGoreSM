@@ -2,19 +2,32 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Menu,
   MenuItem,
+  MenuItem as MuiMenuItem,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
+import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
+
 import CatalogoTablePage, { type ColumnDef } from "../components/CatalogoTablePage";
-import { CatalogoAction, type InstrumentoCreateUpdateDto, type InstrumentoDto } from "../CatalogoAction";
+import {
+  CatalogoAction,
+  type InstrumentoAccionDto,
+  type InstrumentoCreateUpdateDto,
+  type InstrumentoDto,
+} from "../CatalogoAction";
 
 const toDateOnly = (v?: string | null) => (v ? String(v).slice(0, 10) : "");
+
 const pillSx = (estado?: string | null) => ({
   display: "inline-flex",
   px: 1,
@@ -26,17 +39,39 @@ const pillSx = (estado?: string | null) => ({
   bgcolor: estado === "ACTIVO" ? "rgba(16,185,129,.10)" : "rgba(239,68,68,.10)",
 });
 
-function LabelValue({ label, value }: { label: string; value?: any }) {
+type LabelValueValue = string | number | boolean | null | undefined;
+
+function LabelValue({ label, value }: { label: string; value?: LabelValueValue }) {
+  const display =
+    value === null || value === undefined
+      ? "—"
+      : typeof value === "boolean"
+      ? value
+        ? "Sí"
+        : "No"
+      : String(value);
+
   return (
     <Box sx={{ display: "grid", gap: 0.3 }}>
       <Typography sx={{ fontSize: 12, color: "text.secondary", fontWeight: 800 }}>
         {label}
       </Typography>
       <Typography sx={{ fontSize: 13.5, fontWeight: 800 }}>
-        {value ?? "—"}
+        {display}
       </Typography>
     </Box>
   );
+}
+
+
+function sortAcciones(items: InstrumentoAccionDto[]) {
+  const copy = [...items];
+  copy.sort((a, b) => {
+    const ao = a.orden ?? 9999;
+    const bo = b.orden ?? 9999;
+    return ao - bo;
+  });
+  return copy;
 }
 
 export default function InstrumentosPage() {
@@ -68,6 +103,20 @@ export default function InstrumentosPage() {
     resolucionAprobacion: "",
   });
 
+  // =========================================
+  // Menú (3 puntos) - Acciones por instrumento
+  // =========================================
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuRow, setMenuRow] = useState<InstrumentoDto | null>(null);
+
+  // cache por instrumentoId
+  const [accionesByInstrumento, setAccionesByInstrumento] = useState<
+    Record<number, InstrumentoAccionDto[]>
+  >({});
+
+  const [accionesLoading, setAccionesLoading] = useState(false);
+  const [accionesError, setAccionesError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -89,18 +138,6 @@ export default function InstrumentosPage() {
       { key: "nombre", header: "Nombre", sortable: true },
       { key: "nivel", header: "Nivel", width: 140 },
       { key: "horizonteTemporal", header: "Horizonte", width: 140 },
-      {
-        key: "vigenciaDesde",
-        header: "Desde",
-        width: 120,
-        render: (r) => toDateOnly(r.vigenciaDesde),
-      },
-      {
-        key: "vigenciaHasta",
-        header: "Hasta",
-        width: 120,
-        render: (r) => toDateOnly(r.vigenciaHasta),
-      },
       {
         key: "estado",
         header: "Estado",
@@ -151,6 +188,73 @@ export default function InstrumentosPage() {
     }
   };
 
+  const openMenu = async (ev: React.MouseEvent<HTMLElement>, row: InstrumentoDto) => {
+    setMenuAnchorEl(ev.currentTarget);
+    setMenuRow(row);
+
+    const id = row.idInstrumento;
+    if (accionesByInstrumento[id]) return; // ya está en cache
+
+    try {
+      setAccionesLoading(true);
+      setAccionesError(null);
+
+      const acciones = await CatalogoAction.getInstrumentoAcciones(id, false);
+      setAccionesByInstrumento((prev) => ({
+        ...prev,
+        [id]: sortAcciones(acciones ?? []),
+      }));
+    } catch (e: any) {
+      setAccionesError(e.message ?? "Error cargando acciones");
+    } finally {
+      setAccionesLoading(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setMenuAnchorEl(null);
+    setMenuRow(null);
+    setAccionesError(null);
+    setAccionesLoading(false);
+  };
+
+const onClickAccion = (a: InstrumentoAccionDto) => {
+  closeMenu();
+
+  // ✅ Regla: PDRC + OER => navegar a la página React (interna)
+  const instCodigo = (menuRow?.codigo ?? "").trim().toUpperCase();
+  const accionCodigo = (a.codigoAccion ?? "").trim().toUpperCase();
+  const accionNombre = (a.nombre ?? "").trim().toUpperCase();
+
+  if ((instCodigo === "PDRC" || instCodigo === "PRCD") && (accionCodigo === "OER" || accionNombre === "OER")) {
+    // Ruta interna (frontend)
+    window.location.href = `/pdrc/oer?returnTo=${encodeURIComponent("/catalogos/instrumentos")}`;
+    return;
+  }
+  // ✅ Regla: PEI + OEI (o si backend lo manda como OER) => abrir página interna PEI
+  if (
+    instCodigo === "PEI" &&
+    (accionCodigo === "OEI" || accionCodigo === "OER" || accionNombre === "OEI" || accionNombre === "OER")
+  ) {
+    window.location.href = `/pei/oei?returnTo=${encodeURIComponent("/catalogos/instrumentos")}`;
+    return;
+  }
+
+  const url = (a.url ?? "").trim();
+  if (!url) return;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  window.location.href = url;
+};
+
+
+  const currentAcciones =
+    menuRow ? accionesByInstrumento[menuRow.idInstrumento] ?? [] : [];
+
   return (
     <>
       <CatalogoTablePage
@@ -166,7 +270,74 @@ export default function InstrumentosPage() {
         allowEdit={true}
         onView={onView}
         onEdit={onEdit}
+        renderRowActions={(row) => (
+          <>
+            <Tooltip title="Acciones">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={(ev) => openMenu(ev, row)}
+                  disabled={loading}
+                >
+                  <MoreHorizRoundedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
+        )}
       />
+
+      {/* MENÚ 3 PUNTOS */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={closeMenu}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 260 } }}
+      >
+        {accionesLoading && (
+          <MuiMenuItem disabled>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
+                Cargando acciones…
+              </Typography>
+            </Box>
+          </MuiMenuItem>
+        )}
+
+        {!accionesLoading && accionesError && (
+          <MuiMenuItem disabled>
+            <Typography sx={{ fontWeight: 800, fontSize: 13, color: "error.main" }}>
+              {accionesError}
+            </Typography>
+          </MuiMenuItem>
+        )}
+
+        {!accionesLoading && !accionesError && currentAcciones.length === 0 && (
+          <MuiMenuItem disabled>
+            <Typography sx={{ fontWeight: 800, fontSize: 13, color: "text.secondary" }}>
+              Sin acciones configuradas
+            </Typography>
+          </MuiMenuItem>
+        )}
+
+        {!accionesLoading &&
+          !accionesError &&
+          currentAcciones.map((a) => (
+            <MenuItem key={a.idAccion} onClick={() => onClickAccion(a)}>
+              <Box sx={{ display: "grid" }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 13.5 }}>
+                  {a.nombre}
+                </Typography>
+                {(a.descripcion || a.codigoAccion) && (
+                  <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                    {a.descripcion ?? a.codigoAccion}
+                  </Typography>
+                )}
+              </Box>
+            </MenuItem>
+          ))}
+      </Menu>
 
       {/* VER */}
       <Dialog open={openView} onClose={() => setOpenView(false)} fullWidth maxWidth="md">
@@ -219,7 +390,14 @@ export default function InstrumentosPage() {
         <DialogContent sx={{ pt: 1.5 }}>
           <Box sx={{ display: "grid", gap: 1.5 }}>
             {saveError && (
-              <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.25)" }}>
+              <Box
+                sx={{
+                  p: 1.2,
+                  borderRadius: 2,
+                  bgcolor: "rgba(239,68,68,.08)",
+                  border: "1px solid rgba(239,68,68,.25)",
+                }}
+              >
                 <Typography sx={{ fontWeight: 900, color: "error.main" }}>{saveError}</Typography>
               </Box>
             )}
@@ -272,26 +450,26 @@ export default function InstrumentosPage() {
               <TextField
                 label="Vigencia desde"
                 type="date"
-                InputLabelProps={{ shrink: true }}
-                value={form.vigenciaDesde ? toDateOnly(form.vigenciaDesde) : ""}
+                value={form.vigenciaDesde ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, vigenciaDesde: e.target.value || null }))}
                 fullWidth
+                InputLabelProps={{ shrink: true }}
               />
               <TextField
                 label="Vigencia hasta"
                 type="date"
-                InputLabelProps={{ shrink: true }}
-                value={form.vigenciaHasta ? toDateOnly(form.vigenciaHasta) : ""}
+                value={form.vigenciaHasta ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, vigenciaHasta: e.target.value || null }))}
                 fullWidth
+                InputLabelProps={{ shrink: true }}
               />
               <TextField
                 label="Fecha aprobación"
                 type="date"
-                InputLabelProps={{ shrink: true }}
-                value={form.fechaAprobacion ? toDateOnly(form.fechaAprobacion) : ""}
+                value={form.fechaAprobacion ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, fechaAprobacion: e.target.value || null }))}
                 fullWidth
+                InputLabelProps={{ shrink: true }}
               />
             </Box>
 
@@ -311,10 +489,13 @@ export default function InstrumentosPage() {
             </Box>
           </Box>
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenEdit(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={save} variant="contained" disabled={saving || !form.nombre.trim()}>
-            Guardar
+          <Button onClick={() => setOpenEdit(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={save} disabled={saving}>
+            {saving ? "Guardando..." : "Grabar"}
           </Button>
         </DialogActions>
       </Dialog>
