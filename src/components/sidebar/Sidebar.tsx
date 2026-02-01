@@ -38,6 +38,9 @@ import GpsFixedRoundedIcon from "@mui/icons-material/GpsFixedRounded";
 import logoFull from "../../assets/logo-goresam-full.png"
 import logoIcon from "../../assets/logo-goresam-icon.png"
 
+import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
+import { useAuth } from "./../../features/auth/AuthContext"; // 🔁 ajusta ruta
+
 import type { ReactNode } from "react";
 
 type Props = {
@@ -67,17 +70,21 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const {user} =useAuth();
+  const canManageUsers = !!user?.permisos?.puedeCrearUsuarios;
+
+  const administracionItems : SidebarItem[]=[
+    {text: "Usuarios", icon: < GroupRoundedIcon/>, path: "/admin/usuarios"},
+  ];
+
+  const isAdminActive = useMemo(()=> location.pathname.startsWith("/admin"),[location.pathname]);
+  const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
+
   const width = collapsed ? widthCollapsed : widthExpanded;
 
   const mainItems: SidebarItem[] = [
     { text: "Dashboards", icon: <DashboardRoundedIcon />, path: "/" },
-    { text: "Pages", icon: <DescriptionRoundedIcon />, path: "/pages" },
-    { text: "Task", icon: <TaskAltRoundedIcon />, path: "/task" },
-    { text: "Authentication", icon: <LockRoundedIcon />, path: "/login" },
-    { text: "Error", icon: <ErrorOutlineRoundedIcon />, path: "/error" },
-    { text: "UI Elements", icon: <GridViewRoundedIcon />, path: "/ui" },
-    { text: "Widgets", icon: <WidgetsRoundedIcon />, path: "/widgets" },
-    { text: "Tables", icon: <TableChartRoundedIcon />, path: "/tables" },
+    { text: "Bloquear pantalla", icon: <LockRoundedIcon />, path: "/login" },
   ];
 
   const catalogItems: SidebarItem[] = [
@@ -99,6 +106,8 @@ export default function Sidebar({
     { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
   ];
 
+  
+
   const alineamientoItems: SidebarItem[] = [
     { text: "Alineamientos Instrumentos", icon: <AccountTreeRoundedIcon />, path: "/alineamiento/instrumentos" },
   ];
@@ -119,6 +128,9 @@ export default function Sidebar({
   const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
   const [openPlaneamiento, setOpenPlaneamiento] = useState<boolean>(isPlaneamientoActive);
   const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
+
+  console.log("USER", user);
+  console.log("PERMISOS", user?.permisos);
 
   // ✅ sincroniza apertura al cambiar de ruta
   useEffect(() => {
@@ -244,7 +256,7 @@ export default function Sidebar({
       {!collapsed && (
         <Box sx={{ px: 2, pt: 2, pb: 1 }}>
           <Typography sx={{ opacity: 0.7, fontSize: 11, fontWeight: 800 }}>
-            MAIN
+            PRINCIPAL
           </Typography>
         </Box>
       )}
@@ -271,9 +283,6 @@ export default function Sidebar({
       >
         <List disablePadding>
           <NavButton text="Dashboards" icon={<DashboardRoundedIcon />} path="/" />
-          <NavButton text="Pages" icon={<DescriptionRoundedIcon />} path="/pages" />
-          <NavButton text="Task" icon={<TaskAltRoundedIcon />} path="/task" />
-
           {/* Catálogos */}
           <Box sx={{ mt: 0.8 }}>
             <ListItemButton
@@ -387,6 +396,54 @@ export default function Sidebar({
               </Collapse>
             )}
           </Box>
+
+{canManageUsers && (
+  <Box sx={{ mt: 0.8 }}>
+    <ListItemButton
+      onClick={() => setOpenAdmin((p) => !p)}
+      sx={{
+        mb: 0.6,
+        borderRadius: 2,
+        color: "rgba(255,255,255,0.92)",
+        justifyContent: collapsed ? "center" : "flex-start",
+        backgroundColor: isAdminActive ? "rgba(255,255,255,0.18)" : "transparent",
+        "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
+        px: collapsed ? 1.2 : 1.6,
+        py: 1.05,
+        minHeight: 44,
+      }}
+    >
+      <ListItemIcon
+        sx={{
+          minWidth: 0,
+          mr: collapsed ? 0 : 1.4,
+          justifyContent: "center",
+          color: "inherit",
+        }}
+      >
+        <LockRoundedIcon />
+      </ListItemIcon>
+
+      {!collapsed && (
+        <>
+          <ListItemText
+            primary="Administración"
+            primaryTypographyProps={{ fontSize: 13, fontWeight: 750 }}
+          />
+          {openAdmin ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
+        </>
+      )}
+    </ListItemButton>
+
+    <Collapse in={openAdmin} timeout="auto" unmountOnExit>
+      <List disablePadding sx={{ pl: collapsed ? 0 : 1 }}>
+        {administracionItems.map((it) => (
+          <NavButton key={it.path} text={it.text} icon={it.icon} path={it.path} />
+        ))}
+      </List>
+    </Collapse>
+  </Box>
+)}
 
           {/* Alineamiento */}
           <Box sx={{ mt: 0.8 }}>

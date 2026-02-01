@@ -30,6 +30,8 @@ import PdrcObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages
 import PeiObjetivosResponsablesPage from "../features/planeamiento/pages/PeiObjetivosResponsablesPage";
 import PeiObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PeiObjetivosAccionesIndicadoresPage";
 
+import UsuariosPage from "../features/administracion/pages/UsuariosPage";
+
 
 export default function App() {
   return (
@@ -92,7 +94,7 @@ export default function App() {
             path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
             element={<PeiObjetivosAccionesIndicadoresPage />}
           />
-
+          <Route path="/admin/usuarios" element={<UsuariosPage />} />
 
         </Route>
 
