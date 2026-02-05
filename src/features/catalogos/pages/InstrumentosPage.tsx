@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type React from "react";
 import {
   Box,
   Button,
@@ -38,6 +39,44 @@ const pillSx = (estado?: string | null) => ({
   border: "1px solid #E7ECF3",
   bgcolor: estado === "ACTIVO" ? "rgba(16,185,129,.10)" : "rgba(239,68,68,.10)",
 });
+
+const premiumTableSx = {
+  "& .MuiTableContainer-root": {
+    borderRadius: 3,
+    overflow: "hidden",
+    border: "1px solid rgba(2,6,23,.08)",
+    boxShadow: "0 10px 30px rgba(2,6,23,.06)",
+  },
+  "& .MuiTableHead-root .MuiTableCell-head": {
+    position: "sticky",
+    top: 0,
+    zIndex: 2,
+    background:
+      "linear-gradient(180deg, rgba(15,118,110,.12) 0%, rgba(15,118,110,.06) 60%, rgba(255,255,255,1) 100%)",
+    backdropFilter: "blur(6px)",
+    fontWeight: 900,
+    letterSpacing: ".4px",
+    color: "rgba(2,6,23,.85)",
+    borderBottom: "1px solid rgba(2,6,23,.12)",
+    boxShadow: "inset 0 -1px 0 rgba(2,6,23,.06)",
+  },
+  "& .MuiTableHead-root": { position: "relative" },
+  "& .MuiTableHead-root::before": {
+    content: '""',
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 3,
+    background:
+      "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+    opacity: 0.85,
+    zIndex: 3,
+  },
+  "& .MuiTableBody-root .MuiTableRow-root:hover .MuiTableCell-root": {
+    backgroundColor: "rgba(15,118,110,.04)",
+  },
+} as const;
 
 type LabelValueValue = string | number | boolean | null | undefined;
 
@@ -135,9 +174,62 @@ export default function InstrumentosPage() {
   const columns = useMemo<ColumnDef<InstrumentoDto>[]>(
     () => [
       { key: "codigo", header: "Código", sortable: true, width: 120 },
-      { key: "nombre", header: "Nombre", sortable: true },
-      { key: "nivel", header: "Nivel", width: 140 },
-      { key: "horizonteTemporal", header: "Horizonte", width: 140 },
+      {
+        key: "nombre",
+        header: "Nombre",
+        sortable: true,
+        render: (r) => (
+          <Typography sx={{ fontWeight: 950, lineHeight: 1.15 }}>{r.nombre}</Typography>
+        ),
+      },
+      {
+        key: "nivel",
+        header: "Nivel",
+        width: 140,
+        render: (r) =>
+          r.nivel ? (
+            <Box
+              sx={{
+                display: "inline-flex",
+                px: 1,
+                py: 0.25,
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 900,
+                bgcolor: "rgba(59,130,246,.10)",
+                border: "1px solid rgba(59,130,246,.22)",
+              }}
+            >
+              {r.nivel}
+            </Box>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "horizonteTemporal",
+        header: "Horizonte",
+        width: 140,
+        render: (r) =>
+          r.horizonteTemporal ? (
+            <Box
+              sx={{
+                display: "inline-flex",
+                px: 1,
+                py: 0.25,
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 900,
+                bgcolor: "rgba(16,185,129,.10)",
+                border: "1px solid rgba(16,185,129,.22)",
+              }}
+            >
+              {r.horizonteTemporal}
+            </Box>
+          ) : (
+            "—"
+          ),
+      },
       {
         key: "estado",
         header: "Estado",
@@ -257,7 +349,8 @@ const onClickAccion = (a: InstrumentoAccionDto) => {
 
   return (
     <>
-      <CatalogoTablePage
+      <Box sx={premiumTableSx}>
+        <CatalogoTablePage
         title="Catálogo: Instrumentos"
         subtitle="Visualiza y edita instrumentos (solo campos permitidos por backend)."
         rows={rows}
@@ -286,6 +379,7 @@ const onClickAccion = (a: InstrumentoAccionDto) => {
           </>
         )}
       />
+      </Box>
 
       {/* MENÚ 3 PUNTOS */}
       <Menu

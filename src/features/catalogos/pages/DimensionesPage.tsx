@@ -19,6 +19,7 @@ import {
 } from "../CatalogoAction";
 import DimensionViewDialog from "../components/DimensionViewDialog";
 import ColorPickerGrid from "../components/ColorPickerGrid";
+import { Chip, Typography } from "@mui/material";
 
 export default function DimensionesPage() {
   const [rows, setRows] = useState<DimensionDto[]>([]);
@@ -56,40 +57,123 @@ export default function DimensionesPage() {
 
   useEffect(() => void load(), [load]);
 
-  const columns = useMemo<ColumnDef<DimensionDto>[]>(
-    () => [
-      { key: "codigo", header: "Código", sortable: true, width: 110 },
-      { key: "nombre", header: "Nombre", sortable: true },
-      { key: "descripcion", header: "Descripción" },
-      { key: "orden", header: "Orden", sortable: true, width: 90 },
-      {
-        key: "estado",
-        header: "Estado",
-        sortable: true,
-        width: 110,
-        render: (r) => (
-          <Box
+  const columns = useMemo<ColumnDef<DimensionDto>[]>(() => {
+  const safeHex = (v?: string) => {
+    const s = (v ?? "").trim();
+    return /^#([0-9A-Fa-f]{3}){1,2}$/.test(s) ? s : null;
+  };
+
+  return [
+    { key: "codigo", header: "Código", sortable: true, width: 110 },
+
+    // ✅ Color swatch "premium"
+    {
+      key: "color",
+      header: "Color",
+      width: 90,
+      render: (r) => {
+        const hex = safeHex(r.color ?? undefined) ?? "#E5E7EB";;
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{
+                width: 18,
+                height: 18,
+                borderRadius: 1,
+                bgcolor: hex,
+                border: "1px solid rgba(2,6,23,.18)",
+                boxShadow: `0 10px 18px rgba(2,6,23,.10), 0 0 0 4px ${hex}22`,
+              }}
+            />
+            <Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary" }}>
+              {hex.toUpperCase()}
+            </Typography>
+          </Box>
+        );
+      },
+    },
+
+    // ✅ Nombre con “dot” de color
+    {
+      key: "nombre",
+      header: "Nombre",
+      sortable: true,
+      render: (r) => {
+        const hex = safeHex(r.color ?? undefined) ?? "#E5E7EB";;
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Tooltip title={r.color ? `Color: ${r.color}` : "Sin color"} arrow>
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 999,
+                  bgcolor: hex,
+                  boxShadow: `0 0 0 3px ${hex}22`,
+                  border: "1px solid rgba(2,6,23,.15)",
+                }}
+              />
+            </Tooltip>
+            <Typography sx={{ fontWeight: 900, lineHeight: 1.1 }}>
+              {r.nombre}
+            </Typography>
+          </Box>
+        );
+      },
+    },
+
+    // ✅ Descripción: 2 líneas + tooltip
+    {
+      key: "descripcion",
+      header: "Descripción",
+      render: (r) => (
+        <Tooltip title={r.descripcion ?? ""} arrow placement="top-start">
+          <Typography
+            variant="body2"
             sx={{
-              display: "inline-flex",
-              px: 1,
-              py: 0.25,
-              borderRadius: 999,
-              fontSize: 12,
-              fontWeight: 900,
-              border: "1px solid #E7ECF3",
-              bgcolor:
-                r.estado === "ACTIVO"
-                  ? "rgba(16,185,129,.10)"
-                  : "rgba(239,68,68,.10)",
+              color: "text.secondary",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              maxWidth: 520,
             }}
           >
-            {r.estado}
-          </Box>
-        ),
+            {r.descripcion ?? "-"}
+          </Typography>
+        </Tooltip>
+      ),
+    },
+
+    { key: "orden", header: "Orden", sortable: true, width: 90 },
+
+    // ✅ Estado como Chip (más “premium”)
+    {
+      key: "estado",
+      header: "Estado",
+      sortable: true,
+      width: 130,
+      render: (r) => {
+        const ok = r.estado === "ACTIVO";
+        return (
+          <Chip
+            label={r.estado}
+            size="small"
+            sx={{
+              fontWeight: 900,
+              letterSpacing: ".3px",
+              borderRadius: 999,
+              px: 0.5,
+              bgcolor: ok ? "rgba(16,185,129,.12)" : "rgba(239,68,68,.12)",
+              border: ok ? "1px solid rgba(16,185,129,.30)" : "1px solid rgba(239,68,68,.30)",
+              color: ok ? "rgb(5,150,105)" : "rgb(220,38,38)",
+            }}
+          />
+        );
       },
-    ],
-    []
-  );
+    },
+  ];
+}, []);
 
   const onView = (r: DimensionDto) => {
     setViewRow(r);
@@ -122,6 +206,52 @@ export default function DimensionesPage() {
 
   return (
     <>
+    <Box
+  sx={{
+    // Contenedor de la tabla con borde/sombra suave
+    "& .MuiTableContainer-root": {
+      borderRadius: 3,
+      overflow: "hidden",
+      border: "1px solid rgba(2,6,23,.08)",
+      boxShadow: "0 10px 30px rgba(2,6,23,.06)",
+    },
+
+    // Encabezado: gradient + sticky + borde inferior
+    "& .MuiTableHead-root .MuiTableCell-head": {
+      position: "sticky",
+      top: 0,
+      zIndex: 2,
+      background:
+        "linear-gradient(180deg, rgba(15,118,110,.12) 0%, rgba(15,118,110,.06) 60%, rgba(255,255,255,1) 100%)",
+      backdropFilter: "blur(6px)",
+      fontWeight: 900,
+      letterSpacing: ".4px",
+      color: "rgba(2,6,23,.85)",
+      borderBottom: "1px solid rgba(2,6,23,.12)",
+      boxShadow: "inset 0 -1px 0 rgba(2,6,23,.06)",
+    },
+
+    // Línea “accent” arriba del header (detalle premium)
+    "& .MuiTableHead-root": {
+      position: "relative",
+    },
+    "& .MuiTableHead-root::before": {
+      content: '""',
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 3,
+      background: "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+      opacity: 0.85,
+    },
+
+    // Hover de filas (bonus)
+    "& .MuiTableBody-root .MuiTableRow-root:hover .MuiTableCell-root": {
+      backgroundColor: "rgba(15,118,110,.04)",
+    },
+  }}
+>
       <CatalogoTablePage
         title="Catálogo: Dimensiones"
         subtitle="Visualiza y edita dimensiones (solo campos permitidos)."
@@ -136,6 +266,8 @@ export default function DimensionesPage() {
         onView={onView}
         onEdit={onEdit}
       />
+
+      </Box>
 
       {/* ✅ Modal Ver (bonito, solo lectura) */}
       <DimensionViewDialog

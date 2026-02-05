@@ -138,6 +138,48 @@ export default function UnidadesOrgPage() {
 
   return (
     <>
+<Box
+  sx={{
+    "& .MuiTableContainer-root": {
+      borderRadius: 3,
+      overflow: "hidden",
+      border: "1px solid rgba(2,6,23,.08)",
+      boxShadow: "0 10px 30px rgba(2,6,23,.06)",
+    },
+
+    "& .MuiTableHead-root .MuiTableCell-head": {
+      position: "sticky",
+      top: 0,
+      zIndex: 2,
+      background:
+        "linear-gradient(180deg, rgba(15,118,110,.12) 0%, rgba(15,118,110,.06) 60%, rgba(255,255,255,1) 100%)",
+      backdropFilter: "blur(6px)",
+      fontWeight: 900,
+      letterSpacing: ".4px",
+      color: "rgba(2,6,23,.85)",
+      borderBottom: "1px solid rgba(2,6,23,.12)",
+      boxShadow: "inset 0 -1px 0 rgba(2,6,23,.06)",
+    },
+
+    "& .MuiTableHead-root": { position: "relative" },
+    "& .MuiTableHead-root::before": {
+      content: '""',
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 3,
+      background:
+        "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+      opacity: 0.85,
+      zIndex: 3,
+    },
+
+    "& .MuiTableBody-root .MuiTableRow-root:hover .MuiTableCell-root": {
+      backgroundColor: "rgba(15,118,110,.04)",
+    },
+  }}
+>
       <CatalogoTablePage
         title="Catálogo: Unidades Organizacionales"
         subtitle="Visualiza y edita unidades org (campos permitidos por backend)."
@@ -152,10 +194,33 @@ export default function UnidadesOrgPage() {
         onView={onView}
         onEdit={onEdit}
       />
+      </Box>
 
       {/* VER */}
       <Dialog open={openView} onClose={() => setOpenView(false)} fullWidth maxWidth="md">
-        <DialogTitle sx={{ fontWeight: 900 }}>Detalle — Unidad Organizacional</DialogTitle>
+        <DialogTitle
+          sx={{
+            fontWeight: 950,
+            position: "relative",
+            background:
+              "linear-gradient(180deg, rgba(15,118,110,.10) 0%, rgba(255,255,255,1) 85%)",
+            borderBottom: "1px solid rgba(2,6,23,.08)",
+          }}
+        >
+          Detalle — Unidad Organizacional
+          <Box
+            sx={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 3,
+              background:
+                "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+              opacity: 0.85,
+            }}
+          />
+        </DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           {viewRow && (
             <Box sx={{ display: "grid", gap: 2 }}>
@@ -200,7 +265,29 @@ export default function UnidadesOrgPage() {
 
       {/* EDITAR */}
       <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="md">
-        <DialogTitle sx={{ fontWeight: 900 }}>Editar Unidad Organizacional</DialogTitle>
+        <DialogTitle
+          sx={{
+            fontWeight: 950,
+            position: "relative",
+            background:
+              "linear-gradient(180deg, rgba(15,118,110,.10) 0%, rgba(255,255,255,1) 85%)",
+            borderBottom: "1px solid rgba(2,6,23,.08)",
+          }}
+        >
+          Editar Unidad Organizacional
+          <Box
+            sx={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 3,
+              background:
+                "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+              opacity: 0.85,
+            }}
+          />
+        </DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           <Box sx={{ display: "grid", gap: 1.5 }}>
             {saveError && (
