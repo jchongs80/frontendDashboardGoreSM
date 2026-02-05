@@ -104,6 +104,8 @@ export default function Sidebar({
     { text: "Políticas", icon: <FlagRoundedIcon />, path: "/planeamiento/politicas" },
     { text: "Objetivos", icon: <GpsFixedRoundedIcon />, path: "/planeamiento/objetivos" },
     { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
+    { text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
+    { text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
   ];
 
   

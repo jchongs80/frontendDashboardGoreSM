@@ -413,12 +413,91 @@ export type ObjetivoConResponsablesDto = {
 export type ObjetivoResponsableCreateDto = {
   idUnidad: number;
 };
+// ========= Helpers de respuesta (sin any) =========
+type ApiResponseDto<T> = {
+  isSuccess?: boolean;
+  message?: string;
+  data?: T;
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function unwrapApi<T>(resp: unknown): { ok: boolean; data: T; message?: string } {
+  // Si ya vino como array/objeto final (sin wrapper)
+  if (!isRecord(resp)) {
+    return { ok: true, data: resp as T };
+  }
+
+  // Si vino con wrapper ApiResponseDto
+  if ("data" in resp) {
+    const r = resp as ApiResponseDto<T>;
+    const ok = r.isSuccess ?? true;
+    return { ok, data: (r.data as T) ?? (undefined as unknown as T), message: r.message };
+  }
+
+  // fallback
+  return { ok: true, data: resp as T };
+}
+
+// ========= DTOs Unidades Org (completo) =========
+export type UnidadOrganizacionalDto = {
+  idUnidad: number;
+  codigo: string;
+  nombre: string;
+  siglas?: string | null;
+  tipo?: string | null;
+
+  idUnidadPadre?: number | null;
+
+  responsableCargo?: string | null;
+  responsableNombre?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+
+  estado?: string | null; // ACTIVO/INACTIVO
+};
+
+export type UnidadOrganizacionalUpdateDto = {
+  nombre: string;
+  siglas?: string | null;
+  tipo?: string | null;
+
+  idUnidadPadre?: number | null;
+
+  responsableCargo?: string | null;
+  responsableNombre?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+
+  estado: string; // ACTIVO/INACTIVO
+};
 
 /** =========
  * Actions
  * ========= */
 
 export const PlaneamientoAction = {
+  // ===============================
+// Unidades Org (Catálogo)
+// ===============================
+getUnidadesOrganizacionales: async (soloActivas = true) => {
+  const resp = await api.get<unknown>(`/api/unidades-org?soloActivas=${soloActivas}`);
+  const u = unwrapApi<UnidadOrganizacionalDto[]>(resp);
+
+  if (!u.ok) throw new Error(u.message || "No se pudo listar unidades organizacionales.");
+  return u.data ?? [];
+},
+
+updateUnidadOrganizacional: async (idUnidad: number, payload: UnidadOrganizacionalUpdateDto) => {
+  const resp = await api.put<unknown>(`/api/unidades-org/${idUnidad}`, payload);
+  const u = unwrapApi<boolean>(resp);
+
+  if (!u.ok) throw new Error(u.message || "No se pudo actualizar la unidad organizacional.");
+  return true;
+},
+
   // ==========================================================
   // Objetivos + Responsables (N a N) - Vista PDRC
   // ==========================================================

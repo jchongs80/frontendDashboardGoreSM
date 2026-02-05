@@ -18,6 +18,7 @@ import EjesEstrategicosPage from "../features/planeamiento/pages/EjesEstrategico
 import PoliticasPage from "../features/planeamiento/pages/PoliticasPage";
 import ObjetivosPage from "../features/planeamiento/pages/ObjetivosPage";
 import AccionesPage from "../features/planeamiento/pages/AccionesPage";
+import PdrcOeAePage from "../features/planeamiento/pages/PdrcOeAePage";
 
 // Alineamiento (Módulo 4)
 import AlineamientosInstrumentosPage from "../features/alineamiento/pages/AlineamientosInstrumentosPage";
@@ -31,6 +32,8 @@ import PeiObjetivosResponsablesPage from "../features/planeamiento/pages/PeiObje
 import PeiObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PeiObjetivosAccionesIndicadoresPage";
 
 import UsuariosPage from "../features/administracion/pages/UsuariosPage";
+import UnidadesOrganizacionalesCentrosCostoPage from "../features/planeamiento/pages/UnidadesOrganizacionalesCentrosCostoPage";
+import UnidadesOrgPage2 from "../features/planeamiento/pages/UnidadesOrgPage2";
 
 
 export default function App() {
@@ -67,6 +70,10 @@ export default function App() {
           <Route path="/planeamiento/politicas" element={<PoliticasPage />} />
           <Route path="/planeamiento/objetivos" element={<ObjetivosPage />} />
           <Route path="/planeamiento/acciones" element={<AccionesPage />} />
+          <Route path="/planeamiento/centros-costo" element={<UnidadesOrganizacionalesCentrosCostoPage />} />
+          <Route path="/planeamiento/poi" element={<UnidadesOrgPage2 />} />
+          <Route path="/planeamiento/pdrc-oe-ae/:idUnidad" element={<PdrcOeAePage />} />
+
 
           {/* Alineamiento */}
           <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
