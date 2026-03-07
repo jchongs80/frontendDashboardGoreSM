@@ -632,11 +632,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
                                 No hay indicadores registrados para este AER.
                               </Alert>
                             ) : (
-                              <TableContainer
-                                component={Paper}
-                                variant="outlined"
-                                sx={{ borderRadius: 2 }}
-                              >
+                              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                                 <Table size="small">
                                   <TableHead>
                                     <TableRow>
@@ -646,10 +642,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
                                       <TableCell sx={{ fontWeight: 900 }}>
                                         Nombre Indicador
                                       </TableCell>
-                                      <TableCell
-                                        align="right"
-                                        sx={{ fontWeight: 900, width: 120 }}
-                                      >
+                                      <TableCell align="right" sx={{ fontWeight: 900, width: 120 }}>
                                         Acción
                                       </TableCell>
                                     </TableRow>
