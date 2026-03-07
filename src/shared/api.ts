@@ -110,6 +110,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  patch: <T>(path: string, body?: unknown) =>
+  request<T>(path, {
+    method: "PATCH",
+    body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+  }),
+
+/** opcional: alias para acostumbrarte a delete() */
+delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+
+
   get: <T>(path: string) => request<T>(path),
 
   post: <T>(path: string, body?: unknown) =>

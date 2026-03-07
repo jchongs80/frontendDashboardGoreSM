@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Link as RouterLink} from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
@@ -34,9 +34,13 @@ import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import GpsFixedRoundedIcon from "@mui/icons-material/GpsFixedRounded";
+import HubRoundedIcon from "@mui/icons-material/HubRounded";
 
-import logoFull from "../../assets/logo-goresam-full.png"
-import logoIcon from "../../assets/logo-goresam-icon.png"
+// ✅ ICONO NUEVO para Unidades Ejecutoras
+import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
+
+import logoFull from "../../assets/logo-goresam-full.png";
+import logoIcon from "../../assets/logo-goresam-icon.png";
 
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
 import { useAuth } from "./../../features/auth/AuthContext"; // 🔁 ajusta ruta
@@ -70,14 +74,17 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const {user} =useAuth();
+  const { user } = useAuth();
   const canManageUsers = !!user?.permisos?.puedeCrearUsuarios;
 
-  const administracionItems : SidebarItem[]=[
-    {text: "Usuarios", icon: < GroupRoundedIcon/>, path: "/admin/usuarios"},
+  const administracionItems: SidebarItem[] = [
+    { text: "Usuarios", icon: <GroupRoundedIcon />, path: "/admin/usuarios" },
   ];
 
-  const isAdminActive = useMemo(()=> location.pathname.startsWith("/admin"),[location.pathname]);
+  const isAdminActive = useMemo(
+    () => location.pathname.startsWith("/admin"),
+    [location.pathname]
+  );
   const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
 
   const width = collapsed ? widthCollapsed : widthExpanded;
@@ -91,24 +98,34 @@ export default function Sidebar({
     { text: "Dimensiones", icon: <GridViewRoundedIcon />, path: "/catalogos/dimensiones" },
     { text: "Fuentes de Datos", icon: <DescriptionRoundedIcon />, path: "/catalogos/fuentes-datos" },
     { text: "Instrumentos", icon: <DashboardRoundedIcon />, path: "/catalogos/instrumentos" },
-    { text: "Tipos de Indicador", icon: <TaskAltRoundedIcon />, path: "/catalogos/tipos-indicador" },
+    //{ text: "Tipos de Indicador", icon: <TaskAltRoundedIcon />, path: "/catalogos/tipos-indicador" },
     { text: "Unidades de Medida", icon: <TableChartRoundedIcon />, path: "/catalogos/unidades-medida" },
     { text: "Unidades Org.", icon: <WidgetsRoundedIcon />, path: "/catalogos/unidades-org" },
   ];
 
   const planeamientoItems: SidebarItem[] = [
-    { text: "Indicadores", icon: <InsightsRoundedIcon />, path: "/planeamiento/indicadores" },
-    { text: "Indicadores Instrumentos", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-instrumentos" },
-    { text: "Indicadores Metas", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-metas" },
+    //{ text: "Indicadores", icon: <InsightsRoundedIcon />, path: "/planeamiento/indicadores" },
+    //{ text: "Indicadores Instrumentos", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-instrumentos" },
+    //{ text: "Indicadores Metas", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-metas" },
     { text: "Ejes Estratégicos", icon: <TrackChangesRoundedIcon />, path: "/planeamiento/ejes" },
     { text: "Políticas", icon: <FlagRoundedIcon />, path: "/planeamiento/politicas" },
     { text: "Objetivos", icon: <GpsFixedRoundedIcon />, path: "/planeamiento/objetivos" },
     { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
-    { text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
-    { text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
-  ];
+    //{ text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
+    //{ text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
 
-  
+    // ✅ NUEVO BOTÓN (debajo de POI)
+    {
+      text: "P.O.I.",
+      icon: <ApartmentRoundedIcon />,
+      path: "/planeamiento/unidades-ejecutoras",
+    },
+    {
+      text: "P.D.R.C.",
+      icon: <HubRoundedIcon />,
+      path: "/planeamiento/pdrc-oer-aer",
+    },
+  ];
 
   const alineamientoItems: SidebarItem[] = [
     { text: "Alineamientos Instrumentos", icon: <AccountTreeRoundedIcon />, path: "/alineamiento/instrumentos" },
@@ -152,7 +169,8 @@ export default function Sidebar({
     path,
     nested = false,
   }: SidebarItem & { nested?: boolean }) => {
-    const active = path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+    const active =
+      path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
     const button = (
       <ListItemButton
@@ -216,42 +234,40 @@ export default function Sidebar({
         flexDirection: "column",
       }}
     >
-     <Box
-  component={RouterLink}
-  to="/"
-  sx={{
-    // placa (card) para que el logo resalte
-    mx: collapsed ? 1 : 1.6,
-    my: 1.6,
-    px: collapsed ? 1 : 1.6,
-    py: 1.3,
-    borderRadius: 2.5,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    backdropFilter: "blur(6px)",
-    border: "1px solid rgba(255,255,255,0.35)",
-    boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textDecoration: "none",
-  }}
->
-  <Box
-    component="img"
-    src={collapsed ? logoIcon : logoFull}
-    alt="Gobierno Regional San Martín"
-    sx={{
-      height: collapsed ? 38 : 46,
-      width: "auto",
-      maxWidth: "100%",
-      objectFit: "contain",
-      display: "block",
-      transition: "all .2s ease",
-      // un toque de definición
-      filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))",
-    }}
-  />
-</Box>
+      <Box
+        component={RouterLink}
+        to="/"
+        sx={{
+          mx: collapsed ? 1 : 1.6,
+          my: 1.6,
+          px: collapsed ? 1 : 1.6,
+          py: 1.3,
+          borderRadius: 2.5,
+          backgroundColor: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(255,255,255,0.35)",
+          boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textDecoration: "none",
+        }}
+      >
+        <Box
+          component="img"
+          src={collapsed ? logoIcon : logoFull}
+          alt="Gobierno Regional San Martín"
+          sx={{
+            height: collapsed ? 38 : 46,
+            width: "auto",
+            maxWidth: "100%",
+            objectFit: "contain",
+            display: "block",
+            transition: "all .2s ease",
+            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))",
+          }}
+        />
+      </Box>
 
       <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
 
@@ -285,6 +301,7 @@ export default function Sidebar({
       >
         <List disablePadding>
           <NavButton text="Dashboards" icon={<DashboardRoundedIcon />} path="/" />
+
           {/* Catálogos */}
           <Box sx={{ mt: 0.8 }}>
             <ListItemButton
@@ -399,53 +416,53 @@ export default function Sidebar({
             )}
           </Box>
 
-{canManageUsers && (
-  <Box sx={{ mt: 0.8 }}>
-    <ListItemButton
-      onClick={() => setOpenAdmin((p) => !p)}
-      sx={{
-        mb: 0.6,
-        borderRadius: 2,
-        color: "rgba(255,255,255,0.92)",
-        justifyContent: collapsed ? "center" : "flex-start",
-        backgroundColor: isAdminActive ? "rgba(255,255,255,0.18)" : "transparent",
-        "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-        px: collapsed ? 1.2 : 1.6,
-        py: 1.05,
-        minHeight: 44,
-      }}
-    >
-      <ListItemIcon
-        sx={{
-          minWidth: 0,
-          mr: collapsed ? 0 : 1.4,
-          justifyContent: "center",
-          color: "inherit",
-        }}
-      >
-        <LockRoundedIcon />
-      </ListItemIcon>
+          {canManageUsers && (
+            <Box sx={{ mt: 0.8 }}>
+              <ListItemButton
+                onClick={() => setOpenAdmin((p) => !p)}
+                sx={{
+                  mb: 0.6,
+                  borderRadius: 2,
+                  color: "rgba(255,255,255,0.92)",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  backgroundColor: isAdminActive ? "rgba(255,255,255,0.18)" : "transparent",
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
+                  px: collapsed ? 1.2 : 1.6,
+                  py: 1.05,
+                  minHeight: 44,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: collapsed ? 0 : 1.4,
+                    justifyContent: "center",
+                    color: "inherit",
+                  }}
+                >
+                  <LockRoundedIcon />
+                </ListItemIcon>
 
-      {!collapsed && (
-        <>
-          <ListItemText
-            primary="Administración"
-            primaryTypographyProps={{ fontSize: 13, fontWeight: 750 }}
-          />
-          {openAdmin ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-        </>
-      )}
-    </ListItemButton>
+                {!collapsed && (
+                  <>
+                    <ListItemText
+                      primary="Administración"
+                      primaryTypographyProps={{ fontSize: 13, fontWeight: 750 }}
+                    />
+                    {openAdmin ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
+                  </>
+                )}
+              </ListItemButton>
 
-    <Collapse in={openAdmin} timeout="auto" unmountOnExit>
-      <List disablePadding sx={{ pl: collapsed ? 0 : 1 }}>
-        {administracionItems.map((it) => (
-          <NavButton key={it.path} text={it.text} icon={it.icon} path={it.path} />
-        ))}
-      </List>
-    </Collapse>
-  </Box>
-)}
+              <Collapse in={openAdmin} timeout="auto" unmountOnExit>
+                <List disablePadding sx={{ pl: collapsed ? 0 : 1 }}>
+                  {administracionItems.map((it) => (
+                    <NavButton key={it.path} text={it.text} icon={it.icon} path={it.path} />
+                  ))}
+                </List>
+              </Collapse>
+            </Box>
+          )}
 
           {/* Alineamiento */}
           <Box sx={{ mt: 0.8 }}>

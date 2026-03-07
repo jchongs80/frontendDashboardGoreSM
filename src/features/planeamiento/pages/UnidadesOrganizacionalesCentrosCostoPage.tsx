@@ -455,7 +455,7 @@ export default function UnidadesOrganizacionalesCentrosCostoPage() {
             onClick={() => void openCreateModalGeneral()}
             sx={{ whiteSpace: "nowrap" }}
           >
-            Nuevo Centro de Costo
+            Nuevo CC
           </Button>
 
           <Tooltip title="Refrescar">

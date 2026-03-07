@@ -648,4 +648,46 @@ createAccion: (payload: AccionCreateUpdateDto) =>
   removeResponsableFromPolitica: (idPolitica: number, idUnidad: number) =>
     api.del<void>(`/api/politicas/${idPolitica}/responsables/${idUnidad}`),
 
+  // OEI PEI por AER
+  //getOeiPeiByAer: async (idAer: number) => {
+    //const resp = await api.get<ObjetivoListDto[]>(`/api/ObjetivosEstrategicos/pei/oei/aer/${idAer}`);
+    //return resp ?? [];
+  //},
+
+  // AEI PEI por AER
+  //getAeiPeiByAer: async (idAer: number) => {
+    //const resp = await api.get<AccionListDto[]>(`/api/AccionesEstrategicas/pei/aei/aer/${idAer}`);
+    //return resp ?? [];
+  //},
+
+  //async getOeiPeiByAer(idAer: number) {
+  //const resp = await api.get<ObjetivoListDto[]>(
+    //`/api/ObjetivosEstrategicos/pei/oei/aer/${idAer}`
+  //);
+  //return resp ?? [];
+//},
+
+async getAeiPeiByAer(idAer: number) {
+  const resp = await api.get<AccionListDto[]>(
+    `/api/AccionesEstrategicas/pei/aei/aer/${idAer}`
+  );
+  return resp ?? [];
+},
+  // =========================
+  // PEI por AER (modelo nuevo)
+  // =========================
+
+  async getOeiPeiByAer(idAer: number) {
+    const resp = await api.get<ObjetivoListDto[]>(
+      `/api/ObjetivosEstrategicos/pei/oei/aer/${idAer}`
+    );
+    return resp ?? [];
+  },
+
+  async getAeiPeiByOeiCc(idOei: number, idCc: number) {
+    const resp = await api.get<AccionListDto[]>(
+      `/api/AccionesEstrategicas/pei/aei/oei/${idOei}/cc/${idCc}`
+    );
+    return resp ?? [];
+  },
 };

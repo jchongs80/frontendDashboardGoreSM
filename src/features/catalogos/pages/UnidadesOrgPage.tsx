@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -7,12 +8,34 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
 
 import CatalogoTablePage, { type ColumnDef } from "../components/CatalogoTablePage";
-import { CatalogoAction, type UnidadOrganizacionalDto, type UnidadOrganizacionalUpdateDto } from "../CatalogoAction";
+import {
+  CatalogoAction,
+  type UnidadOrganizacionalCreateDto,
+  type UnidadOrganizacionalDto,
+  type UnidadOrganizacionalUpdateDto,
+} from "../CatalogoAction";
+
+/** ✅ Utilidad sin `any` para leer mensajes de error */
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+
+  // Si tu wrapper api devuelve { message: "..." } o { error: "..." }
+  if (typeof err === "object" && err !== null) {
+    const rec = err as Record<string, unknown>;
+    const msg = rec["message"];
+    const error = rec["error"];
+    if (typeof msg === "string") return msg;
+    if (typeof error === "string") return error;
+  }
+  return "Ocurrió un error inesperado.";
+}
 
 const pillSx = (estado?: string | null) => ({
   display: "inline-flex",
@@ -25,32 +48,30 @@ const pillSx = (estado?: string | null) => ({
   bgcolor: estado === "ACTIVO" ? "rgba(16,185,129,.10)" : "rgba(239,68,68,.10)",
 });
 
-function LabelValue({ label, value }: { label: string; value?: any }) {
+function LabelValue({ label, value }: { label: string; value?: unknown }) {
   return (
     <Box sx={{ display: "grid", gap: 0.3 }}>
       <Typography sx={{ fontSize: 12, color: "text.secondary", fontWeight: 800 }}>
         {label}
       </Typography>
-      <Typography sx={{ fontSize: 13.5, fontWeight: 800 }}>
-        {value ?? "—"}
-      </Typography>
+      <Typography sx={{ fontSize: 13.5, fontWeight: 800 }}>{String(value ?? "—")}</Typography>
     </Box>
   );
 }
 
 export default function UnidadesOrgPage() {
   const [rows, setRows] = useState<UnidadOrganizacionalDto[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // view
-  const [openView, setOpenView] = useState(false);
+  const [openView, setOpenView] = useState<boolean>(false);
   const [viewRow, setViewRow] = useState<UnidadOrganizacionalDto | null>(null);
 
   // edit
-  const [openEdit, setOpenEdit] = useState(false);
+  const [openEdit, setOpenEdit] = useState<boolean>(false);
   const [editing, setEditing] = useState<UnidadOrganizacionalDto | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [form, setForm] = useState<UnidadOrganizacionalUpdateDto>({
@@ -65,20 +86,39 @@ export default function UnidadesOrgPage() {
     estado: "ACTIVO",
   });
 
+  // create
+  const [openCreate, setOpenCreate] = useState<boolean>(false);
+  const [creating, setCreating] = useState<boolean>(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const [createForm, setCreateForm] = useState<UnidadOrganizacionalCreateDto>({
+    codigo: "",
+    nombre: "",
+    siglas: "",
+    tipo: "",
+    idUnidadPadre: null,
+    responsableCargo: "",
+    responsableNombre: "",
+    email: "",
+    telefono: "",
+  });
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await CatalogoAction.getUnidadesOrganizacionales();
       setRows(data);
-    } catch (e: any) {
-      setError(e.message ?? "Error cargando unidades organizacionales");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => void load(), [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const columns = useMemo<ColumnDef<UnidadOrganizacionalDto>[]>(
     () => [
@@ -129,98 +169,132 @@ export default function UnidadesOrgPage() {
       await CatalogoAction.updateUnidadOrg(editing.idUnidad, form);
       setOpenEdit(false);
       await load();
-    } catch (e: any) {
-      setSaveError(e.message ?? "Error al guardar");
+    } catch (e: unknown) {
+      setSaveError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
   };
 
+  const onOpenCreate = () => {
+    setCreateError(null);
+    setCreateForm({
+      codigo: "",
+      nombre: "",
+      siglas: "",
+      tipo: "",
+      idUnidadPadre: null,
+      responsableCargo: "",
+      responsableNombre: "",
+      email: "",
+      telefono: "",
+    });
+    setOpenCreate(true);
+  };
+
+  const create = async () => {
+    const codigo = (createForm.codigo ?? "").trim();
+    const nombre = (createForm.nombre ?? "").trim();
+
+    if (!codigo || !nombre) {
+      setCreateError("Código y Nombre son obligatorios.");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      setCreateError(null);
+
+      await CatalogoAction.createUnidadOrg({
+        ...createForm,
+        codigo: codigo.toUpperCase(),
+        nombre,
+      });
+
+      setOpenCreate(false);
+      await load();
+    } catch (e: unknown) {
+      setCreateError(getErrorMessage(e));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <>
-<Box
-  sx={{
-    "& .MuiTableContainer-root": {
-      borderRadius: 3,
-      overflow: "hidden",
-      border: "1px solid rgba(2,6,23,.08)",
-      boxShadow: "0 10px 30px rgba(2,6,23,.06)",
-    },
+      <Box
+        sx={{
+          "& .MuiTableContainer-root": {
+            borderRadius: 3,
+            overflow: "hidden",
+            border: "1px solid rgba(2,6,23,.08)",
+            boxShadow: "0 10px 30px rgba(2,6,23,.06)",
+          },
+          "& .MuiTableHead-root .MuiTableCell-head": {
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+            background:
+              "linear-gradient(180deg, rgba(15,118,110,.12) 0%, rgba(15,118,110,.06) 60%, rgba(255,255,255,1) 100%)",
+            backdropFilter: "blur(6px)",
+            fontWeight: 900,
+            letterSpacing: ".4px",
+            color: "rgba(2,6,23,.85)",
+            borderBottom: "1px solid rgba(2,6,23,.12)",
+            boxShadow: "inset 0 -1px 0 rgba(2,6,23,.06)",
+          },
+          "& .MuiTableHead-root": { position: "relative" },
+          "& .MuiTableHead-root::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 3,
+            background:
+              "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
+            opacity: 0.85,
+            zIndex: 3,
+          },
+          "& .MuiTableBody-root .MuiTableRow-root:hover .MuiTableCell-root": {
+            backgroundColor: "rgba(15,118,110,.04)",
+          },
+        }}
+      >
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+          <Button
+            variant="contained"
+            onClick={onOpenCreate}
+            sx={{
+              borderRadius: 2.5,
+              fontWeight: 900,
+              px: 2.2,
+              boxShadow: "0 10px 25px rgba(0,0,0,.08)",
+            }}
+          >
+            + Nuevo
+          </Button>
+        </Stack>
 
-    "& .MuiTableHead-root .MuiTableCell-head": {
-      position: "sticky",
-      top: 0,
-      zIndex: 2,
-      background:
-        "linear-gradient(180deg, rgba(15,118,110,.12) 0%, rgba(15,118,110,.06) 60%, rgba(255,255,255,1) 100%)",
-      backdropFilter: "blur(6px)",
-      fontWeight: 900,
-      letterSpacing: ".4px",
-      color: "rgba(2,6,23,.85)",
-      borderBottom: "1px solid rgba(2,6,23,.12)",
-      boxShadow: "inset 0 -1px 0 rgba(2,6,23,.06)",
-    },
-
-    "& .MuiTableHead-root": { position: "relative" },
-    "& .MuiTableHead-root::before": {
-      content: '""',
-      position: "absolute",
-      left: 0,
-      right: 0,
-      top: 0,
-      height: 3,
-      background:
-        "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
-      opacity: 0.85,
-      zIndex: 3,
-    },
-
-    "& .MuiTableBody-root .MuiTableRow-root:hover .MuiTableCell-root": {
-      backgroundColor: "rgba(15,118,110,.04)",
-    },
-  }}
->
-      <CatalogoTablePage
-        title="Catálogo: Unidades Organizacionales"
-        subtitle="Visualiza y edita unidades org (campos permitidos por backend)."
-        rows={rows}
-        loading={loading}
-        error={error}
-        columns={columns}
-        getRowId={(r) => r.idUnidad}
-        searchKeys={["codigo", "nombre", "siglas", "tipo", "responsableNombre", "email", "estado"]}
-        onRefresh={load}
-        allowEdit={true}
-        onView={onView}
-        onEdit={onEdit}
-      />
+        <CatalogoTablePage
+          title="Catálogo: Unidades Organizacionales"
+          subtitle="Visualiza y edita unidades org (campos permitidos por backend)."
+          rows={rows}
+          loading={loading}
+          error={error}
+          columns={columns}
+          getRowId={(r) => r.idUnidad}
+          searchKeys={["codigo", "nombre", "siglas", "tipo", "responsableNombre", "email", "estado"]}
+          onRefresh={load}
+          allowEdit={true}
+          onView={onView}
+          onEdit={onEdit}
+        />
       </Box>
 
       {/* VER */}
       <Dialog open={openView} onClose={() => setOpenView(false)} fullWidth maxWidth="md">
-        <DialogTitle
-          sx={{
-            fontWeight: 950,
-            position: "relative",
-            background:
-              "linear-gradient(180deg, rgba(15,118,110,.10) 0%, rgba(255,255,255,1) 85%)",
-            borderBottom: "1px solid rgba(2,6,23,.08)",
-          }}
-        >
-          Detalle — Unidad Organizacional
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 3,
-              background:
-                "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
-              opacity: 0.85,
-            }}
-          />
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 950 }}>Detalle — Unidad Organizacional</DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
           {viewRow && (
             <Box sx={{ display: "grid", gap: 2 }}>
@@ -235,9 +309,7 @@ export default function UnidadesOrgPage() {
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography sx={{ fontWeight: 950, fontSize: 16 }}>
-                    {viewRow.nombre}
-                  </Typography>
+                  <Typography sx={{ fontWeight: 950, fontSize: 16 }}>{viewRow.nombre}</Typography>
                   <Box sx={pillSx(viewRow.estado)}>{viewRow.estado ?? "—"}</Box>
                 </Box>
                 <Typography sx={{ color: "text.secondary", fontWeight: 700 }}>
@@ -258,122 +330,217 @@ export default function UnidadesOrgPage() {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenView(false)}>Cerrar</Button>
+        <DialogActions>
+          <Button onClick={() => setOpenView(false)} sx={{ fontWeight: 900 }}>
+            Cerrar
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* EDITAR */}
       <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="md">
-        <DialogTitle
-          sx={{
-            fontWeight: 950,
-            position: "relative",
-            background:
-              "linear-gradient(180deg, rgba(15,118,110,.10) 0%, rgba(255,255,255,1) 85%)",
-            borderBottom: "1px solid rgba(2,6,23,.08)",
-          }}
-        >
-          Editar Unidad Organizacional
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 3,
-              background:
-                "linear-gradient(90deg, rgba(59,130,246,.9), rgba(16,185,129,.9), rgba(249,115,22,.9))",
-              opacity: 0.85,
-            }}
-          />
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 950 }}>Editar — Unidad Organizacional</DialogTitle>
         <DialogContent sx={{ pt: 1.5 }}>
-          <Box sx={{ display: "grid", gap: 1.5 }}>
-            {saveError && (
-              <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.25)" }}>
-                <Typography sx={{ fontWeight: 900, color: "error.main" }}>{saveError}</Typography>
-              </Box>
-            )}
+          {saveError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {saveError}
+            </Alert>
+          )}
 
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5 }}>
-              <TextField
-                label="Nombre"
-                value={form.nombre}
-                onChange={(e) => setForm((p) => ({ ...p, nombre: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Siglas"
-                value={form.siglas ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, siglas: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Tipo"
-                value={form.tipo ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value }))}
-                fullWidth
-              />
-            </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 2 }}>
+            <TextField
+              label="Nombre"
+              value={form.nombre}
+              onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Siglas"
+              value={form.siglas ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, siglas: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Tipo"
+              value={form.tipo ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, tipo: e.target.value }))}
+              fullWidth
+              select
+            >
+              <MenuItem value="">(Sin tipo)</MenuItem>
+              <MenuItem value="OFICINA">OFICINA</MenuItem>
+              <MenuItem value="DIRECCION">DIRECCION</MenuItem>
+              <MenuItem value="GERENCIA">GERENCIA</MenuItem>
+              <MenuItem value="UNIDAD">UNIDAD</MenuItem>
+            </TextField>
 
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5 }}>
-              <TextField
-                label="Responsable (cargo)"
-                value={form.responsableCargo ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, responsableCargo: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Responsable (nombre)"
-                value={form.responsableNombre ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, responsableNombre: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Unidad padre (ID)"
-                type="number"
-                value={form.idUnidadPadre ?? ""}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    idUnidadPadre: e.target.value === "" ? null : Number(e.target.value),
-                  }))
-                }
-                fullWidth
-              />
-            </Box>
+            <TextField
+              label="Estado"
+              value={form.estado ?? "ACTIVO"}
+              onChange={(e) => setForm((s) => ({ ...s, estado: e.target.value }))}
+              fullWidth
+              select
+            >
+              <MenuItem value="ACTIVO">ACTIVO</MenuItem>
+              <MenuItem value="INACTIVO">INACTIVO</MenuItem>
+            </TextField>
 
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5 }}>
-              <TextField
-                label="Email"
-                value={form.email ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Teléfono"
-                value={form.telefono ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, telefono: e.target.value }))}
-                fullWidth
-              />
-              <TextField
-                label="Estado"
-                select
-                value={form.estado ?? "ACTIVO"}
-                onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))}
-                fullWidth
-              >
-                <MenuItem value="ACTIVO">ACTIVO</MenuItem>
-                <MenuItem value="INACTIVO">INACTIVO</MenuItem>
-              </TextField>
-            </Box>
+            <TextField
+              label="Responsable (Cargo)"
+              value={form.responsableCargo ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, responsableCargo: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Responsable (Nombre)"
+              value={form.responsableNombre ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, responsableNombre: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Email"
+              value={form.email ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Teléfono"
+              value={form.telefono ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, telefono: e.target.value }))}
+              fullWidth
+            />
+
+            <TextField
+              label="Unidad Padre"
+              value={form.idUnidadPadre ?? ""}
+              onChange={(e) =>
+                setForm((s) => ({
+                  ...s,
+                  idUnidadPadre: e.target.value === "" ? null : Number(e.target.value),
+                }))
+              }
+              fullWidth
+              select
+            >
+              <MenuItem value="">(Sin unidad padre)</MenuItem>
+              {rows.map((u) => (
+                <MenuItem key={u.idUnidad} value={u.idUnidad}>
+                  {u.codigo} - {u.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setOpenEdit(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={save} variant="contained" disabled={saving || !form.nombre.trim()}>
-            Guardar
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenEdit(false)} disabled={saving} sx={{ fontWeight: 900 }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={save} disabled={saving} sx={{ fontWeight: 900 }}>
+            {saving ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* CREAR */}
+      <Dialog open={openCreate} onClose={() => setOpenCreate(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ fontWeight: 950 }}>Nuevo — Unidad Organizacional</DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          {createError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {createError}
+            </Alert>
+          )}
+
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 2 }}>
+            <TextField
+              label="Código *"
+              value={createForm.codigo}
+              onChange={(e) => setCreateForm((s) => ({ ...s, codigo: e.target.value }))}
+              fullWidth
+              helperText="Ej: UO-001"
+            />
+            <TextField
+              label="Nombre *"
+              value={createForm.nombre}
+              onChange={(e) => setCreateForm((s) => ({ ...s, nombre: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Siglas"
+              value={createForm.siglas ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, siglas: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Tipo"
+              value={createForm.tipo ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, tipo: e.target.value }))}
+              fullWidth
+              select
+            >
+              <MenuItem value="">(Sin tipo)</MenuItem>
+              <MenuItem value="OFICINA">OFICINA</MenuItem>
+              <MenuItem value="DIRECCION">DIRECCION</MenuItem>
+              <MenuItem value="GERENCIA">GERENCIA</MenuItem>
+              <MenuItem value="UNIDAD">UNIDAD</MenuItem>
+            </TextField>
+
+            <TextField
+              label="Unidad Padre"
+              value={createForm.idUnidadPadre ?? ""}
+              onChange={(e) =>
+                setCreateForm((s) => ({
+                  ...s,
+                  idUnidadPadre: e.target.value === "" ? null : Number(e.target.value),
+                }))
+              }
+              fullWidth
+              select
+            >
+              <MenuItem value="">(Sin unidad padre)</MenuItem>
+              {rows.map((u) => (
+                <MenuItem key={u.idUnidad} value={u.idUnidad}>
+                  {u.codigo} - {u.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              label="Responsable (Cargo)"
+              value={createForm.responsableCargo ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, responsableCargo: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Responsable (Nombre)"
+              value={createForm.responsableNombre ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, responsableNombre: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Email"
+              value={createForm.email ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, email: e.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Teléfono"
+              value={createForm.telefono ?? ""}
+              onChange={(e) => setCreateForm((s) => ({ ...s, telefono: e.target.value }))}
+              fullWidth
+            />
+          </Box>
+
+          <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+            El backend creará la unidad en estado <b>ACTIVO</b> automáticamente.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenCreate(false)} disabled={creating} sx={{ fontWeight: 900 }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={create} disabled={creating} sx={{ fontWeight: 900 }}>
+            {creating ? "Creando..." : "Crear"}
           </Button>
         </DialogActions>
       </Dialog>

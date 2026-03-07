@@ -1,10 +1,8 @@
-// src/features/planeamiento/components/PdrcOerAerModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
   Button,
-  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -20,7 +18,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -28,7 +25,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
   PdrcOeAeAction,
   type PdrcAccionUnidadListDto,
-  type PdrcObjetivoUnidadListDto,
+  type PdrcOerListDto,
 } from "../PdrcOeAeAction";
 
 type SnackSeverity = "success" | "info" | "warning" | "error";
@@ -36,26 +33,16 @@ type SnackState = { open: boolean; msg: string; sev: SnackSeverity };
 
 type Props = {
   open: boolean;
-  idUnidad: number; // responsables_objetivos.id_unidad
+  idUe: number;
+  idCc: number;
+  idPoiAnio: number;
   unidadLabel?: string;
   onClose: () => void;
-
-  /**
-   * ✅ Nuevo: Aplicar en memoria (sin backend).
-   * El padre actualiza la tabla principal con el payload.
-   */
-  onApply?: (payload: { idObjetivo: number; idsAccion: number[] }) => void;
-
-  /**
-   * Compatibilidad: si aún lo tienes en la página, no rompe.
-   * (Idealmente ya NO se usa)
-   */
-  onSuccess?: () => void;
+  onSaved?: () => void;
 };
 
 function errorMsg(e: unknown, fallback: string): string {
   if (e instanceof Error) return e.message || fallback;
-  if (typeof e === "string" && e.trim().length) return e;
   return fallback;
 }
 
@@ -63,32 +50,30 @@ function cloneSet(src: Set<number>): Set<number> {
   return new Set<number>(Array.from(src.values()));
 }
 
+function isAsignadaAUnidad(a: PdrcAccionUnidadListDto): boolean {
+  return Boolean(a.asignadaAUnidad ?? a.yaAsignada);
+}
+
 export default function PdrcOerAerModal({
   open,
-  idUnidad,
+  idUe,
+  idCc,
+  idPoiAnio,
   unidadLabel,
   onClose,
-  onApply,
-  onSuccess,
+  onSaved,
 }: Props) {
   const [loadingOer, setLoadingOer] = useState(false);
   const [loadingAer, setLoadingAer] = useState(false);
 
-  const [oer, setOer] = useState<PdrcObjetivoUnidadListDto[]>([]);
+  const [oer, setOer] = useState<PdrcOerListDto[]>([]);
   const [acciones, setAcciones] = useState<PdrcAccionUnidadListDto[]>([]);
-  const [oerSelected, setOerSelected] = useState<PdrcObjetivoUnidadListDto | null>(null);
+  const [oerSelected, setOerSelected] = useState<PdrcOerListDto | null>(null);
 
   const [filterOer, setFilterOer] = useState("");
-
-  // selección visible actual
   const [selectedAcciones, setSelectedAcciones] = useState<Set<number>>(new Set());
 
-  // ✅ memoria por objetivo: idObjetivo -> Set<idAccion>
-  const [selectedByObjetivo, setSelectedByObjetivo] = useState<Record<number, Set<number>>>({});
-
-  // ✅ para requisito (1): “Seleccionar todo” NO se marca automático
-  const [selectAllTouched, setSelectAllTouched] = useState<Set<number>>(new Set());
-
+  const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState<SnackState>({ open: false, msg: "", sev: "info" });
 
   const oerFiltered = useMemo(() => {
@@ -101,31 +86,17 @@ export default function PdrcOerAerModal({
     );
   }, [oer, filterOer]);
 
-  const accionesSeleccionables = useMemo(
-    () => acciones.filter((a) => !a.asignadaAOtraUnidad),
-    [acciones]
-  );
 
-  const isAllChecked = useMemo(() => {
-    if (accionesSeleccionables.length === 0) return false;
-    return accionesSeleccionables.every((a) => selectedAcciones.has(a.idAccion));
-  }, [accionesSeleccionables, selectedAcciones]);
-
-  const isIndeterminate = useMemo(() => {
-    if (accionesSeleccionables.length === 0) return false;
-    const checkedCount = accionesSeleccionables.filter((a) => selectedAcciones.has(a.idAccion)).length;
-    return checkedCount > 0 && checkedCount < accionesSeleccionables.length;
-  }, [accionesSeleccionables, selectedAcciones]);
-
-  const currentObjetivoId = oerSelected?.idObjetivo ?? 0;
-  const headerTouchedForCurrent = useMemo(() => {
-    if (!currentObjetivoId) return false;
-    return selectAllTouched.has(currentObjetivoId);
-  }, [selectAllTouched, currentObjetivoId]);
-
-  // ✅ Cargar OER al abrir modal (manteniendo el estilo original)
   useEffect(() => {
     if (!open) return;
+
+    if (!idUe || !idCc || !idPoiAnio) {
+      setOer([]);
+      setAcciones([]);
+      setOerSelected(null);
+      setSelectedAcciones(new Set());
+      return;
+    }
 
     (async () => {
       setLoadingOer(true);
@@ -135,11 +106,7 @@ export default function PdrcOerAerModal({
         setAcciones([]);
         setSelectedAcciones(new Set());
 
-        // ✅ IMPORTANTE: NO borramos selectedByObjetivo para mantener memoria aunque cierres el modal
-        // setSelectedByObjetivo({});  <-- ya NO
-        // setSelectAllTouched(new Set()); <-- opcional: lo mantenemos por memoria también
-
-        const list = await PdrcOeAeAction.getObjetivosByUnidad(idUnidad, false);
+        const list = await PdrcOeAeAction.getObjetivosByUeCc(idUe, idCc, idPoiAnio);
         setOer(list ?? []);
       } catch (e: unknown) {
         setOer([]);
@@ -148,40 +115,21 @@ export default function PdrcOerAerModal({
         setLoadingOer(false);
       }
     })();
-  }, [open, idUnidad]);
-
-  const persistSelection = (idObjetivo: number, next: Set<number>) => {
-    setSelectedByObjetivo((prev) => ({ ...prev, [idObjetivo]: cloneSet(next) }));
-  };
+  }, [open, idUe, idCc, idPoiAnio]);
 
   const loadAcciones = async (idObjetivo: number) => {
     setLoadingAer(true);
     try {
       setAcciones([]);
+      const list = await PdrcOeAeAction.getAccionesByObjetivoPoi(idObjetivo, idUe, idCc, idPoiAnio, false);
 
-      const list = await PdrcOeAeAction.getAccionesByUnidadObjetivo(idUnidad, idObjetivo, false);
-      const safeList = list ?? [];
-      setAcciones(safeList);
+      const safe = list ?? [];
+      setAcciones(safe);
 
-      // ✅ Recuperar selección del objetivo desde memoria
-      setSelectedByObjetivo((prev) => {
-        const exists = prev[idObjetivo];
-        if (exists) {
-          setSelectedAcciones(cloneSet(exists));
-          return prev;
-        }
-
-        // Si es primera vez, inicializamos con las que ya están asignadas a la unidad (comportamiento original)
-        const initial = new Set<number>();
-        for (const a of safeList) {
-          if (a.asignadaAUnidad) initial.add(a.idAccion);
-        }
-
-        setSelectedAcciones(cloneSet(initial));
-        return { ...prev, [idObjetivo]: initial };
-      });
-
-      // ✅ requisito (1): NO marcamos touched aquí
+      // Inicializa selección con lo ya asignado (Año + UE + CC)
+      const init = new Set<number>();
+      for (const a of safe) if (isAsignadaAUnidad(a)) init.add(a.idAccion);
+      setSelectedAcciones(init);
     } catch (e: unknown) {
       setAcciones([]);
       setSelectedAcciones(new Set());
@@ -191,47 +139,23 @@ export default function PdrcOerAerModal({
     }
   };
 
-  const handleSelectOer = (row: PdrcObjetivoUnidadListDto) => {
+  // ✅ 1) NO hay botón “VER AER”: al seleccionar OER se carga la tabla inferior
+  const handleSelectOer = (row: PdrcOerListDto) => {
     setOerSelected(row);
     void loadAcciones(row.idObjetivo);
   };
 
   const toggleAccion = (idAccion: number) => {
-    if (!oerSelected) return;
-
     setSelectedAcciones((prev) => {
-      const next = new Set(prev);
+      const next = cloneSet(prev);
       if (next.has(idAccion)) next.delete(idAccion);
       else next.add(idAccion);
-
-      persistSelection(oerSelected.idObjetivo, next);
       return next;
     });
   };
 
-  const toggleSelectAll = () => {
-    if (!oerSelected) return;
 
-    // ✅ desde aquí recién se “habilita” el check del header
-    setSelectAllTouched((prev) => {
-      const n = new Set(prev);
-      n.add(oerSelected.idObjetivo);
-      return n;
-    });
-
-    setSelectedAcciones((prev) => {
-      const next = new Set(prev);
-
-      if (isAllChecked) accionesSeleccionables.forEach((a) => next.delete(a.idAccion));
-      else accionesSeleccionables.forEach((a) => next.add(a.idAccion));
-
-      persistSelection(oerSelected.idObjetivo, next);
-      return next;
-    });
-  };
-
-  // ✅ AGREGAR: SOLO EN MEMORIA (NO backend)
-  const handleAgregar = () => {
+  const handleAgregar = async () => {
     if (!oerSelected) {
       setSnack({ open: true, msg: "Selecciona un OER.", sev: "warning" });
       return;
@@ -243,30 +167,31 @@ export default function PdrcOerAerModal({
       return;
     }
 
-    // ✅ Construir payload y entregar al padre
-    onApply?.({ idObjetivo: oerSelected.idObjetivo, idsAccion });
-
-    // Compatibilidad (idealmente ya no lo uses)
-    // onSuccess?.();
-
-    onClose();
+    setSaving(true);
+    try {
+      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, oerSelected.idObjetivo, idsAccion);
+      setSnack({ open: true, msg: "Asignación guardada correctamente.", sev: "success" });
+      onSaved?.();
+      onClose();
+    } catch (e: unknown) {
+      setSnack({ open: true, msg: errorMsg(e, "No se pudo guardar la asignación."), sev: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <>
-      {/* ✅ Layout/estilo como tu modal original (2da captura) */}
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
         <DialogTitle sx={{ pr: 6 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
             <Box>
-              <Typography variant="h6" fontWeight={800}>
-                OBJETIVO ESTRATÉGICOS REGIONALES / UNIDAD ORG. SELECCIONADA
+              <Typography variant="h6" fontWeight={900}>
+                ACCIONES ESTRATÉGICAS REGIONALES / {unidadLabel ?? "—"}
               </Typography>
-              {unidadLabel ? (
-                <Typography variant="body2" color="text.secondary">
-                  {unidadLabel}
-                </Typography>
-              ) : null}
+              <Typography variant="body2" color="text.secondary">
+                Asignación persistente (BD) para UE + Centro de Costo + Año.
+              </Typography>
             </Box>
 
             <IconButton onClick={onClose} aria-label="close">
@@ -276,21 +201,20 @@ export default function PdrcOerAerModal({
         </DialogTitle>
 
         <DialogContent dividers>
-          {/* FILTRO */}
           <Box sx={{ mb: 2 }}>
             <TextField
               value={filterOer}
               onChange={(e) => setFilterOer(e.target.value)}
-              label="FILTRAR OBJETIVO"
+              label="FILTRAR OER"
               size="small"
               fullWidth
             />
           </Box>
 
-          {/* TABLA OER */}
+          {/* OER */}
           <Box sx={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 2, overflow: "hidden" }}>
             <Box sx={{ p: 1, bgcolor: "rgba(0,0,0,0.03)" }}>
-              <Typography fontWeight={800}>OBJETIVOS ESTRATÉGICOS REGIONALES (OER)</Typography>
+              <Typography fontWeight={900}>OBJETIVOS (OER)</Typography>
             </Box>
 
             {loadingOer ? (
@@ -301,38 +225,38 @@ export default function PdrcOerAerModal({
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ width: 140, fontWeight: 800 }}>CÓDIGO</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>DESCRIPCIÓN / ENUNCIADO</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 110 }}>Código</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>Enunciado</TableCell>
+                    {/* ❌ ELIMINAR columna Acción */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {oerFiltered.map((x) => {
-                    const selected = oerSelected?.idObjetivo === x.idObjetivo;
-                    return (
-                      <TableRow
-                        key={x.idObjetivo}
-                        hover
-                        onClick={() => handleSelectOer(x)}
-                        sx={{
-                          cursor: "pointer",
-                          bgcolor: selected ? "rgba(25,118,210,0.12)" : "inherit",
-                        }}
-                      >
-                        <TableCell>{x.codigo}</TableCell>
-                        <TableCell>{x.enunciado}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-
                   {oerFiltered.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          No hay objetivos para mostrar.
-                        </Typography>
+                        <Alert severity="info" sx={{ borderRadius: 2 }}>
+                          No hay OER para mostrar.
+                        </Alert>
                       </TableCell>
                     </TableRow>
-                  ) : null}
+                  ) : (
+                    oerFiltered.map((x) => {
+                      const selected = oerSelected?.idObjetivo === x.idObjetivo;
+
+                      return (
+                        <TableRow
+                          key={x.idObjetivo}
+                          hover
+                          selected={selected}
+                          onClick={() => handleSelectOer(x)}     // ✅ click fila
+                          sx={{ cursor: "pointer" }}             // ✅ UX
+                        >
+                          <TableCell sx={{ fontWeight: 900 }}>{x.codigo}</TableCell>
+                          <TableCell>{x.enunciado}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             )}
@@ -340,29 +264,15 @@ export default function PdrcOerAerModal({
 
           <Divider sx={{ my: 2 }} />
 
-          {/* TABLA AER */}
+          {/* AER */}
           <Box sx={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 2, overflow: "hidden" }}>
             <Box sx={{ p: 1, bgcolor: "rgba(0,0,0,0.03)" }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                <Typography fontWeight={800}>
-                  ACCIONES ESTRATÉGICAS REGIONALES {oerSelected ? `/ ${oerSelected.codigo}` : ""}
+                <Typography fontWeight={900}>
+                  ACCIONES (AER) {oerSelected ? `/ ${oerSelected.codigo}` : ""}
                 </Typography>
 
-                <Tooltip title="Seleccionar todo (solo acciones disponibles)">
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      SELECCIONAR TODO
-                    </Typography>
-
-                    <Checkbox
-                      size="small"
-                      disabled={!oerSelected || accionesSeleccionables.length === 0}
-                      checked={headerTouchedForCurrent ? isAllChecked : false}
-                      indeterminate={headerTouchedForCurrent ? isIndeterminate : false}
-                      onChange={toggleSelectAll}
-                    />
-                  </Box>
-                </Tooltip>
+                
               </Stack>
             </Box>
 
@@ -382,47 +292,37 @@ export default function PdrcOerAerModal({
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ width: 140, fontWeight: 800 }}>CÓDIGO</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>DESCRIPCIÓN / ENUNCIADO</TableCell>
-                    <TableCell sx={{ width: 120, fontWeight: 800 }}>SELECCIÓN</TableCell>
+                    <TableCell sx={{ width: 140, fontWeight: 900 }}>CÓDIGO</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>DESCRIPCIÓN / ENUNCIADO</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {acciones.map((a) => {
-                    const disabled = a.asignadaAOtraUnidad;
                     const checked = selectedAcciones.has(a.idAccion);
-                    const hint = disabled
-                      ? `Asignada a otra unidad (id=${a.idUnidadActual ?? "?"})`
-                      : a.asignadaAUnidad
-                      ? "Ya asignada a esta unidad"
-                      : "Disponible";
+                    const asignada = isAsignadaAUnidad(a);
 
                     return (
-                      <TableRow key={a.idAccion} hover>
-                        <TableCell>{a.codigo}</TableCell>
-                        <TableCell>
-                          <Stack direction="row" gap={1} alignItems="center">
-                            <Typography variant="body2">{a.enunciado}</Typography>
-                            {disabled ? (
-                              <Typography variant="caption" color="error">
-                                (bloqueada)
-                              </Typography>
-                            ) : null}
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip title={hint}>
-                            <span>
-                              <Checkbox
-                                size="small"
-                                disabled={disabled}
-                                checked={checked}
-                                onChange={() => toggleAccion(a.idAccion)}
-                              />
-                            </span>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
+                      <TableRow
+  key={a.idAccion}
+  hover
+  selected={checked}
+  onClick={() => {
+    if (!asignada) toggleAccion(a.idAccion); // ✅ no permitir desmarcar "YA ASIGNADA"
+  }}
+  sx={{
+    cursor: asignada ? "default" : "pointer",
+    "&.Mui-selected": {
+      bgcolor: "rgba(59,130,246,.10) !important",
+    },
+    "&.Mui-selected:hover": {
+      bgcolor: "rgba(59,130,246,.14) !important",
+    },
+  }}
+>
+  <TableCell sx={{ fontWeight: 800 }}>{a.codigo}</TableCell>
+  <TableCell>{a.enunciado}</TableCell>
+
+</TableRow>
                     );
                   })}
                 </TableBody>
@@ -431,12 +331,15 @@ export default function PdrcOerAerModal({
           </Box>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>CANCELAR</Button>
-          <Button variant="contained" onClick={handleAgregar}>
-            AGREGAR
-          </Button>
-        </DialogActions>
+        <DialogActions sx={{ p: 2, justifyContent: "flex-end" }}>
+        <Button
+          onMouseDown={(e) => e.currentTarget.blur()}
+          onClick={onClose}
+          sx={{ fontWeight: 800, borderRadius: 2 }}
+        >
+          CERRAR
+        </Button>
+      </DialogActions>
       </Dialog>
 
       <Snackbar

@@ -19,11 +19,15 @@ import PoliticasPage from "../features/planeamiento/pages/PoliticasPage";
 import ObjetivosPage from "../features/planeamiento/pages/ObjetivosPage";
 import AccionesPage from "../features/planeamiento/pages/AccionesPage";
 import PdrcOeAePage from "../features/planeamiento/pages/PdrcOeAePage";
+import UnidadesEjecutorasPage from "../features/planeamiento/pages/UnidadesEjecutorasPage";
+import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
 
+//import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage";
+import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage"; // ajusta el path real
+import PdrcOerAerPage from "../features/planeamiento/pages/PdrcOerAerPage";
 // Alineamiento (Módulo 4)
 import AlineamientosInstrumentosPage from "../features/alineamiento/pages/AlineamientosInstrumentosPage";
 import AcuerdosGobernabilidadPoliticasPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasPage";
-
 import AcuerdosGobernabilidadPoliticasResponsablesResultadosPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasResponsablesResultadosPage";
 
 import PdrcObjetivosResponsablesPage from "../features/planeamiento/pages/PdrcObjetivosResponsablesPage";
@@ -34,7 +38,7 @@ import PeiObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/
 import UsuariosPage from "../features/administracion/pages/UsuariosPage";
 import UnidadesOrganizacionalesCentrosCostoPage from "../features/planeamiento/pages/UnidadesOrganizacionalesCentrosCostoPage";
 import UnidadesOrgPage2 from "../features/planeamiento/pages/UnidadesOrgPage2";
-
+//import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
 
 export default function App() {
   return (
@@ -44,7 +48,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Todo lo protegido VA dentro del layout */}
+        {/* Protegido */}
         <Route
           element={
             <RequireAuth>
@@ -72,13 +76,22 @@ export default function App() {
           <Route path="/planeamiento/acciones" element={<AccionesPage />} />
           <Route path="/planeamiento/centros-costo" element={<UnidadesOrganizacionalesCentrosCostoPage />} />
           <Route path="/planeamiento/poi" element={<UnidadesOrgPage2 />} />
-          <Route path="/planeamiento/pdrc-oe-ae/:idUnidad" element={<PdrcOeAePage />} />
 
+          {/* ✅ Ruta confirmada por ti */}
+          {/* <Route path="/poi/oei-aei/:idOeiAei/ao" element={<PoiOeiAeiAoPage />} /> */}
+          <Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />
+          
+          {/* PDRC */}
+          <Route path="/planeamiento/pdrc-oer-aer/ue/:idUnidadEjecutora" element={<PdrcOeAePage />} />
+          <Route path="/planeamiento/unidades-ejecutoras" element={<UnidadesEjecutorasPage />} />
+          
+          <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
+          
+          {/*<Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />*/}
 
           {/* Alineamiento */}
           <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
           <Route path="/alineamiento/instrumentos" element={<AlineamientosInstrumentosPage />} />
-          {/*<Route path="/ag/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />*/}
           <Route path="/:codigoInstrumento/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />
           <Route
             path="/acuerdos-gobernabilidad/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
@@ -88,21 +101,20 @@ export default function App() {
             path="/prcp/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
             element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
           />
+
           <Route path="/pdrc/oer" element={<PdrcObjetivosResponsablesPage />} />
-          <Route path="/pdrc/oer" element={<PeiObjetivosResponsablesPage />} />
-          <Route path="/:codigoInstrumento/oer" element={<PdrcObjetivosResponsablesPage />} />
-          <Route path="/:codigoInstrumento/oer" element={<PeiObjetivosResponsablesPage />} />
+          <Route path="/pei/oei" element={<PeiObjetivosResponsablesPage />} />
+
           <Route
             path="/pdrc/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
             element={<PdrcObjetivosAccionesIndicadoresPage />}
           />
-          <Route path="/pei/oei" element={<PeiObjetivosResponsablesPage />} />
           <Route
             path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
             element={<PeiObjetivosAccionesIndicadoresPage />}
           />
-          <Route path="/admin/usuarios" element={<UsuariosPage />} />
 
+          <Route path="/admin/usuarios" element={<UsuariosPage />} />
         </Route>
 
         {/* Fallback */}

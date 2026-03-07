@@ -1,7 +1,6 @@
 // src/features/catalogos/CatalogoAction.ts
 import { api } from "../../shared/api";
 
-
 /* =========================
    DTOs (según tu backend)
 ========================= */
@@ -36,7 +35,7 @@ export type FuenteDatoDto = {
   responsable?: string | null;
   emailContacto?: string | null;
   url?: string | null;
-  estado?: string | null; // si tu tabla lo tiene
+  estado?: string | null;
 };
 
 export type ActualizarFuenteDatoDto = {
@@ -57,7 +56,7 @@ export type InstrumentoDto = {
   descripcion?: string | null;
   horizonteTemporal?: string | null;
   nivel?: string | null;
-  vigenciaDesde?: string | null; // ISO
+  vigenciaDesde?: string | null;
   vigenciaHasta?: string | null;
   estado: string;
   archivoDocumento?: string | null;
@@ -85,7 +84,7 @@ export type TipoIndicadorDto = {
   nombre: string;
   descripcion?: string | null;
   orden?: number | null;
-  estado?: string | null; // si aplica
+  estado?: string | null;
 };
 
 export type ActualizarTipoIndicadorDto = {
@@ -102,7 +101,7 @@ export type UnidadMedidaDto = {
   nombre: string;
   simbolo?: string | null;
   tipo?: string | null;
-  estado?: string | null; // si aplica
+  estado?: string | null;
 };
 
 export type ActualizarUnidadMedidaDto = {
@@ -139,6 +138,19 @@ export type UnidadOrganizacionalUpdateDto = {
   estado?: string | null;
 };
 
+// ✅ NUEVO (según UnidadOrganizacionalCreateDto del backend)
+export type UnidadOrganizacionalCreateDto = {
+  codigo: string;
+  nombre: string;
+  siglas?: string | null;
+  tipo?: string | null;
+  idUnidadPadre?: number | null;
+  responsableCargo?: string | null;
+  responsableNombre?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+};
+
 export type InstrumentoAccionDto = {
   idAccion: number;
   idInstrumento: number;
@@ -147,7 +159,7 @@ export type InstrumentoAccionDto = {
   icono?: string | null;
   url?: string | null;
   orden?: number | null;
-  estado: string; // "ACTIVO" | "INACTIVO"
+  estado: string;
   descripcion?: string | null;
 };
 
@@ -159,21 +171,22 @@ export const CatalogoAction = {
   // LIST (GET)
   getDimensiones: () => api.get<DimensionDto[]>("/api/dimensiones"),
   getFuentesDatos: () => api.get<FuenteDatoDto[]>("/api/fuentesdatos"),
-  getInstrumentos: () => api.get<InstrumentoDto[]>("/api/instrumentos"), 
+  getInstrumentos: () => api.get<InstrumentoDto[]>("/api/instrumentos"),
   getInstrumentoById: (idInstrumento: number) =>
-  api.get<InstrumentoDto>(`/api/instrumentos/${idInstrumento}`),
+    api.get<InstrumentoDto>(`/api/instrumentos/${idInstrumento}`),
   getTiposIndicador: () => api.get<TipoIndicadorDto[]>("/api/tiposindicador"),
   getUnidadesMedida: () => api.get<UnidadMedidaDto[]>("/api/unidadesmedida"),
   getUnidadesOrganizacionales: () => api.get<UnidadOrganizacionalDto[]>("/api/unidades-org"),
   getInstrumentosEje: () => api.get<InstrumentoDto[]>("/api/instrumentos/GetAllEje"),
 
   getInstrumentoAcciones: (idInstrumento: number, incluirInactivos = false) =>
-  api.get<InstrumentoAccionDto[]>(
-    `/api/instrumentos/${idInstrumento}/acciones?incluirInactivos=${incluirInactivos}`
-  ),
+    api.get<InstrumentoAccionDto[]>(
+      `/api/instrumentos/${idInstrumento}/acciones?incluirInactivos=${incluirInactivos}`
+    ),
+
   getInstrumentoByCodigo: async (codigo: string) => {
     const list = await api.get<InstrumentoDto[]>("/api/instrumentos");
-    const x = list.find(i => i.codigo?.toUpperCase() === codigo.toUpperCase());
+    const x = list.find((i) => i.codigo?.toUpperCase() === codigo.toUpperCase());
     if (!x) throw new Error("Instrumento no encontrado");
     return x;
   },
@@ -195,4 +208,8 @@ export const CatalogoAction = {
 
   updateUnidadOrg: (id: number, payload: UnidadOrganizacionalUpdateDto) =>
     api.put<void>(`/api/unidades-org/${id}`, payload),
+
+  // ✅ NUEVO: CREATE unidad org
+  createUnidadOrg: (payload: UnidadOrganizacionalCreateDto) =>
+    api.post<void>(`/api/unidades-org`, payload),
 };
