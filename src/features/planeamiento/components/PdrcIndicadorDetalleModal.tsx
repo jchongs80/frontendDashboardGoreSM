@@ -25,8 +25,8 @@ import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import FunctionsRoundedIcon from "@mui/icons-material/FunctionsRounded";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 import {
   PdrcOerAerVistaAction,
@@ -69,6 +69,12 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
+function parseDecimalInput(value: string): number {
+  const normalized = value.replace(",", ".").trim();
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 2.5,
@@ -82,6 +88,15 @@ const fieldSx = {
   },
   "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
     borderColor: "rgba(37,99,235,0.7)",
+  },
+} as const;
+
+const valueTextFieldSx = {
+  ...fieldSx,
+  "& .MuiInputBase-input": {
+    py: 0.95,
+    fontSize: 13,
+    textAlign: "right",
   },
 } as const;
 
@@ -142,6 +157,9 @@ export default function PdrcIndicadorDetalleModal({
 
   const [data, setData] = useState<PdrcIndicadorDetalleResponseDto | null>(null);
   const [anioSel, setAnioSel] = useState<PdrcIndicadorDetalleAnioDto | null>(null);
+
+  const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
+  const [savingEjecutado, setSavingEjecutado] = useState<boolean>(false);
 
   const loadDetalle = async (
     currentIdPdrcOerAer: number,
@@ -204,6 +222,14 @@ export default function PdrcIndicadorDetalleModal({
     void loadDetalle(idPdrcOerAer, idIndicadorNombre, null, false);
   }, [open, idPdrcOerAer, idIndicadorNombre]);
 
+  useEffect(() => {
+    const map: Record<number, string> = {};
+    for (const item of data?.valoresEjecutados ?? []) {
+      map[item.idPdrcIndMet] = String(item.valor ?? 0);
+    }
+    setEjecutadoForm(map);
+  }, [data]);
+
   const codigoIndicadorView = useMemo(() => {
     return safeText(data?.codigoIndicador ?? codigoIndicador);
   }, [data, codigoIndicador]);
@@ -220,6 +246,7 @@ export default function PdrcIndicadorDetalleModal({
   }, [data, oer]);
 
   const resumenAer = useMemo(() => {
+    if (data?.tipoNivel === "OER") return "—";
     if (data?.codigoAer || data?.enunciadoAer) {
       return `${safeText(data?.codigoAer)} - ${safeText(data?.enunciadoAer)}`;
     }
@@ -237,6 +264,31 @@ export default function PdrcIndicadorDetalleModal({
       Number(valoresFijos.valorRelativo)
     );
   }, [valoresFijos]);
+
+  async function guardarEjecutado() {
+    if (!anioSel) return;
+
+    try {
+      setSavingEjecutado(true);
+      setErrorMsg("");
+
+      await PdrcOerAerVistaAction.guardarIndicadorEjecutado({
+        idPdrcOerAer,
+        idIndicadorNombre,
+        idAnioProyeccion: anioSel.idAnioProyeccion,
+        valores: (data?.valoresEjecutados ?? []).map((x) => ({
+          idPdrcIndMet: x.idPdrcIndMet,
+          valor: parseDecimalInput(ejecutadoForm[x.idPdrcIndMet] ?? "0"),
+        })),
+      });
+
+      await loadDetalle(idPdrcOerAer, idIndicadorNombre, anioSel.idAnioProyeccion, true);
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error));
+    } finally {
+      setSavingEjecutado(false);
+    }
+  }
 
   const handleChangeAnio = async (_event: unknown, value: PdrcIndicadorDetalleAnioDto | null) => {
     setAnioSel(value);
@@ -259,8 +311,8 @@ export default function PdrcIndicadorDetalleModal({
         sx: {
           borderRadius: 3,
           overflow: "hidden",
-          width: { xs: "96vw", sm: "92vw", md: 760 },
-          maxWidth: "760px",
+          width: { xs: "96vw", sm: "92vw", md: 820 },
+          maxWidth: "820px",
         },
       }}
     >
@@ -274,57 +326,54 @@ export default function PdrcIndicadorDetalleModal({
             "linear-gradient(180deg, rgba(27,111,238,0.10) 0%, rgba(27,111,238,0) 100%)",
         }}
       >
-      <Stack spacing={0.55} sx={{ pr: 2, minWidth: 0 }}>
-        <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="nowrap">
-          <AccountTreeRoundedIcon fontSize="small" sx={{ mt: 0.15, flexShrink: 0 }} />
+        <Stack spacing={0.55} sx={{ pr: 2, minWidth: 0 }}>
+          <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="nowrap">
+            <AccountTreeRoundedIcon fontSize="small" sx={{ mt: 0.15, flexShrink: 0 }} />
 
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              flexWrap="wrap"
-              useFlexGap
-              sx={{ mb: 0.45 }}
-            >
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+                sx={{ mb: 0.45 }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 950,
+                    letterSpacing: 0.1,
+                    lineHeight: 1.2,
+                    fontSize: { xs: "0.98rem", sm: "1.05rem" },
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  Indicador PDRC
+                </Typography>
 
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={data?.tipoNivel ?? "Detalle"}
+                  sx={{ borderRadius: 999, fontWeight: 800 }}
+                />
+              </Stack>
 
-
-            </Stack>
-
-            <Typography
-              sx={{
-                fontWeight: 950,
-                letterSpacing: 0.1,
-                lineHeight: 1.2,
-                fontSize: { xs: "0.98rem", sm: "1.05rem" },
-                whiteSpace: "normal",
-                wordBreak: "break-word",
-                overflowWrap: "anywhere",
-              }}
-            >
-              Indicador PDRC
-             <Chip
-                size="small"
-                variant="outlined"
-                label="Detalle"
-                sx={{ borderRadius: 999, fontWeight: 800 }}
-              />
-            </Typography>
-
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                fontSize: "12px",
-                mt: 0.2,
-              }}
-            >
-             Indicador: {codigoIndicadorView} - {nombreIndicadorView} 
-            </Typography>
-          </Box>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: "12px",
+                  mt: 0.2,
+                }}
+              >
+                Indicador: <b>{nombreIndicadorView}</b>
+              </Typography>
+            </Box>
+          </Stack>
         </Stack>
-      </Stack>
 
         <Tooltip title="Cerrar">
           <IconButton onClick={onClose} sx={{ borderRadius: 2 }}>
@@ -357,7 +406,7 @@ export default function PdrcIndicadorDetalleModal({
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Chip
                 icon={<TagRoundedIcon />}
-                label={`Código: ${safeText(data?.codigoIndicador ?? codigoIndicador)}`}
+                label={`Código: ${codigoIndicadorView}`}
                 sx={{ fontWeight: 900, borderRadius: 999 }}
                 variant="outlined"
               />
@@ -384,8 +433,9 @@ export default function PdrcIndicadorDetalleModal({
                 lineHeight: 1.45,
               }}
             >
-              OER: {resumenOer}
-              {"\n"}AER: {resumenAer}
+              Nivel: {safeText(data?.tipoNivel)}
+              {"\n"}OER: {resumenOer}
+              {data?.tipoNivel === "AER" ? `\nAER: ${resumenAer}` : ""}
             </Typography>
           </Box>
         </Paper>
@@ -393,41 +443,24 @@ export default function PdrcIndicadorDetalleModal({
         <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
             <ChecklistRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Detalle</Typography>
+            <Typography sx={{ fontWeight: 950 }}>Detalle Línea Base</Typography>
           </Stack>
 
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
               gap: 1.1,
+              mb: 1.1,
             }}
           >
-            <Autocomplete
-              options={data?.anios ?? []}
-              value={anioSel}
-              onChange={handleChangeAnio}
-              getOptionLabel={(o) => `${o.anio}`}
-              isOptionEqualToValue={(o, v) => o.idAnioProyeccion === v.idAnioProyeccion}
-              noOptionsText={loading ? "Cargando..." : "Sin años"}
-              loading={loading || loadingRefresh}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Año Proyección"
-                  size="small"
-                  sx={fieldSx}
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {loading || loadingRefresh ? <CircularProgress size={16} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                />
-              )}
+            <TextField
+              label="Año Proyección"
+              size="small"
+              fullWidth
+              value={data?.lineaBase?.anio != null ? String(data.lineaBase.anio) : "—"}
+              sx={fieldSx}
+              InputProps={{ readOnly: true }}
             />
 
             <TextField
@@ -435,8 +468,10 @@ export default function PdrcIndicadorDetalleModal({
               size="small"
               fullWidth
               value={
-                data?.codigoTipoValor || data?.nombreTipoValor
-                  ? `${safeText(data?.codigoTipoValor)} - ${safeText(data?.nombreTipoValor)}`
+                data?.lineaBase?.codigoTipoValor || data?.lineaBase?.nombreTipoValor
+                  ? `${safeText(data?.lineaBase?.codigoTipoValor)} - ${safeText(
+                      data?.lineaBase?.nombreTipoValor
+                    )}`
                   : "—"
               }
               sx={fieldSx}
@@ -450,9 +485,171 @@ export default function PdrcIndicadorDetalleModal({
               }}
             />
           </Box>
+
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.1}>
+            <TextField
+              label=""
+              value={formatNumber(data?.lineaBase?.valorAbsolutoA)}
+              size="small"
+              fullWidth
+              sx={valueTextFieldSx}
+              InputProps={{
+                readOnly: true,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Chip
+                      size="small"
+                      label="Valor Absoluto A"
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        height: 20,
+                        maxWidth: 150,
+                        "& .MuiChip-label": {
+                          px: 0.7,
+                          fontSize: 10.5,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
+                      }}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              label=""
+              value={formatNumber(data?.lineaBase?.valorAbsolutoB)}
+              size="small"
+              fullWidth
+              sx={valueTextFieldSx}
+              InputProps={{
+                readOnly: true,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Chip
+                      size="small"
+                      label="Valor Absoluto B"
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        height: 20,
+                        maxWidth: 150,
+                        "& .MuiChip-label": {
+                          px: 0.7,
+                          fontSize: 10.5,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
+                      }}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              label=""
+              value={formatNumber(data?.lineaBase?.valorRelativo)}
+              size="small"
+              fullWidth
+              sx={valueTextFieldSx}
+              InputProps={{
+                readOnly: true,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Chip
+                      size="small"
+                      label="Valor Relativo"
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        height: 20,
+                        maxWidth: 150,
+                        "& .MuiChip-label": {
+                          px: 0.7,
+                          fontSize: 10.5,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
+                      }}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Stack>
         </Paper>
 
-        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
+        {(data?.anios?.length ?? 0) > 0 && (
+          <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+              <ChecklistRoundedIcon fontSize="small" />
+              <Typography sx={{ fontWeight: 950 }}>Detalle</Typography>
+            </Stack>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 1.1,
+              }}
+            >
+              <Autocomplete
+                options={data?.anios ?? []}
+                value={anioSel}
+                onChange={handleChangeAnio}
+                getOptionLabel={(o) => `${o.anio}`}
+                isOptionEqualToValue={(o, v) => o.idAnioProyeccion === v.idAnioProyeccion}
+                noOptionsText={loading ? "Cargando..." : "Sin años"}
+                loading={loading || loadingRefresh}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Año Proyección"
+                    size="small"
+                    sx={fieldSx}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loading || loadingRefresh ? <CircularProgress size={16} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+
+              <TextField
+                label="Tipo de Valor"
+                size="small"
+                fullWidth
+                value={
+                  data?.codigoTipoValor || data?.nombreTipoValor
+                    ? `${safeText(data?.codigoTipoValor)} - ${safeText(data?.nombreTipoValor)}`
+                    : "—"
+                }
+                sx={fieldSx}
+                InputProps={{
+                  readOnly: true,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <TagRoundedIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          </Paper>
+        )}
+
+        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
             <CalendarMonthRoundedIcon fontSize="small" />
             <Typography sx={{ fontWeight: 950 }}>Valores por Indicador</Typography>
@@ -484,14 +681,7 @@ export default function PdrcIndicadorDetalleModal({
                   value={formatNumber(valoresFijos.valorAbsolutoA)}
                   size="small"
                   fullWidth
-                  sx={{
-                    ...fieldSx,
-                    "& .MuiInputBase-input": {
-                      py: 0.95,
-                      fontSize: 13,
-                      textAlign: "right",
-                    },
-                  }}
+                  sx={valueTextFieldSx}
                   InputProps={{
                     readOnly: true,
                     startAdornment: (
@@ -523,14 +713,7 @@ export default function PdrcIndicadorDetalleModal({
                   value={formatNumber(valoresFijos.valorAbsolutoB)}
                   size="small"
                   fullWidth
-                  sx={{
-                    ...fieldSx,
-                    "& .MuiInputBase-input": {
-                      py: 0.95,
-                      fontSize: 13,
-                      textAlign: "right",
-                    },
-                  }}
+                  sx={valueTextFieldSx}
                   InputProps={{
                     readOnly: true,
                     startAdornment: (
@@ -562,21 +745,14 @@ export default function PdrcIndicadorDetalleModal({
                   value={formatNumber(valoresFijos.valorRelativo)}
                   size="small"
                   fullWidth
-                  sx={{
-                    ...fieldSx,
-                    "& .MuiInputBase-input": {
-                      py: 0.95,
-                      fontSize: 13,
-                      textAlign: "right",
-                    },
-                  }}
+                  sx={valueTextFieldSx}
                   InputProps={{
                     readOnly: true,
                     startAdornment: (
                       <InputAdornment position="start">
                         <Chip
                           size="small"
-                          label="Valor en Relativo"
+                          label="Valor Relativo"
                           variant="outlined"
                           sx={{
                             borderRadius: 999,
@@ -597,22 +773,85 @@ export default function PdrcIndicadorDetalleModal({
                 />
               </Stack>
 
+              <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>
+                * El valor mostrado corresponde al año seleccionado.
+              </Typography>
 
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <InfoOutlinedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+                <Typography variant="caption" color="text.secondary">
+                  El tipo de valor se obtiene automáticamente desde pdrc_ind_tv para el año seleccionado,
+                  y los importes se obtienen de pdrc_indicador_valor por cada pdrc_ind_met.
+                </Typography>
+              </Stack>
             </>
           )}
-
-          <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>
-            * El valor mostrado corresponde al año seleccionado.
-          </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-            <InfoOutlinedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary">
-              El tipo de valor se obtiene automáticamente desde pdrc_ind_tv para el año seleccionado,
-              y los importes se obtienen de pdrc_indicador_valor por cada pdrc_ind_met.
-            </Typography>
-          </Stack>
         </Paper>
+
+        {(data?.anios?.length ?? 0) > 0 && (
+          <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+              <CalendarMonthRoundedIcon fontSize="small" />
+              <Typography sx={{ fontWeight: 950 }}>Valores por Indicador - Ejecutado</Typography>
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={guardarEjecutado}
+                disabled={savingEjecutado || !anioSel}
+                sx={{ borderRadius: 2, fontWeight: 900 }}
+              >
+                {savingEjecutado ? "Guardando..." : "Guardar"}
+              </Button>
+            </Stack>
+
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.1}>
+              {(data?.valoresEjecutados ?? []).map((item) => (
+               <TextField
+  key={item.idPdrcIndMet}
+  label=""
+  value={ejecutadoForm[item.idPdrcIndMet] ?? "0"}
+  size="small"
+  fullWidth
+  onChange={(e) =>
+    setEjecutadoForm((prev) => ({
+      ...prev,
+      [item.idPdrcIndMet]: e.target.value,
+    }))
+  }
+  sx={valueTextFieldSx}
+  InputProps={{
+    startAdornment: (
+      <InputAdornment position="start">
+        <Chip
+          size="small"
+          label={item.nombreMet}
+          variant="outlined"
+          sx={{
+            borderRadius: 999,
+            fontWeight: 900,
+            height: 20,
+            maxWidth: 150,
+            "& .MuiChip-label": {
+              px: 0.7,
+              fontSize: 10.5,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            },
+          }}
+        />
+      </InputAdornment>
+    ),
+  }}
+/>
+              ))}
+            </Stack>
+
+            <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>
+              * Estos valores corresponden al ejecutado real del año seleccionado y sí se pueden editar.
+            </Typography>
+          </Paper>
+        )}
       </DialogContent>
 
       <DialogActions sx={{ px: 2.5, pb: 2 }}>

@@ -23,20 +23,6 @@ function unwrapList<T>(resp: unknown): T[] {
   return [];
 }
 
-function unwrapItem<T>(resp: unknown): T | null {
-  if (isRecord(resp) && "data" in resp) {
-    return ((resp as ApiResponseDto<T>).data ?? null) as T | null;
-  }
-  return null;
-}
-
-export function extractApiErrorMessage(resp: unknown): string | null {
-  if (isRecord(resp) && "message" in resp) {
-    return (resp as { message?: string }).message ?? null;
-  }
-  return null;
-}
-
 export type PdrcPeriodoDto = {
   idPeriodo: number;
   codigo: string | null;
@@ -58,12 +44,14 @@ export type PdrcUnidadOrgDto = {
 
 export type PdrcOerAerMasterDto = {
   idPdrcOerAer: number;
+  idPdrcEntidadEstrategica: number;
+  tipoNivel: "OER" | "AER";
   idObjetivo: number;
-  idAccion: number;
+  idAccion?: number | null;
   codigoOer: string;
   enunciadoOer: string;
-  codigoAer: string;
-  enunciadoAer: string;
+  codigoAer?: string | null;
+  enunciadoAer?: string | null;
   cantidadIndicadores: number;
 };
 
@@ -91,20 +79,54 @@ export type PdrcIndicadorDetalleMetValorDto = {
   valor: number;
 };
 
+export type PdrcIndicadorEjecutadoValorDto = {
+  idPdrcIndMet: number;
+  codigoMet: string;
+  nombreMet: string;
+  valor: number;
+};
+
+export type PdrcIndicadorEjecutadoUpdateItemDto = {
+  idPdrcIndMet: number;
+  valor: number;
+};
+
+export type PdrcIndicadorEjecutadoUpdateRequestDto = {
+  idPdrcOerAer: number;
+  idIndicadorNombre: number;
+  idAnioProyeccion: number;
+  valores: PdrcIndicadorEjecutadoUpdateItemDto[];
+};
+
+export type PdrcIndicadorDetalleLineaBaseDto = {
+  idAnioProyeccion: number;
+  anio: number;
+  idPdrcIndTv: number;
+  codigoTipoValor: string;
+  nombreTipoValor: string;
+  valorAbsolutoA: number;
+  valorAbsolutoB: number;
+  valorRelativo: number;
+};
+
 export type PdrcIndicadorDetalleResponseDto = {
   idIndicadorNombre: number;
   codigoIndicador: string;
   nombreIndicador: string;
+  idPdrcEntidadEstrategica: number;
+  tipoNivel: "OER" | "AER";
   codigoOer: string;
   enunciadoOer: string;
-  codigoAer: string;
-  enunciadoAer: string;
+  codigoAer?: string | null;
+  enunciadoAer?: string | null;
   idPdrcIndTv: number;
   codigoTipoValor: string;
   nombreTipoValor: string;
+  lineaBase?: PdrcIndicadorDetalleLineaBaseDto | null;
   tiposValor: PdrcIndicadorDetalleTipoValorDto[];
   anios: PdrcIndicadorDetalleAnioDto[];
   valoresMet: PdrcIndicadorDetalleMetValorDto[];
+  valoresEjecutados: PdrcIndicadorEjecutadoValorDto[];
 };
 
 export const PdrcOerAerVistaAction = {
@@ -159,6 +181,10 @@ export const PdrcOerAerVistaAction = {
     );
 
     return resp ?? null;
+  },
+
+  async guardarIndicadorEjecutado(payload: PdrcIndicadorEjecutadoUpdateRequestDto) {
+    return await api.post(`/api/PdrcOerAerVista/indicador-ejecutado`, payload);
   },
 };
 

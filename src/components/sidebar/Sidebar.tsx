@@ -35,6 +35,9 @@ import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import GpsFixedRoundedIcon from "@mui/icons-material/GpsFixedRounded";
 import HubRoundedIcon from "@mui/icons-material/HubRounded";
+import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
+import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
+import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
 
 // ✅ ICONO NUEVO para Unidades Ejecutoras
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
@@ -124,6 +127,21 @@ export default function Sidebar({
       text: "P.D.R.C.",
       icon: <HubRoundedIcon />,
       path: "/planeamiento/pdrc-oer-aer",
+    },
+    {
+      text: "P.E.I.",
+      icon: <AutoGraphRoundedIcon />,
+      path: "/planeamiento/pei-oei-aei",
+    },
+    {
+      text: "A.G.",
+      icon: <PolicyRoundedIcon />,
+      path: "/planeamiento/ag-po-reco-inpr",
+    },
+    {
+      text: "P.R.C.P.",
+      icon: <WorkspacePremiumRoundedIcon />,
+      path: "/planeamiento/prcp-op-pi-mp",
     },
   ];
 
