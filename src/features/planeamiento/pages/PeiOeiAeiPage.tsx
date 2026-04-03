@@ -29,54 +29,69 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 
 import { useNavigate } from "react-router-dom";
 import {
-  PdrcOerAerVistaAction,
-  type PdrcPeriodoDto,
-  type PdrcDimensionDto,
-  type PdrcUnidadOrgDto,
-  type PdrcOerAerMasterDto,
-  type PdrcOerAerDetailDto,
-} from "../PdrcOerAerVistaAction";
-import PdrcIndicadorDetalleModal from "../components/PdrcIndicadorDetalleModal";
+  PeiOeiAeiVistaAction,
+  type PeiPeriodoDto,
+  type PeiDimensionDto,
+  type PeiUnidadOrgDto,
+  type PeiOeiAeiMasterDto,
+  type PeiOeiAeiDetailDto,
+} from "../PeiOeiAeiVistaAction";
+import PeiIndicadorDetalleModal from "../components/PeiIndicadorDetalleModal";
 
 type DetailState = {
   loading: boolean;
-  data: PdrcOerAerDetailDto[];
+  data: PeiOeiAeiDetailDto[];
   error?: string;
 };
 
 type IndicadorModalState = {
   open: boolean;
-  idPdrcOerAer: number;
+  idPeiOeiAei: number;
   idIndicadorNombre: number;
   codigoIndicador: string;
   nombreIndicador: string;
-  tipoNivel: "OER" | "AER";
-  codigoOer: string;
-  enunciadoOer: string;
-  codigoAer?: string | null;
-  enunciadoAer?: string | null;
+  tipoNivel: "OEI" | "AEI";
+  codigoOei: string;
+  enunciadoOei: string;
+  codigoAei?: string | null;
+  enunciadoAei?: string | null;
 };
 
 function safeText(value?: string | null): string {
   const txt = (value ?? "").toString().trim();
   return txt.length === 0 ? "—" : txt;
 }
+const comboSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.96)",
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(0,0,0,0.18)",
+  },
+  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.45)",
+  },
+  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.7)",
+  },
+} as const;
 
-export default function PdrcOerAerPage(): React.ReactElement {
+export default function PeiOeiAeiPage(): React.ReactElement {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingTabla, setLoadingTabla] = useState<boolean>(false);
 
-  const [periodos, setPeriodos] = useState<PdrcPeriodoDto[]>([]);
-  const [dimensiones, setDimensiones] = useState<PdrcDimensionDto[]>([]);
-  const [unidades, setUnidades] = useState<PdrcUnidadOrgDto[]>([]);
+  const [periodos, setPeriodos] = useState<PeiPeriodoDto[]>([]);
+  const [dimensiones, setDimensiones] = useState<PeiDimensionDto[]>([]);
+  const [unidades, setUnidades] = useState<PeiUnidadOrgDto[]>([]);
 
   const [idPeriodoSel, setIdPeriodoSel] = useState<number>(0);
   const [idDimensionSel, setIdDimensionSel] = useState<number>(0);
   const [idUnidadSel, setIdUnidadSel] = useState<number>(0);
 
-  const [rows, setRows] = useState<PdrcOerAerMasterDto[]>([]);
+  const [rows, setRows] = useState<PeiOeiAeiMasterDto[]>([]);
   const [qSearch, setQSearch] = useState<string>("");
 
   const [openRowMap, setOpenRowMap] = useState<Record<number, boolean>>({});
@@ -84,15 +99,15 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
   const [indicadorModal, setIndicadorModal] = useState<IndicadorModalState>({
     open: false,
-    idPdrcOerAer: 0,
+    idPeiOeiAei: 0,
     idIndicadorNombre: 0,
     codigoIndicador: "",
     nombreIndicador: "",
-    tipoNivel: "AER",
-    codigoOer: "",
-    enunciadoOer: "",
-    codigoAer: "",
-    enunciadoAer: "",
+    tipoNivel: "AEI",
+    codigoOei: "",
+    enunciadoOei: "",
+    codigoAei: "",
+    enunciadoAei: "",
   });
 
   const periodoSelectedObj = useMemo(
@@ -115,24 +130,24 @@ export default function PdrcOerAerPage(): React.ReactElement {
     if (!q) return rows;
 
     return rows.filter((r) =>
-      `${r.tipoNivel ?? ""} ${r.codigoOer ?? ""} ${r.enunciadoOer ?? ""} ${r.codigoAer ?? ""} ${r.enunciadoAer ?? ""}`
+      `${r.tipoNivel ?? ""} ${r.codigoOei ?? ""} ${r.enunciadoOei ?? ""} ${r.codigoAei ?? ""} ${r.enunciadoAei ?? ""}`
         .toLowerCase()
         .includes(q)
     );
   }, [rows, qSearch]);
 
-  const oerCount = useMemo(() => {
+  const oeiCount = useMemo(() => {
     const ids = new Set(rows.map((x) => x.idObjetivo));
     return ids.size;
   }, [rows]);
 
-  const aerCount = useMemo(() => {
-    return rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AER").length;
+  const aeiCount = useMemo(() => {
+    return rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AEI").length;
   }, [rows]);
 
   const totalRows = useMemo(() => rows.length, [rows]);
 
-  const getIndicadoresCount = (row: PdrcOerAerMasterDto): number => row.cantidadIndicadores ?? 0;
+  const getIndicadoresCount = (row: PeiOeiAeiMasterDto): number => row.cantidadIndicadores ?? 0;
 
   const filterByTexto = <
     T extends { codigo: string | null; descripcion?: string | null; nombre?: string | null }
@@ -154,9 +169,9 @@ export default function PdrcOerAerPage(): React.ReactElement {
     setLoading(true);
     try {
       const [periodosDb, dimensionesDb, unidadesDb] = await Promise.all([
-        PdrcOerAerVistaAction.getPeriodos(),
-        PdrcOerAerVistaAction.getDimensiones(),
-        PdrcOerAerVistaAction.getUnidadesOrganizacionales(),
+        PeiOeiAeiVistaAction.getPeriodos(),
+        PeiOeiAeiVistaAction.getDimensiones(),
+        PeiOeiAeiVistaAction.getUnidadesOrganizacionales(),
       ]);
 
       setPeriodos(periodosDb ?? []);
@@ -186,7 +201,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
     setLoadingTabla(true);
     try {
-      const data = await PdrcOerAerVistaAction.getMaster(idPeriodo, idDimension, idUnidad);
+      const data = await PeiOeiAeiVistaAction.getMaster(idPeriodo, idDimension, idUnidad);
       setRows(data ?? []);
       setOpenRowMap({});
       setDetailMap({});
@@ -200,8 +215,8 @@ export default function PdrcOerAerPage(): React.ReactElement {
     }
   }
 
-  async function toggleRowDetail(r: PdrcOerAerMasterDto) {
-    const idKey = r.idPdrcOerAer;
+  async function toggleRowDetail(r: PeiOeiAeiMasterDto) {
+    const idKey = r.idPeiOeiAei;
 
     setOpenRowMap((prev) => ({
       ...prev,
@@ -216,7 +231,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
         [idKey]: { loading: true, data: [] },
       }));
 
-      const data = await PdrcOerAerVistaAction.getDetail(idKey);
+      const data = await PeiOeiAeiVistaAction.getDetail(idKey);
 
       setDetailMap((prev) => ({
         ...prev,
@@ -231,24 +246,24 @@ export default function PdrcOerAerPage(): React.ReactElement {
     }
   }
 
-  async function reloadRowDetail(idPdrcOerAer: number) {
+  async function reloadRowDetail(idPeiOeiAei: number) {
     try {
       setDetailMap((prev) => ({
         ...prev,
-        [idPdrcOerAer]: { loading: true, data: [] },
+        [idPeiOeiAei]: { loading: true, data: [] },
       }));
 
-      const data = await PdrcOerAerVistaAction.getDetail(idPdrcOerAer);
+      const data = await PeiOeiAeiVistaAction.getDetail(idPeiOeiAei);
 
       setDetailMap((prev) => ({
         ...prev,
-        [idPdrcOerAer]: { loading: false, data: data ?? [] },
+        [idPeiOeiAei]: { loading: false, data: data ?? [] },
       }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "No se pudo recargar el detalle.";
       setDetailMap((prev) => ({
         ...prev,
-        [idPdrcOerAer]: { loading: false, data: [], error: msg },
+        [idPeiOeiAei]: { loading: false, data: [], error: msg },
       }));
     }
   }
@@ -257,18 +272,18 @@ export default function PdrcOerAerPage(): React.ReactElement {
     await loadTabla(idPeriodoSel, idDimensionSel, idUnidadSel);
   }
 
-  function openIndicadorModal(row: PdrcOerAerMasterDto, indicador: PdrcOerAerDetailDto) {
+  function openIndicadorModal(row: PeiOeiAeiMasterDto, indicador: PeiOeiAeiDetailDto) {
     setIndicadorModal({
       open: true,
-      idPdrcOerAer: row.idPdrcOerAer,
+      idPeiOeiAei: row.idPeiOeiAei,
       idIndicadorNombre: indicador.idIndicadorNombre,
       codigoIndicador: indicador.codigoIndicador,
       nombreIndicador: indicador.nombreIndicador,
       tipoNivel: row.tipoNivel,
-      codigoOer: row.codigoOer,
-      enunciadoOer: row.enunciadoOer,
-      codigoAer: row.codigoAer ?? null,
-      enunciadoAer: row.enunciadoAer ?? null,
+      codigoOei: row.codigoOei,
+      enunciadoOei: row.enunciadoOei,
+      codigoAei: row.codigoAei ?? null,
+      enunciadoAei: row.enunciadoAei ?? null,
     });
   }
 
@@ -319,7 +334,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              PDRC: OER / AER
+              PEI: OEI / AEI
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Vista por Periodo, Dimensión y Unidad Organizacional
@@ -328,8 +343,8 @@ export default function PdrcOerAerPage(): React.ReactElement {
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={`OER: ${oerCount}`} variant="outlined" />
-          <Chip label={`AER: ${aerCount}`} variant="outlined" />
+          <Chip label={`OEI: ${oeiCount}`} variant="outlined" />
+          <Chip label={`AEI: ${aeiCount}`} variant="outlined" />
           <Chip label={`Registros: ${totalRows}`} variant="outlined" />
 
           <Tooltip title="Refrescar" arrow>
@@ -350,56 +365,59 @@ export default function PdrcOerAerPage(): React.ReactElement {
           boxShadow: "0 10px 30px rgba(0,0,0,.06)",
         }}
       >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ width: "100%", mb: 2 }}>
-          <Autocomplete
-            options={periodos}
-            value={periodoSelectedObj}
-            onChange={(_e, newValue) => setIdPeriodoSel(newValue?.idPeriodo ?? 0)}
-            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
-            isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
-            noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-            renderInput={(params) => <TextField {...params} label="Periodo" size="small" />}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
-          />
+    <Box sx={{ width: "100%", mb: 2 }}>
+  <Stack
+    direction={{ xs: "column", md: "row" }}
+    spacing={2}
+    sx={{ width: "100%", mb: 2 }}
+  >
+<Autocomplete
+  options={periodos}
+  value={periodoSelectedObj}
+  onChange={(_e, newValue) => setIdPeriodoSel(newValue?.idPeriodo ?? 0)}
+  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
+  isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
+  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+  renderInput={(params) => <TextField {...params} label="Periodo" size="small" />}
+  sx={{ flex: 1, ...comboSx }}
+/>
 
-          <Autocomplete
-            options={dimensiones}
-            value={dimensionSelectedObj}
-            onChange={(_e, newValue) => setIdDimensionSel(newValue?.idDimension ?? 0)}
-            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
-            isOptionEqualToValue={(o, v) => o.idDimension === v.idDimension}
-            noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-            renderInput={(params) => <TextField {...params} label="Dimensión" size="small" />}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
-          />
-        </Stack>
+<Autocomplete
+  options={dimensiones}
+  value={dimensionSelectedObj}
+  onChange={(_e, newValue) => setIdDimensionSel(newValue?.idDimension ?? 0)}
+  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
+  isOptionEqualToValue={(o, v) => o.idDimension === v.idDimension}
+  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+  renderInput={(params) => <TextField {...params} label="Dimensión" size="small" />}
+  sx={{ flex: 1, ...comboSx }}
+/>
+  </Stack>
 
-        <Stack direction="row" sx={{ width: "100%" }}>
-          <Autocomplete
-            options={unidades}
-            value={unidadSelectedObj}
-            onChange={(_e, newValue) => setIdUnidadSel(newValue?.idUnidad ?? 0)}
-            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
-            isOptionEqualToValue={(o, v) => o.idUnidad === v.idUnidad}
-            noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-            renderInput={(params) => (
-              <TextField {...params} label="Unidad Organizacional" size="small" />
-            )}
-            sx={{ width: "100%", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
-          />
-        </Stack>
+  <Stack direction="column" sx={{ width: "100%" }}>
+<Autocomplete
+  options={unidades}
+  value={unidadSelectedObj}
+  onChange={(_e, newValue) => setIdUnidadSel(newValue?.idUnidad ?? 0)}
+  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
+  isOptionEqualToValue={(o, v) => o.idUnidad === v.idUnidad}
+  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+  renderInput={(params) => (
+    <TextField {...params} label="Unidad Organizacional" size="small" />
+  )}
+  sx={{ width: "100%", ...comboSx }}
+/>
+  </Stack>
+</Box>
 
         <Divider sx={{ my: 2 }} />
 
         <TextField
           value={qSearch}
           onChange={(e) => setQSearch(e.target.value)}
-          placeholder="Buscar por nivel, OER o AER..."
-          size="small"
+          placeholder="Buscar por nivel, OEI o AEI..."
           fullWidth
+          size="small"
           sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
         />
       </Paper>
@@ -417,10 +435,10 @@ export default function PdrcOerAerPage(): React.ReactElement {
             <TableRow>
               <TableCell sx={{ width: 88 }} />
               <TableCell sx={{ fontWeight: 900, width: 90 }}>Nivel</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OER</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado OER</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AER</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado AER</TableCell>
+              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OEI</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Enunciado OEI</TableCell>
+              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AEI</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Enunciado AEI</TableCell>
               <TableCell sx={{ fontWeight: 900, width: 150, ...sxStickyActionHeader }} align="right">
                 Acción
               </TableCell>
@@ -447,12 +465,12 @@ export default function PdrcOerAerPage(): React.ReactElement {
               </TableRow>
             ) : (
               rowsFiltered.map((r) => {
-                const open = !!openRowMap[r.idPdrcOerAer];
-                const detail = detailMap[r.idPdrcOerAer];
+                const open = !!openRowMap[r.idPeiOeiAei];
+                const detail = detailMap[r.idPeiOeiAei];
                 const indicadoresCount = getIndicadoresCount(r);
 
                 return (
-                  <React.Fragment key={r.idPdrcOerAer}>
+                  <React.Fragment key={r.idPeiOeiAei}>
                     <TableRow hover>
                       <TableCell sx={{ width: 88, verticalAlign: "middle", py: 1.5 }}>
                         <Stack
@@ -504,41 +522,41 @@ export default function PdrcOerAerPage(): React.ReactElement {
                       <TableCell sx={{ verticalAlign: "middle" }}>
                         <Chip
                           size="small"
-                          label={r.tipoNivel}
-                          color={r.tipoNivel === "OER" ? "secondary" : "primary"}
+                          label={safeText(r.tipoNivel)}
+                          color={(r.tipoNivel ?? "").toUpperCase() === "AEI" ? "primary" : "secondary"}
                           variant="outlined"
                           sx={{ fontWeight: 900 }}
                         />
                       </TableCell>
 
                       <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoOer)}
+                        {safeText(r.codigoOei)}
                       </TableCell>
 
                       <TableCell
                         sx={{
                           whiteSpace: "normal",
-                          wordBreak: "normal",
+                          wordBreak: "break-word",
                           overflowWrap: "break-word",
                           verticalAlign: "middle",
                         }}
                       >
-                        {safeText(r.enunciadoOer)}
+                        {safeText(r.enunciadoOei)}
                       </TableCell>
 
                       <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoAer)}
+                        {safeText(r.codigoAei)}
                       </TableCell>
 
                       <TableCell
                         sx={{
                           whiteSpace: "normal",
-                          wordBreak: "normal",
+                          wordBreak: "break-word",
                           overflowWrap: "break-word",
                           verticalAlign: "middle",
                         }}
                       >
-                        {safeText(r.enunciadoAer)}
+                        {safeText(r.enunciadoAei)}
                       </TableCell>
 
                       <TableCell
@@ -605,9 +623,9 @@ export default function PdrcOerAerPage(): React.ReactElement {
                                   Detalle Indicadores
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {r.tipoNivel === "AER"
-                                    ? `AER: ${safeText(r.codigoAer)} — ${safeText(r.enunciadoAer)}`
-                                    : `OER: ${safeText(r.codigoOer)} — ${safeText(r.enunciadoOer)}`}
+                                  {r.tipoNivel === "AEI"
+                                    ? `AEI: ${safeText(r.codigoAei)} — ${safeText(r.enunciadoAei)}`
+                                    : `OEI: ${safeText(r.codigoOei)} — ${safeText(r.enunciadoOei)}`}
                                 </Typography>
                               </Stack>
 
@@ -615,7 +633,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
                                 <IconButton
                                   size="small"
                                   onMouseDown={(e) => e.currentTarget.blur()}
-                                  onClick={() => void reloadRowDetail(r.idPdrcOerAer)}
+                                  onClick={() => void reloadRowDetail(r.idPeiOeiAei)}
                                   sx={{
                                     borderRadius: 2,
                                     border: "1px solid",
@@ -711,7 +729,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
         </Table>
       </TableContainer>
 
-      <PdrcIndicadorDetalleModal
+      <PeiIndicadorDetalleModal
         open={indicadorModal.open}
         onClose={() =>
           setIndicadorModal((prev) => ({
@@ -719,14 +737,14 @@ export default function PdrcOerAerPage(): React.ReactElement {
             open: false,
           }))
         }
-        idPdrcOerAer={indicadorModal.idPdrcOerAer}
+        idPeiOeiAei={indicadorModal.idPeiOeiAei}
         idIndicadorNombre={indicadorModal.idIndicadorNombre}
         codigoIndicador={indicadorModal.codigoIndicador}
         nombreIndicador={indicadorModal.nombreIndicador}
-        oer={`${safeText(indicadorModal.codigoOer)} - ${safeText(indicadorModal.enunciadoOer)}`}
-        aer={
-          indicadorModal.tipoNivel === "AER"
-            ? `${safeText(indicadorModal.codigoAer)} - ${safeText(indicadorModal.enunciadoAer)}`
+        oei={`${safeText(indicadorModal.codigoOei)} - ${safeText(indicadorModal.enunciadoOei)}`}
+        aei={
+          indicadorModal.tipoNivel === "AEI"
+            ? `${safeText(indicadorModal.codigoAei)} - ${safeText(indicadorModal.enunciadoAei)}`
             : "—"
         }
       />

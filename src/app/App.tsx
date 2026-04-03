@@ -34,6 +34,7 @@ import PdrcObjetivosResponsablesPage from "../features/planeamiento/pages/PdrcOb
 import PdrcObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PdrcObjetivosAccionesIndicadoresPage";
 import PeiObjetivosResponsablesPage from "../features/planeamiento/pages/PeiObjetivosResponsablesPage";
 import PeiObjetivosAccionesIndicadoresPage from "../features/planeamiento/pages/PeiObjetivosAccionesIndicadoresPage";
+import PeiOeiAeiPage from "../features/planeamiento/pages/PeiOeiAeiPage";
 
 import UsuariosPage from "../features/administracion/pages/UsuariosPage";
 import UnidadesOrganizacionalesCentrosCostoPage from "../features/planeamiento/pages/UnidadesOrganizacionalesCentrosCostoPage";
@@ -41,6 +42,8 @@ import UnidadesOrgPage2 from "../features/planeamiento/pages/UnidadesOrgPage2";
 //import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
 import CargaMasivaPage from "../features/planeamiento/pages/CargaMasivaPage";
 
+import AgPoRecoInprPage from "../features/planeamiento/pages/AgPoRecoInprPage";
+import PrcpOpPiMpPage from "../features/planeamiento/pages/PrcpOpPiMpPage";
 
 export default function App() {
   return (
@@ -90,9 +93,11 @@ export default function App() {
           <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
           
           <Route path="/planeamiento/carga-masiva/:tipo" element={<CargaMasivaPage />} />
-
-
+          <Route path="/planeamiento/pei-oei-aei" element={<PeiOeiAeiPage />} />
           {/*<Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />*/}
+
+          <Route path="/pei/oei-aei" element={<PeiOeiAeiPage />} />
+          
 
           {/* Alineamiento */}
           <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
@@ -118,7 +123,8 @@ export default function App() {
             path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
             element={<PeiObjetivosAccionesIndicadoresPage />}
           />
-
+          <Route path="/planeamiento/ag-po-reco-inpr" element={<AgPoRecoInprPage />} />
+          <Route path="/planeamiento/prcp-op-pi-mp" element={<PrcpOpPiMpPage />} />
           <Route path="/admin/usuarios" element={<UsuariosPage />} />
         </Route>
 

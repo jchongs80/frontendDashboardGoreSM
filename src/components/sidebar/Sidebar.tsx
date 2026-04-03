@@ -28,10 +28,12 @@ import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
 import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
-import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+
 import HubRoundedIcon from "@mui/icons-material/HubRounded";
-import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
+import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
+
+// ✅ ICONO NUEVO para Unidades Ejecutoras
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
@@ -89,22 +91,38 @@ export default function Sidebar({
 
   const planeamientoItems: SidebarItem[] = [
     { text: "Ejes Estratégicos", icon: <TrackChangesRoundedIcon />, path: "/planeamiento/ejes" },
-    { text: "Políticas", icon: <PolicyRoundedIcon />, path: "/planeamiento/politicas" },
-    { text: "Objetivos", icon: <FlagRoundedIcon />, path: "/planeamiento/objetivos" },
-    { text: "Acciones", icon: <TaskAltRoundedIcon />, path: "/planeamiento/acciones" },
-    { text: "P.O.I.", icon: <ApartmentRoundedIcon />, path: "/planeamiento/unidades-ejecutoras" },
-    { text: "P.D.R.C.", icon: <HubRoundedIcon />, path: "/planeamiento/pdrc-oer-aer" },
-  ];
+    { text: "Políticas", icon: <FlagRoundedIcon />, path: "/planeamiento/politicas" },
+    { text: "Objetivos", icon: <GroupRoundedIcon />, path: "/planeamiento/objetivos" },
+    { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
+    //{ text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
+    //{ text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
 
-  const cargaMasivaItems: SidebarItem[] = [
-    { text: "Carga PDRC", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/pdrc" },
-    { text: "Carga AG", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/ag" },
-    { text: "Carga PEI", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/pei" },
-    { text: "Carga POI", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/poi" },
-  ];
-
-  const administracionItems: SidebarItem[] = [
-    { text: "Usuarios", icon: <GroupRoundedIcon />, path: "/admin/usuarios" },
+    // ✅ NUEVO BOTÓN (debajo de POI)
+    {
+      text: "P.O.I.",
+      icon: <ApartmentRoundedIcon />,
+      path: "/planeamiento/unidades-ejecutoras",
+    },
+    {
+      text: "P.D.R.C.",
+      icon: <HubRoundedIcon />,
+      path: "/planeamiento/pdrc-oer-aer",
+    },
+    {
+      text: "P.E.I.",
+      icon: <AutoGraphRoundedIcon />,
+      path: "/planeamiento/pei-oei-aei",
+    },
+    {
+      text: "A.G.",
+      icon: <PolicyRoundedIcon />,
+      path: "/planeamiento/ag-po-reco-inpr",
+    },
+    {
+      text: "P.R.C.P.",
+      icon: <WorkspacePremiumRoundedIcon />,
+      path: "/planeamiento/prcp-op-pi-mp",
+    },
   ];
 
   const alineamientoItems: SidebarItem[] = [
