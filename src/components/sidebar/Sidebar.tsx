@@ -13,37 +13,32 @@ import {
   Collapse,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Link as RouterLink } from "react-router-dom";
+import { useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 
-import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
+import SpaceDashboardRoundedIcon from "@mui/icons-material/SpaceDashboardRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
-import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
-import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import WidgetsRoundedIcon from "@mui/icons-material/WidgetsRounded";
 import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
-import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
+import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
-
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
-import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
+import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
-import GpsFixedRoundedIcon from "@mui/icons-material/GpsFixedRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import HubRoundedIcon from "@mui/icons-material/HubRounded";
-
-// ✅ ICONO NUEVO para Unidades Ejecutoras
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
-
+import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
+import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import logoFull from "../../assets/logo-goresam-full.png";
 import logoIcon from "../../assets/logo-goresam-icon.png";
 
-import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
-import { useAuth } from "./../../features/auth/AuthContext"; // 🔁 ajusta ruta
+import { useAuth } from "./../../features/auth/AuthContext";
 
 import type { ReactNode } from "react";
 
@@ -77,54 +72,39 @@ export default function Sidebar({
   const { user } = useAuth();
   const canManageUsers = !!user?.permisos?.puedeCrearUsuarios;
 
-  const administracionItems: SidebarItem[] = [
-    { text: "Usuarios", icon: <GroupRoundedIcon />, path: "/admin/usuarios" },
-  ];
-
-  const isAdminActive = useMemo(
-    () => location.pathname.startsWith("/admin"),
-    [location.pathname]
-  );
-  const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
-
   const width = collapsed ? widthCollapsed : widthExpanded;
 
   const mainItems: SidebarItem[] = [
-    { text: "Dashboards", icon: <DashboardRoundedIcon />, path: "/" },
+    { text: "Dashboards", icon: <SpaceDashboardRoundedIcon />, path: "/" },
     { text: "Bloquear pantalla", icon: <LockRoundedIcon />, path: "/login" },
   ];
 
   const catalogItems: SidebarItem[] = [
     { text: "Dimensiones", icon: <GridViewRoundedIcon />, path: "/catalogos/dimensiones" },
     { text: "Fuentes de Datos", icon: <DescriptionRoundedIcon />, path: "/catalogos/fuentes-datos" },
-    { text: "Instrumentos", icon: <DashboardRoundedIcon />, path: "/catalogos/instrumentos" },
-    //{ text: "Tipos de Indicador", icon: <TaskAltRoundedIcon />, path: "/catalogos/tipos-indicador" },
+    { text: "Instrumentos", icon: <SpaceDashboardRoundedIcon />, path: "/catalogos/instrumentos" },
     { text: "Unidades de Medida", icon: <TableChartRoundedIcon />, path: "/catalogos/unidades-medida" },
     { text: "Unidades Org.", icon: <WidgetsRoundedIcon />, path: "/catalogos/unidades-org" },
   ];
 
   const planeamientoItems: SidebarItem[] = [
-    //{ text: "Indicadores", icon: <InsightsRoundedIcon />, path: "/planeamiento/indicadores" },
-    //{ text: "Indicadores Instrumentos", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-instrumentos" },
-    //{ text: "Indicadores Metas", icon: <ChecklistRoundedIcon />, path: "/planeamiento/indicadores-metas" },
     { text: "Ejes Estratégicos", icon: <TrackChangesRoundedIcon />, path: "/planeamiento/ejes" },
-    { text: "Políticas", icon: <FlagRoundedIcon />, path: "/planeamiento/politicas" },
-    { text: "Objetivos", icon: <GpsFixedRoundedIcon />, path: "/planeamiento/objetivos" },
-    { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
-    //{ text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
-    //{ text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
+    { text: "Políticas", icon: <PolicyRoundedIcon />, path: "/planeamiento/politicas" },
+    { text: "Objetivos", icon: <FlagRoundedIcon />, path: "/planeamiento/objetivos" },
+    { text: "Acciones", icon: <TaskAltRoundedIcon />, path: "/planeamiento/acciones" },
+    { text: "P.O.I.", icon: <ApartmentRoundedIcon />, path: "/planeamiento/unidades-ejecutoras" },
+    { text: "P.D.R.C.", icon: <HubRoundedIcon />, path: "/planeamiento/pdrc-oer-aer" },
+  ];
 
-    // ✅ NUEVO BOTÓN (debajo de POI)
-    {
-      text: "P.O.I.",
-      icon: <ApartmentRoundedIcon />,
-      path: "/planeamiento/unidades-ejecutoras",
-    },
-    {
-      text: "P.D.R.C.",
-      icon: <HubRoundedIcon />,
-      path: "/planeamiento/pdrc-oer-aer",
-    },
+  const cargaMasivaItems: SidebarItem[] = [
+    { text: "Carga PDRC", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/pdrc" },
+    { text: "Carga AG", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/ag" },
+    { text: "Carga PEI", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/pei" },
+    { text: "Carga POI", icon: <UploadFileRoundedIcon />, path: "/planeamiento/carga-masiva/poi" },
+  ];
+
+  const administracionItems: SidebarItem[] = [
+    { text: "Usuarios", icon: <GroupRoundedIcon />, path: "/admin/usuarios" },
   ];
 
   const alineamientoItems: SidebarItem[] = [
@@ -135,10 +115,24 @@ export default function Sidebar({
     () => location.pathname.startsWith("/catalogos"),
     [location.pathname]
   );
+
   const isPlaneamientoActive = useMemo(
-    () => location.pathname.startsWith("/planeamiento"),
+    () =>
+      location.pathname.startsWith("/planeamiento") &&
+      !location.pathname.startsWith("/planeamiento/carga-masiva"),
     [location.pathname]
   );
+
+  const isCargaMasivaActive = useMemo(
+    () => location.pathname.startsWith("/planeamiento/carga-masiva"),
+    [location.pathname]
+  );
+
+  const isAdminActive = useMemo(
+    () => location.pathname.startsWith("/admin"),
+    [location.pathname]
+  );
+
   const isAlineamientoActive = useMemo(
     () => location.pathname.startsWith("/alineamiento"),
     [location.pathname]
@@ -146,22 +140,45 @@ export default function Sidebar({
 
   const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
   const [openPlaneamiento, setOpenPlaneamiento] = useState<boolean>(isPlaneamientoActive);
+  const [openCargaMasiva, setOpenCargaMasiva] = useState<boolean>(isCargaMasivaActive);
+  const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
   const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
 
-  console.log("USER", user);
-  console.log("PERMISOS", user?.permisos);
-
-  // ✅ sincroniza apertura al cambiar de ruta
   useEffect(() => {
     if (isCatalogActive) setOpenCatalogs(true);
     if (isPlaneamientoActive) setOpenPlaneamiento(true);
+    if (isCargaMasivaActive) setOpenCargaMasiva(true);
+    if (isAdminActive) setOpenAdmin(true);
     if (isAlineamientoActive) setOpenAlineamiento(true);
-  }, [isCatalogActive, isPlaneamientoActive, isAlineamientoActive]);
+  }, [
+    isCatalogActive,
+    isPlaneamientoActive,
+    isCargaMasivaActive,
+    isAdminActive,
+    isAlineamientoActive,
+  ]);
 
   const go = (path: string) => {
     navigate(path);
     if (!isMdUp) onCloseMobile();
   };
+
+  const sectionButtonSx = (active: boolean) => ({
+    mb: 0.7,
+    borderRadius: 2.5,
+    color: "rgba(255,255,255,0.95)",
+    justifyContent: collapsed ? "center" : "flex-start",
+    backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent",
+    border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+    boxShadow: active ? "0 8px 18px rgba(0,0,0,0.10)" : "none",
+    "&:hover": {
+      backgroundColor: "rgba(255,255,255,0.10)",
+    },
+    px: collapsed ? 1.25 : 1.6,
+    py: 1.05,
+    minHeight: 46,
+    transition: "all .18s ease",
+  });
 
   const NavButton = ({
     text,
@@ -176,24 +193,34 @@ export default function Sidebar({
       <ListItemButton
         onClick={() => go(path)}
         sx={{
-          mb: nested ? 0.6 : 0.8,
-          borderRadius: 2,
-          color: "rgba(255,255,255,0.92)",
+          mb: nested ? 0.45 : 0.7,
+          borderRadius: nested ? 2.2 : 2.5,
+          color: "rgba(255,255,255,0.94)",
           justifyContent: collapsed ? "center" : "flex-start",
-          backgroundColor: active ? "rgba(255,255,255,0.18)" : "transparent",
-          "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-          px: collapsed ? 1.2 : nested ? 2.2 : 1.6,
-          py: nested ? 0.9 : 1.05,
+          backgroundColor: active ? "rgba(255,255,255,0.14)" : "transparent",
+          border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent",
+          boxShadow: active ? "0 8px 16px rgba(0,0,0,0.08)" : "none",
+          "&:hover": {
+            backgroundColor: active
+              ? "rgba(255,255,255,0.16)"
+              : "rgba(255,255,255,0.08)",
+          },
+          px: collapsed ? 1.2 : nested ? 2.5 : 1.75,
+          py: nested ? 0.82 : 0.95,
           width: "100%",
-          minHeight: nested ? 40 : 44,
+          minHeight: nested ? 38 : 42,
+          transition: "all .18s ease",
         }}
       >
         <ListItemIcon
           sx={{
-            minWidth: collapsed ? "auto" : 36,
+            minWidth: collapsed ? "auto" : nested ? 32 : 36,
             color: "inherit",
-            opacity: 0.95,
+            opacity: active ? 1 : 0.92,
             justifyContent: "center",
+            "& svg": {
+              fontSize: nested ? 19 : 21,
+            },
           }}
         >
           {icon}
@@ -204,10 +231,11 @@ export default function Sidebar({
             primary={text}
             primaryTypographyProps={{
               fontSize: nested ? 13 : 13.5,
-              fontWeight: nested ? 650 : 700,
+              fontWeight: active ? 800 : nested ? 600 : 720,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              letterSpacing: 0.1,
             }}
           />
         )}
@@ -223,12 +251,69 @@ export default function Sidebar({
     );
   };
 
+  const renderSection = (
+    title: string,
+    icon: ReactNode,
+    items: SidebarItem[],
+    open: boolean,
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+    active: boolean
+  ) => (
+    <Box sx={{ mt: 0.7 }}>
+      <ListItemButton onClick={() => setOpen((p) => !p)} sx={sectionButtonSx(active)}>
+        <ListItemIcon
+          sx={{
+            minWidth: collapsed ? "auto" : 36,
+            color: "inherit",
+            opacity: 0.96,
+            justifyContent: "center",
+            "& svg": { fontSize: 21 },
+          }}
+        >
+          {icon}
+        </ListItemIcon>
+
+        {!collapsed && (
+          <>
+            <ListItemText
+              primary={title}
+              primaryTypographyProps={{
+                fontSize: 13.6,
+                fontWeight: 800,
+                letterSpacing: 0.15,
+              }}
+            />
+            {open ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
+          </>
+        )}
+      </ListItemButton>
+
+      {!collapsed && (
+        <Collapse in={open} timeout={180} unmountOnExit>
+          <Box
+            sx={{
+              ml: 2.1,
+              pl: 1.25,
+              borderLeft: "1px solid rgba(255,255,255,0.16)",
+            }}
+          >
+            <List disablePadding sx={{ mt: 0.5 }}>
+              {items.map((it) => (
+                <NavButton key={it.text} {...it} nested />
+              ))}
+            </List>
+          </Box>
+        </Collapse>
+      )}
+    </Box>
+  );
+
   const content = (
     <Box
       sx={{
         height: "100%",
-        color: "rgba(255,255,255,0.92)",
-        background: "linear-gradient(180deg, #0EA5A4 0%, #0D9488 45%, #0B7F7C 100%)",
+        color: "rgba(255,255,255,0.94)",
+        background: "linear-gradient(180deg, #0F766E 0%, #0B5F5A 52%, #084C48 100%)",
         overflowX: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -238,15 +323,15 @@ export default function Sidebar({
         component={RouterLink}
         to="/"
         sx={{
-          mx: collapsed ? 1 : 1.6,
-          my: 1.6,
-          px: collapsed ? 1 : 1.6,
-          py: 1.3,
-          borderRadius: 2.5,
+          mx: collapsed ? 1.1 : 1.6,
+          my: 1.5,
+          px: collapsed ? 1 : 1.5,
+          py: 1.25,
+          borderRadius: 3,
           backgroundColor: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(6px)",
-          border: "1px solid rgba(255,255,255,0.35)",
-          boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.38)",
+          boxShadow: "0 12px 24px rgba(0,0,0,0.14)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -264,16 +349,23 @@ export default function Sidebar({
             objectFit: "contain",
             display: "block",
             transition: "all .2s ease",
-            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))",
+            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.16))",
           }}
         />
       </Box>
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.10)" }} />
 
       {!collapsed && (
-        <Box sx={{ px: 2, pt: 2, pb: 1 }}>
-          <Typography sx={{ opacity: 0.7, fontSize: 11, fontWeight: 800 }}>
+        <Box sx={{ px: 2.1, pt: 1.8, pb: 0.8 }}>
+          <Typography
+            sx={{
+              opacity: 0.72,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 0.9,
+            }}
+          >
             PRINCIPAL
           </Typography>
         </Box>
@@ -282,7 +374,7 @@ export default function Sidebar({
       <Box
         sx={{
           px: collapsed ? 1 : 1.2,
-          pt: 1,
+          pt: 0.8,
           pb: 1.2,
           overflowY: "auto",
           flex: 1,
@@ -300,241 +392,70 @@ export default function Sidebar({
         }}
       >
         <List disablePadding>
-          <NavButton text="Dashboards" icon={<DashboardRoundedIcon />} path="/" />
+          <NavButton text="Dashboards" icon={<SpaceDashboardRoundedIcon />} path="/" />
 
-          {/* Catálogos */}
-          <Box sx={{ mt: 0.8 }}>
-            <ListItemButton
-              onClick={() => setOpenCatalogs((p) => !p)}
-              sx={{
-                mb: 0.6,
-                borderRadius: 2,
-                color: "rgba(255,255,255,0.92)",
-                justifyContent: collapsed ? "center" : "flex-start",
-                backgroundColor: isCatalogActive ? "rgba(255,255,255,0.18)" : "transparent",
-                "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                px: collapsed ? 1.2 : 1.6,
-                py: 1.05,
-                minHeight: 44,
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: collapsed ? "auto" : 36,
-                  color: "inherit",
-                  opacity: 0.95,
-                  justifyContent: "center",
-                }}
-              >
-                <FolderRoundedIcon />
-              </ListItemIcon>
-
-              {!collapsed && (
-                <>
-                  <ListItemText
-                    primary="Catálogos"
-                    primaryTypographyProps={{ fontSize: 13.5, fontWeight: 800 }}
-                  />
-                  {openCatalogs ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-                </>
-              )}
-            </ListItemButton>
-
-            {!collapsed && (
-              <Collapse in={openCatalogs} timeout={180} unmountOnExit>
-                <Box
-                  sx={{
-                    ml: 1.8,
-                    pl: 1.2,
-                    borderLeft: "1px solid rgba(255,255,255,0.22)",
-                  }}
-                >
-                  <List disablePadding sx={{ mt: 0.6 }}>
-                    {catalogItems.map((it) => (
-                      <NavButton key={it.text} {...it} nested />
-                    ))}
-                  </List>
-                </Box>
-              </Collapse>
-            )}
-          </Box>
-
-          {/* Planeamiento */}
-          <Box sx={{ mt: 0.8 }}>
-            <ListItemButton
-              onClick={() => setOpenPlaneamiento((p) => !p)}
-              sx={{
-                mb: 0.6,
-                borderRadius: 2,
-                color: "rgba(255,255,255,0.92)",
-                justifyContent: collapsed ? "center" : "flex-start",
-                backgroundColor: isPlaneamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
-                "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                px: collapsed ? 1.2 : 1.6,
-                py: 1.05,
-                minHeight: 44,
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: collapsed ? "auto" : 36,
-                  color: "inherit",
-                  opacity: 0.95,
-                  justifyContent: "center",
-                }}
-              >
-                <AccountTreeRoundedIcon />
-              </ListItemIcon>
-
-              {!collapsed && (
-                <>
-                  <ListItemText
-                    primary="Planeamiento"
-                    primaryTypographyProps={{ fontSize: 13.5, fontWeight: 800 }}
-                  />
-                  {openPlaneamiento ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-                </>
-              )}
-            </ListItemButton>
-
-            {!collapsed && (
-              <Collapse in={openPlaneamiento} timeout={180} unmountOnExit>
-                <Box
-                  sx={{
-                    ml: 1.8,
-                    pl: 1.2,
-                    borderLeft: "1px solid rgba(255,255,255,0.22)",
-                  }}
-                >
-                  <List disablePadding sx={{ mt: 0.6 }}>
-                    {planeamientoItems.map((it) => (
-                      <NavButton key={it.text} {...it} nested />
-                    ))}
-                  </List>
-                </Box>
-              </Collapse>
-            )}
-          </Box>
-
-          {canManageUsers && (
-            <Box sx={{ mt: 0.8 }}>
-              <ListItemButton
-                onClick={() => setOpenAdmin((p) => !p)}
-                sx={{
-                  mb: 0.6,
-                  borderRadius: 2,
-                  color: "rgba(255,255,255,0.92)",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  backgroundColor: isAdminActive ? "rgba(255,255,255,0.18)" : "transparent",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                  px: collapsed ? 1.2 : 1.6,
-                  py: 1.05,
-                  minHeight: 44,
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    mr: collapsed ? 0 : 1.4,
-                    justifyContent: "center",
-                    color: "inherit",
-                  }}
-                >
-                  <LockRoundedIcon />
-                </ListItemIcon>
-
-                {!collapsed && (
-                  <>
-                    <ListItemText
-                      primary="Administración"
-                      primaryTypographyProps={{ fontSize: 13, fontWeight: 750 }}
-                    />
-                    {openAdmin ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-                  </>
-                )}
-              </ListItemButton>
-
-              <Collapse in={openAdmin} timeout="auto" unmountOnExit>
-                <List disablePadding sx={{ pl: collapsed ? 0 : 1 }}>
-                  {administracionItems.map((it) => (
-                    <NavButton key={it.path} text={it.text} icon={it.icon} path={it.path} />
-                  ))}
-                </List>
-              </Collapse>
-            </Box>
+          {renderSection(
+            "Catálogos",
+            <FolderOpenRoundedIcon />,
+            catalogItems,
+            openCatalogs,
+            setOpenCatalogs,
+            isCatalogActive
           )}
 
-          {/* Alineamiento */}
-          <Box sx={{ mt: 0.8 }}>
-            <ListItemButton
-              onClick={() => setOpenAlineamiento((p) => !p)}
-              sx={{
-                mb: 0.6,
-                borderRadius: 2,
-                color: "rgba(255,255,255,0.92)",
-                justifyContent: collapsed ? "center" : "flex-start",
-                backgroundColor: isAlineamientoActive ? "rgba(255,255,255,0.18)" : "transparent",
-                "&:hover": { backgroundColor: "rgba(255,255,255,0.20)" },
-                px: collapsed ? 1.2 : 1.6,
-                py: 1.05,
-                minHeight: 44,
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: collapsed ? "auto" : 36,
-                  color: "inherit",
-                  opacity: 0.95,
-                  justifyContent: "center",
-                }}
-              >
-                <AccountTreeRoundedIcon />
-              </ListItemIcon>
+          {renderSection(
+            "Planeamiento",
+            <AccountTreeRoundedIcon />,
+            planeamientoItems,
+            openPlaneamiento,
+            setOpenPlaneamiento,
+            isPlaneamientoActive
+          )}
 
-              {!collapsed && (
-                <>
-                  <ListItemText
-                    primary="Alineamiento"
-                    primaryTypographyProps={{ fontSize: 13.5, fontWeight: 800 }}
-                  />
-                  {openAlineamiento ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
-                </>
-              )}
-            </ListItemButton>
+          {renderSection(
+            "Carga Masiva",
+            <CloudUploadRoundedIcon />,
+            cargaMasivaItems,
+            openCargaMasiva,
+            setOpenCargaMasiva,
+            isCargaMasivaActive
+          )}
 
-            {!collapsed && (
-              <Collapse in={openAlineamiento} timeout={180} unmountOnExit>
-                <Box
-                  sx={{
-                    ml: 1.8,
-                    pl: 1.2,
-                    borderLeft: "1px solid rgba(255,255,255,0.22)",
-                  }}
-                >
-                  <List disablePadding sx={{ mt: 0.6 }}>
-                    {alineamientoItems.map((it) => (
-                      <NavButton key={it.text} {...it} nested />
-                    ))}
-                  </List>
-                </Box>
-              </Collapse>
+          {canManageUsers &&
+            renderSection(
+              "Administración",
+              <AdminPanelSettingsRoundedIcon />,
+              administracionItems,
+              openAdmin,
+              setOpenAdmin,
+              isAdminActive
             )}
-          </Box>
 
-          <Divider sx={{ my: 1.4, borderColor: "rgba(255,255,255,0.12)" }} />
+          {renderSection(
+            "Alineamiento",
+            <HubRoundedIcon />,
+            alineamientoItems,
+            openAlineamiento,
+            setOpenAlineamiento,
+            isAlineamientoActive
+          )}
+
+          <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,0.10)" }} />
 
           {mainItems
-            .filter((x) => !["Dashboards", "Pages", "Task"].includes(x.text))
+            .filter((x) => !["Dashboards"].includes(x.text))
             .map((it) => (
               <NavButton key={it.text} {...it} />
             ))}
         </List>
       </Box>
 
-      <Box sx={{ px: collapsed ? 1 : 2, pb: 2, opacity: 0.85, fontSize: 12 }}>
-        <Divider sx={{ mb: 1.5, borderColor: "rgba(255,255,255,0.12)" }} />
+      <Box sx={{ px: collapsed ? 1 : 2, pb: 2, opacity: 0.86, fontSize: 12 }}>
+        <Divider sx={{ mb: 1.4, borderColor: "rgba(255,255,255,0.10)" }} />
         {!collapsed ? (
-          <Typography sx={{ fontSize: 12 }}>© {new Date().getFullYear()} Dashboard</Typography>
+          <Typography sx={{ fontSize: 12, color: "rgba(255,255,255,0.82)" }}>
+            © {new Date().getFullYear()} Dashboard
+          </Typography>
         ) : (
           <Typography sx={{ fontSize: 12, textAlign: "center" }}>©</Typography>
         )}

@@ -23,7 +23,7 @@ import UnidadesEjecutorasPage from "../features/planeamiento/pages/UnidadesEjecu
 import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
 
 //import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage";
-import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage"; // ajusta el path real
+//import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage"; // ajusta el path real
 import PdrcOerAerPage from "../features/planeamiento/pages/PdrcOerAerPage";
 // Alineamiento (Módulo 4)
 import AlineamientosInstrumentosPage from "../features/alineamiento/pages/AlineamientosInstrumentosPage";
@@ -39,6 +39,8 @@ import UsuariosPage from "../features/administracion/pages/UsuariosPage";
 import UnidadesOrganizacionalesCentrosCostoPage from "../features/planeamiento/pages/UnidadesOrganizacionalesCentrosCostoPage";
 import UnidadesOrgPage2 from "../features/planeamiento/pages/UnidadesOrgPage2";
 //import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
+import CargaMasivaPage from "../features/planeamiento/pages/CargaMasivaPage";
+
 
 export default function App() {
   return (
@@ -87,6 +89,9 @@ export default function App() {
           
           <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
           
+          <Route path="/planeamiento/carga-masiva/:tipo" element={<CargaMasivaPage />} />
+
+
           {/*<Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />*/}
 
           {/* Alineamiento */}

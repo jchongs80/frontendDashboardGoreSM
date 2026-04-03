@@ -1,7 +1,6 @@
 import {
   AppBar,
   Avatar,
-  Badge,
   Box,
   IconButton,
   InputBase,
@@ -18,14 +17,12 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
-import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 
 import { useState } from "react";
-import { useAuth } from "./../../features/auth/AuthContext"; // 🔁 ajusta ruta si corresponde
+import { useAuth } from "./../../features/auth/AuthContext";
 
 type Props = {
   onToggleMobileSidebar: () => void;
@@ -60,20 +57,41 @@ export default function Topbar({
       sx={{
         bgcolor: "background.paper",
         color: "text.primary",
-        borderBottom: "1px solid #EEF2F7",
+        borderBottom: "1px solid #E8EEF5",
+        backdropFilter: "blur(8px)",
       }}
     >
-      <Toolbar sx={{ gap: 1.5, px: { xs: 2, md: 3 }, minHeight: 58 }}>
+      <Toolbar
+        sx={{
+          gap: 1.5,
+          px: { xs: 2, md: 3 },
+          minHeight: 64,
+        }}
+      >
         {/* Mobile menu */}
-        <IconButton edge="start" onClick={onToggleMobileSidebar} sx={{ display: { md: "none" } }}>
-          <MenuRoundedIcon />
-        </IconButton>
+        <Tooltip title="Abrir menú">
+          <IconButton
+            edge="start"
+            onClick={onToggleMobileSidebar}
+            sx={{
+              display: { md: "none" },
+              borderRadius: 2.5,
+              "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
+            }}
+          >
+            <MenuRoundedIcon />
+          </IconButton>
+        </Tooltip>
 
         {/* Desktop collapse toggle */}
         <Tooltip title={sidebarCollapsed ? "Expandir menú" : "Colapsar menú"}>
           <IconButton
             onClick={onToggleCollapsedSidebar}
-            sx={{ display: { xs: "none", md: "inline-flex" } }}
+            sx={{
+              display: { xs: "none", md: "inline-flex" },
+              borderRadius: 2.5,
+              "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
+            }}
           >
             {sidebarCollapsed ? <ChevronRightRoundedIcon /> : <ChevronLeftRoundedIcon />}
           </IconButton>
@@ -86,43 +104,60 @@ export default function Topbar({
               display: "flex",
               alignItems: "center",
               gap: 1,
-              px: 1.2,
-              height: 36,
-              border: "1px solid #E7ECF3",
+              px: 1.5,
+              height: 42,
+              border: "1px solid #E2E8F0",
               borderRadius: 999,
-              width: { xs: "100%", sm: 360, md: 420 },
-              bgcolor: "#FAFBFD",
+              width: { xs: "100%", sm: 340, md: 430 },
+              bgcolor: "#F8FAFC",
+              boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.04)",
+              transition: "all .18s ease",
+              "&:hover": {
+                borderColor: "#CBD5E1",
+                bgcolor: "#FFFFFF",
+              },
             }}
           >
             <SearchRoundedIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-            <InputBase placeholder="Buscar..." sx={{ flex: 1, fontSize: 13 }} />
+            <InputBase
+              placeholder="Buscar..."
+              sx={{
+                flex: 1,
+                fontSize: 13.5,
+                "& input::placeholder": {
+                  color: "#94A3B8",
+                  opacity: 1,
+                },
+              }}
+            />
           </Box>
         </Box>
 
-        {/* Right icons + User */}
+        {/* Right side */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <IconButton>
-            <DarkModeOutlinedIcon />
-          </IconButton>
+          <Tooltip title="Modo oscuro">
+            <IconButton
+              sx={{
+                borderRadius: 2.5,
+                color: "text.secondary",
+                "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
+              }}
+            >
+              <DarkModeRoundedIcon />
+            </IconButton>
+          </Tooltip>
 
-         {/*
-          <IconButton>
-            <Badge badgeContent={5} color="primary">
-              <ShoppingCartOutlinedIcon />
-            </Badge>
-          </IconButton>
-
-          <IconButton>
-            <Badge badgeContent={5} color="primary">
-              <NotificationsNoneRoundedIcon />
-            </Badge>
-          </IconButton>
-
-          */}
-          
-          <IconButton>
-            <SettingsOutlinedIcon />
-          </IconButton>
+          <Tooltip title="Configuración">
+            <IconButton
+              sx={{
+                borderRadius: 2.5,
+                color: "text.secondary",
+                "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
+              }}
+            >
+              <SettingsRoundedIcon />
+            </IconButton>
+          </Tooltip>
 
           {/* User pill */}
           <Box
@@ -133,18 +168,49 @@ export default function Topbar({
               gap: 1,
               pl: 1,
               cursor: "pointer",
-              borderRadius: 2,
-              px: 1,
-              py: 0.6,
-              "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+              borderRadius: 3,
+              px: 1.1,
+              py: 0.65,
+              ml: 0.4,
+              border: "1px solid transparent",
+              transition: "all .18s ease",
+              "&:hover": {
+                bgcolor: "rgba(15, 23, 42, 0.04)",
+                borderColor: "#E2E8F0",
+              },
             }}
           >
-            <Avatar sx={{ width: 32, height: 32 }}>{getInitials(nombre)}</Avatar>
+            <Avatar
+              sx={{
+                width: 34,
+                height: 34,
+                fontSize: 13,
+                fontWeight: 800,
+                bgcolor: "rgba(14,165,164,0.14)",
+                color: "primary.main",
+              }}
+            >
+              {getInitials(nombre)}
+            </Avatar>
+
             <Box sx={{ display: { xs: "none", md: "block" } }}>
-              <Typography sx={{ fontWeight: 750, fontSize: 13, lineHeight: 1.1 }}>
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: 13,
+                  lineHeight: 1.1,
+                  letterSpacing: 0.1,
+                }}
+              >
                 {nombre}
               </Typography>
-              <Typography sx={{ fontSize: 11.5, color: "text.secondary" }}>
+              <Typography
+                sx={{
+                  fontSize: 11.5,
+                  color: "text.secondary",
+                  mt: 0.2,
+                }}
+              >
                 {perfil}
               </Typography>
             </Box>
@@ -154,19 +220,35 @@ export default function Topbar({
             anchorEl={anchorEl}
             open={open}
             onClose={() => setAnchorEl(null)}
-            PaperProps={{ sx: { borderRadius: 2.5, minWidth: 240 } }}
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                minWidth: 250,
+                border: "1px solid #E8EEF5",
+                boxShadow: "0 16px 34px rgba(15, 23, 42, 0.10)",
+                mt: 1,
+              },
+            }}
           >
-            <Box sx={{ px: 2, py: 1.2 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: 13 }}>{nombre}</Typography>
-              <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+            <Box sx={{ px: 2, py: 1.4 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>
+                {nombre}
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.3 }}>
                 {user?.email ?? ""}
               </Typography>
             </Box>
+
             <Divider />
+
             <MenuItem
               onClick={async () => {
                 setAnchorEl(null);
                 await logout();
+              }}
+              sx={{
+                py: 1.2,
+                fontSize: 13.5,
               }}
             >
               <ListItemIcon>

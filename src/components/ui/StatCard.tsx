@@ -13,27 +13,43 @@ export default function StatCard({
   delta?: { text: string; positive?: boolean };
 }) {
   return (
-    <Card>
-      <CardContent sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+    <Card
+      sx={{
+        borderRadius: 3,
+        border: "1px solid #E8EEF5",
+        boxShadow: "0 8px 20px rgba(15, 23, 42, 0.05)",
+      }}
+    >
+      <CardContent sx={{ display: "flex", alignItems: "center", gap: 1.6 }}>
         <Box
           sx={{
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             borderRadius: 999,
             display: "grid",
             placeItems: "center",
-            bgcolor: "rgba(14,165,164,0.14)", // teal suave
+            bgcolor: "rgba(14,165,164,0.10)",
             color: "primary.main",
           }}
         >
           {icon}
         </Box>
+
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: 12.5, color: "text.secondary", fontWeight: 700 }}>
+          <Typography
+            sx={{
+              fontSize: 12.5,
+              color: "text.secondary",
+              fontWeight: 700,
+            }}
+          >
             {label}
           </Typography>
-          <Typography sx={{ fontSize: 20, fontWeight: 900 }}>{value}</Typography>
+          <Typography sx={{ fontSize: 21, fontWeight: 900 }}>
+            {value}
+          </Typography>
         </Box>
+
         {delta && (
           <Typography
             sx={{

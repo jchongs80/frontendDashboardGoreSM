@@ -14,10 +14,21 @@ export default function SectionCard({
   sx?: SxProps<Theme>;
 }) {
   return (
-    <Card sx={sx}>
+    <Card
+      sx={{
+        borderRadius: 3,
+        border: "1px solid #E8EEF5",
+        boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
+        ...sx,
+      }}
+    >
       <CardHeader
         title={title}
-        titleTypographyProps={{ fontSize: 14, fontWeight: 800 }}
+        titleTypographyProps={{
+          fontSize: 14.5,
+          fontWeight: 800,
+          letterSpacing: 0.1,
+        }}
         action={action}
         sx={{ pb: 0.5 }}
       />
