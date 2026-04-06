@@ -2,20 +2,21 @@ import { api } from "../../shared/api";
 
 export type CargaMasivaTipo = "ag" | "pdrc" | "pei" | "poi";
 
-export type PdrcCargaMasivaErrorDto = {
+export type CargaMasivaErrorDto = {
   numeroFila: number;
   campo: string;
   mensaje: string;
   valor?: string | null;
 };
 
-export type PdrcCargaMasivaValidacionDto = {
+export type CargaMasivaValidacionDto = {
   nombreArchivo: string;
+  tipoPlantilla?: string;
   totalFilas: number;
   filasValidas: number;
   filasConError: number;
   puedeProcesar: boolean;
-  errores: PdrcCargaMasivaErrorDto[];
+  errores: CargaMasivaErrorDto[];
 };
 
 export type PdrcCargaMasivaResultadoDto = {
@@ -33,8 +34,31 @@ export type PdrcCargaMasivaResultadoDto = {
   valoresOmitidos: number;
   success: boolean;
   mensaje: string;
-  errores: PdrcCargaMasivaErrorDto[];
+  errores: CargaMasivaErrorDto[];
 };
+
+export type AgCargaMasivaResultadoDto = {
+  nombreArchivo: string;
+  tipoPlantilla: string;
+  totalFilasLeidas: number;
+  totalFilasValidas: number;
+  totalFilasConError: number;
+  cabecerasInsertadas: number;
+  cabecerasReutilizadas: number;
+  valoresInsertados: number;
+  valoresActualizados: number;
+  valoresOmitidos: number;
+  ejecutadosInsertados: number;
+  ejecutadosActualizados: number;
+  ejecutadosOmitidos: number;
+  success: boolean;
+  mensaje: string;
+  errores: CargaMasivaErrorDto[];
+};
+
+export type CargaMasivaResultadoDto =
+  | PdrcCargaMasivaResultadoDto
+  | AgCargaMasivaResultadoDto;
 
 function normalizeTipo(tipo: string | undefined): CargaMasivaTipo {
   const t = (tipo ?? "").trim().toLowerCase();
@@ -53,6 +77,11 @@ function getEndpoints(tipo: string | undefined) {
       };
 
     case "ag":
+      return {
+        validar: "/api/AgCargaMasiva/validar",
+        procesar: "/api/AgCargaMasiva/procesar",
+      };
+
     case "pei":
     case "poi":
       return {
@@ -73,25 +102,29 @@ export const CargaMasivaAction = {
     const endpoints = getEndpoints(tipo);
 
     if (!endpoints.validar) {
-      throw new Error(`La carga masiva para ${normalizeTipo(tipo).toUpperCase()} aún no está implementada.`);
+      throw new Error(
+        `La carga masiva para ${normalizeTipo(tipo).toUpperCase()} aún no está implementada.`
+      );
     }
 
     const formData = new FormData();
     formData.append("archivo", archivo);
 
-    return await api.post<PdrcCargaMasivaValidacionDto>(endpoints.validar, formData);
+    return await api.post<CargaMasivaValidacionDto>(endpoints.validar, formData);
   },
 
   async procesar(tipo: string | undefined, archivo: File) {
     const endpoints = getEndpoints(tipo);
 
     if (!endpoints.procesar) {
-      throw new Error(`La carga masiva para ${normalizeTipo(tipo).toUpperCase()} aún no está implementada.`);
+      throw new Error(
+        `La carga masiva para ${normalizeTipo(tipo).toUpperCase()} aún no está implementada.`
+      );
     }
 
     const formData = new FormData();
     formData.append("archivo", archivo);
 
-    return await api.post<PdrcCargaMasivaResultadoDto>(endpoints.procesar, formData);
+    return await api.post<CargaMasivaResultadoDto>(endpoints.procesar, formData);
   },
 };

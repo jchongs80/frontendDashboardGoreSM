@@ -39,6 +39,7 @@ import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import logoFull from "../../assets/logo-goresam-full.png";
 import logoIcon from "../../assets/logo-goresam-icon.png";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 
 import { useAuth } from "./../../features/auth/AuthContext";
 
@@ -122,6 +123,37 @@ export default function Sidebar({
       text: "P.R.C.P.",
       icon: <WorkspacePremiumRoundedIcon />,
       path: "/planeamiento/prcp-op-pi-mp",
+    },
+  ];
+
+  const cargaMasivaItems: SidebarItem[] = [
+    {
+      text: "Carga Masiva PDRC",
+      icon: <CloudUploadRoundedIcon />,
+      path: "/planeamiento/carga-masiva/pdrc",
+    },
+    {
+      text: "Carga Masiva AG",
+      icon: <CloudUploadRoundedIcon />,
+      path: "/planeamiento/carga-masiva/ag",
+    },
+    {
+      text: "Carga Masiva PEI",
+      icon: <CloudUploadRoundedIcon />,
+      path: "/planeamiento/carga-masiva/pei",
+    },
+    {
+      text: "Carga Masiva POI",
+      icon: <CloudUploadRoundedIcon />,
+      path: "/planeamiento/carga-masiva/poi",
+    },
+  ];
+
+  const administracionItems: SidebarItem[] = [
+    {
+      text: "Usuarios",
+      icon: <AdminPanelSettingsRoundedIcon />,
+      path: "/admin/usuarios",
     },
   ];
 

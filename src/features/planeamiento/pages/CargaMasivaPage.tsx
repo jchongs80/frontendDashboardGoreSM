@@ -26,11 +26,14 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 
 import {
   CargaMasivaAction,
+  type CargaMasivaResultadoDto,
+  type CargaMasivaValidacionDto,
+  type AgCargaMasivaResultadoDto,
   type PdrcCargaMasivaResultadoDto,
-  type PdrcCargaMasivaValidacionDto,
 } from "../CargaMasivaAction";
 
 type RouteParams = {
@@ -65,7 +68,7 @@ function getDescripcion(tipo: TipoInstrumento): string {
     case "pdrc":
       return "Valida y procesa el archivo Excel para objetivos, acciones, indicadores y valores del PDRC.";
     case "ag":
-      return "Carga masiva para Acuerdos de Gobernabilidad.";
+      return "Valida y procesa el archivo Excel para Acuerdos de Gobernabilidad, tanto Indicador Valor como Indicador Ejecutado.";
     case "pei":
       return "Carga masiva para el PEI.";
     case "poi":
@@ -75,20 +78,78 @@ function getDescripcion(tipo: TipoInstrumento): string {
   }
 }
 
+function isPdrcResultado(
+  resultado: CargaMasivaResultadoDto | null
+): resultado is PdrcCargaMasivaResultadoDto {
+  return !!resultado && "periodosInsertados" in resultado;
+}
+
+function isAgResultado(
+  resultado: CargaMasivaResultadoDto | null
+): resultado is AgCargaMasivaResultadoDto {
+  return !!resultado && "cabecerasInsertadas" in resultado;
+}
+
+type PlantillaDescarga = {
+  label: string;
+  fileName: string;
+  url: string;
+};
+
+function getPlantillas(tipo: TipoInstrumento): PlantillaDescarga[] {
+  switch (tipo) {
+    case "pdrc":
+      return [
+        {
+          label: "Descargar plantilla PDRC",
+          fileName: "pdrc-plantilla.xlsx",
+          url: "/plantillas/pdrc-plantilla.xlsx",
+        },
+      ];
+
+    case "ag":
+      return [
+        {
+          label: "Plantilla AG - Valores",
+          fileName: "ag-plantilla-valores.xlsx",
+          url: "/plantillas/ag-plantilla-valores.xlsx",
+        },
+        {
+          label: "Plantilla AG - Ejecutado",
+          fileName: "ag-plantilla-ejecutado.xlsx",
+          url: "/plantillas/ag-plantilla-ejecutado.xlsx",
+        },
+      ];
+
+    default:
+      return [];
+  }
+}
+
+function descargarArchivo(url: string, fileName: string) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export default function CargaMasivaPage(): React.ReactElement {
   const navigate = useNavigate();
   const { tipo } = useParams<RouteParams>();
 
   const tipoActual = useMemo(() => normalizeTipo(tipo), [tipo]);
+  const plantillas = useMemo(() => getPlantillas(tipoActual), [tipoActual]);
 
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [validacion, setValidacion] = useState<PdrcCargaMasivaValidacionDto | null>(null);
-  const [resultado, setResultado] = useState<PdrcCargaMasivaResultadoDto | null>(null);
+  const [validacion, setValidacion] = useState<CargaMasivaValidacionDto | null>(null);
+  const [resultado, setResultado] = useState<CargaMasivaResultadoDto | null>(null);
   const [errorGeneral, setErrorGeneral] = useState<string>("");
   const [loadingValidar, setLoadingValidar] = useState<boolean>(false);
   const [loadingProcesar, setLoadingProcesar] = useState<boolean>(false);
 
-  const soportado = tipoActual === "pdrc";
+  const soportado = tipoActual === "pdrc" || tipoActual === "ag";
 
   const archivoLabel = archivo?.name ?? "Ningún archivo seleccionado";
 
@@ -190,7 +251,7 @@ export default function CargaMasivaPage(): React.ReactElement {
       {!soportado && (
         <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
           La carga masiva para <strong>{tipoActual.toUpperCase()}</strong> todavía no está habilitada.
-          Por ahora la implementación operativa está en <strong>PDRC</strong>.
+          Por ahora la implementación operativa está en <strong>PDRC</strong> y <strong>AG</strong>.
         </Alert>
       )}
 
@@ -205,6 +266,32 @@ export default function CargaMasivaPage(): React.ReactElement {
         }}
       >
         <Stack spacing={2}>
+          {plantillas.length > 0 && (
+            <>
+              <Stack spacing={1}>
+                <Typography sx={{ fontWeight: 700 }}>
+                  Plantillas Excel
+                </Typography>
+
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} flexWrap="wrap">
+                  {plantillas.map((p) => (
+                    <Button
+                      key={p.url}
+                      variant="outlined"
+                      startIcon={<DownloadRoundedIcon />}
+                      onClick={() => descargarArchivo(p.url, p.fileName)}
+                      sx={{ borderRadius: 2.5 }}
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </Stack>
+              </Stack>
+
+              <Divider />
+            </>
+          )}
+
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={2}
@@ -265,6 +352,19 @@ export default function CargaMasivaPage(): React.ReactElement {
             Flujo recomendado: primero <strong>Validar</strong>, luego <strong>Procesar</strong>.
           </Alert>
 
+          {tipoActual === "ag" && (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Para <strong>AG</strong>, el archivo debe contener <strong>una sola hoja</strong>:
+              puede ser <strong>Indicador Valor</strong> o <strong>Indicador Ejecutado</strong>.
+            </Alert>
+          )}
+
+          {tipoActual === "pdrc" && (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              Para <strong>PDRC</strong>, utiliza la plantilla oficial de carga masiva antes de validar y procesar.
+            </Alert>
+          )}
+
           {errorGeneral && (
             <Alert severity="error" sx={{ borderRadius: 2 }}>
               {errorGeneral}
@@ -296,6 +396,13 @@ export default function CargaMasivaPage(): React.ReactElement {
               label={validacion.puedeProcesar ? "Puede procesar" : "No puede procesar"}
               color={validacion.puedeProcesar ? "success" : "warning"}
             />
+            {!!validacion.tipoPlantilla && (
+              <Chip
+                label={`Plantilla: ${validacion.tipoPlantilla}`}
+                color="primary"
+                variant="outlined"
+              />
+            )}
           </Stack>
 
           {validacion.errores?.length > 0 ? (
@@ -348,40 +455,96 @@ export default function CargaMasivaPage(): React.ReactElement {
             <Chip label={`Leídas: ${resultado.totalFilasLeidas}`} variant="outlined" />
             <Chip label={`Válidas: ${resultado.totalFilasValidas}`} color="success" variant="outlined" />
             <Chip label={`Con error: ${resultado.totalFilasConError}`} color="error" variant="outlined" />
-            <Chip label={`Valores insertados: ${resultado.valoresInsertados}`} color="success" />
-            <Chip label={`Valores omitidos: ${resultado.valoresOmitidos}`} color="warning" variant="outlined" />
+            {!!("tipoPlantilla" in resultado) && (
+              <Chip label={`Plantilla: ${resultado.tipoPlantilla}`} color="primary" variant="outlined" />
+            )}
           </Stack>
 
-          <Box sx={{ overflowX: "auto" }}>
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Periodos insertados</TableCell>
-                  <TableCell>{resultado.periodosInsertados}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>OER insertados</TableCell>
-                  <TableCell>{resultado.oerInsertados}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>AER insertados</TableCell>
-                  <TableCell>{resultado.aerInsertados}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Entidades estratégicas insertadas</TableCell>
-                  <TableCell>{resultado.entidadesEstrategicasInsertadas}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Relaciones OER/AER insertadas</TableCell>
-                  <TableCell>{resultado.oerAerInsertados}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Indicadores insertados</TableCell>
-                  <TableCell>{resultado.indicadoresInsertados}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Box>
+          {isPdrcResultado(resultado) && (
+            <>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
+                <Chip label={`Valores insertados: ${resultado.valoresInsertados}`} color="success" />
+                <Chip label={`Valores omitidos: ${resultado.valoresOmitidos}`} color="warning" variant="outlined" />
+              </Stack>
+
+              <Box sx={{ overflowX: "auto" }}>
+                <Table size="small">
+                  <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Periodos insertados</TableCell>
+                      <TableCell>{resultado.periodosInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>OER insertados</TableCell>
+                      <TableCell>{resultado.oerInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>AER insertados</TableCell>
+                      <TableCell>{resultado.aerInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Entidades estratégicas insertadas</TableCell>
+                      <TableCell>{resultado.entidadesEstrategicasInsertadas}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Relaciones OER/AER insertadas</TableCell>
+                      <TableCell>{resultado.oerAerInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Indicadores insertados</TableCell>
+                      <TableCell>{resultado.indicadoresInsertados}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Box>
+            </>
+          )}
+
+          {isAgResultado(resultado) && (
+            <>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
+                <Chip label={`Cabeceras insertadas: ${resultado.cabecerasInsertadas}`} color="success" variant="outlined" />
+                <Chip label={`Cabeceras reutilizadas: ${resultado.cabecerasReutilizadas}`} color="primary" variant="outlined" />
+                <Chip label={`Valores insertados: ${resultado.valoresInsertados}`} color="success" />
+                <Chip label={`Valores actualizados: ${resultado.valoresActualizados}`} color="info" variant="outlined" />
+                <Chip label={`Valores omitidos: ${resultado.valoresOmitidos}`} color="warning" variant="outlined" />
+                <Chip label={`Ejecutados insertados: ${resultado.ejecutadosInsertados}`} color="success" />
+                <Chip label={`Ejecutados actualizados: ${resultado.ejecutadosActualizados}`} color="info" variant="outlined" />
+                <Chip label={`Ejecutados omitidos: ${resultado.ejecutadosOmitidos}`} color="warning" variant="outlined" />
+              </Stack>
+
+              <Box sx={{ overflowX: "auto" }}>
+                <Table size="small">
+                  <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Cabeceras insertadas</TableCell>
+                      <TableCell>{resultado.cabecerasInsertadas}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Cabeceras reutilizadas</TableCell>
+                      <TableCell>{resultado.cabecerasReutilizadas}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Valores insertados</TableCell>
+                      <TableCell>{resultado.valoresInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Valores actualizados</TableCell>
+                      <TableCell>{resultado.valoresActualizados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Ejecutados insertados</TableCell>
+                      <TableCell>{resultado.ejecutadosInsertados}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Ejecutados actualizados</TableCell>
+                      <TableCell>{resultado.ejecutadosActualizados}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Box>
+            </>
+          )}
 
           {!!resultado.errores?.length && (
             <Box sx={{ mt: 2 }}>
