@@ -11,6 +11,7 @@ import {
   DialogTitle,
   Divider,
   InputAdornment,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -22,12 +23,15 @@ import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
 
 import {
   PeiOeiAeiVistaAction,
   type PeiIndicadorDetalleResponseDto,
 } from "../PeiOeiAeiVistaAction";
+import PeiIndicadorInfoModal from "./PeiIndicadorInfoModal";
+import PeiIndicadorFichaModal from "./PeiIndicadorFichaModal";
 
 type Props = {
   open: boolean;
@@ -69,6 +73,32 @@ function parseDecimalInput(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function formatPercent(value: number | null | undefined): string {
+  const n = Number(value ?? 0);
+  return `${new Intl.NumberFormat("es-PE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(n) ? n : 0)}%`;
+}
+
+function calcularAvancePorcentaje(
+  valorEjecutado: string | number | null | undefined,
+  valorMeta: number | null | undefined
+): number | null {
+  const ejecutado =
+    typeof valorEjecutado === "string"
+      ? parseDecimalInput(valorEjecutado)
+      : Number(valorEjecutado ?? 0);
+
+  const meta = Number(valorMeta ?? 0);
+
+  if (!Number.isFinite(ejecutado) || !Number.isFinite(meta) || meta === 0) {
+    return null;
+  }
+
+  return (ejecutado / meta) * 100;
+}
+
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 2.5,
@@ -91,6 +121,18 @@ const valueTextFieldSx = {
     py: 0.95,
     fontSize: 13,
     textAlign: "right",
+  },
+} as const;
+
+const avanceChipSx = {
+  borderRadius: 999,
+  height: 28,
+  minWidth: 76,
+  justifyContent: "center",
+  fontWeight: 950,
+  fontSize: 11,
+  "& .MuiChip-label": {
+    px: 0.9,
   },
 } as const;
 
@@ -117,6 +159,14 @@ export default function PeiIndicadorDetalleModal({
 
   const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
   const [savingEjecutado, setSavingEjecutado] = useState<boolean>(false);
+  const [semestreIForm, setSemestreIForm] = useState<Record<number, string>>({});
+  const [savingSemestreI, setSavingSemestreI] = useState<boolean>(false);
+  const [idRelevancia, setIdRelevancia] = useState<string>("");
+  const [idSentidoEsperado, setIdSentidoEsperado] = useState<string>("");
+  const [idTipoAgregacion, setIdTipoAgregacion] = useState<string>("");
+  const [savingInfoEditable, setSavingInfoEditable] = useState<boolean>(false);
+  const [openInfoModal, setOpenInfoModal] = useState<boolean>(false);
+  const [openFichaModal, setOpenFichaModal] = useState<boolean>(false);
 
   const loadDetalle = async (
     currentIdPeiOeiAei: number,
@@ -169,6 +219,26 @@ export default function PeiIndicadorDetalleModal({
     setEjecutadoForm(map);
   }, [data]);
 
+
+  useEffect(() => {
+    const map: Record<number, string> = {};
+    for (const item of data?.valoresEjecutadoSemestreIPorAnio ?? []) {
+      map[item.idAnioProyeccion] = String(item.valor ?? 0);
+    }
+    setSemestreIForm(map);
+  }, [data]);
+
+  useEffect(() => {
+    setIdRelevancia(data?.infoEditable?.idRelevancia != null ? String(data.infoEditable.idRelevancia) : "");
+    setIdSentidoEsperado(
+      data?.infoEditable?.idSentidoEsperado != null
+        ? String(data.infoEditable.idSentidoEsperado)
+        : ""
+    );
+    setIdTipoAgregacion(
+      data?.infoEditable?.idTipoAgregacion != null ? String(data.infoEditable.idTipoAgregacion) : ""
+    );
+  }, [data]);
   const codigoIndicadorView = useMemo(() => {
     return safeText(data?.codigoIndicador ?? codigoIndicador);
   }, [data, codigoIndicador]);
@@ -192,6 +262,16 @@ export default function PeiIndicadorDetalleModal({
     return safeText(aei);
   }, [data, aei]);
 
+  const metaPorAnioMap = useMemo(() => {
+    const map = new Map<number, number>();
+
+    for (const item of data?.valoresMetaPorAnio ?? []) {
+      map.set(item.idAnioProyeccion, Number(item.valorAbsolutoA ?? 0));
+    }
+
+    return map;
+  }, [data]);
+
   async function guardarEjecutado() {
     try {
       setSavingEjecutado(true);
@@ -214,8 +294,52 @@ export default function PeiIndicadorDetalleModal({
     }
   }
 
+  async function guardarSemestreI() {
+    try {
+      setSavingSemestreI(true);
+      setErrorMsg("");
+
+      await PeiOeiAeiVistaAction.guardarIndicadorEjecutadoSemestreI({
+        idPeiOeiAei,
+        idIndicadorNombre,
+        valores: (data?.valoresEjecutadoSemestreIPorAnio ?? []).map((x) => ({
+          idAnioProyeccion: x.idAnioProyeccion,
+          valor: parseDecimalInput(semestreIForm[x.idAnioProyeccion] ?? "0"),
+        })),
+      });
+
+      await loadDetalle(idPeiOeiAei, idIndicadorNombre);
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error));
+    } finally {
+      setSavingSemestreI(false);
+    }
+  }
+
+  async function guardarInfoEditable() {
+    try {
+      setSavingInfoEditable(true);
+      setErrorMsg("");
+
+      await PeiOeiAeiVistaAction.guardarIndicadorInfoEditable({
+        idPeiOeiAei,
+        idIndicadorNombre,
+        idRelevancia: idRelevancia ? Number(idRelevancia) : null,
+        idSentidoEsperado: idSentidoEsperado ? Number(idSentidoEsperado) : null,
+        idTipoAgregacion: idTipoAgregacion ? Number(idTipoAgregacion) : null,
+      });
+
+      await loadDetalle(idPeiOeiAei, idIndicadorNombre);
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error));
+    } finally {
+      setSavingInfoEditable(false);
+    }
+  }
+
   return (
-    <Dialog
+    <>
+      <Dialog
       open={open}
       onClose={onClose}
       fullWidth
@@ -407,6 +531,84 @@ export default function PeiIndicadorDetalleModal({
 
         <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+            <InfoOutlinedIcon fontSize="small" />
+            <Typography sx={{ fontWeight: 950 }}>Información Editable</Typography>
+          </Stack>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" },
+              gap: 1.1,
+            }}
+          >
+            <TextField
+              select
+              label="RELEVANCIA"
+              size="small"
+              fullWidth
+              value={idRelevancia}
+              onChange={(e) => setIdRelevancia(e.target.value)}
+              sx={fieldSx}
+            >
+              <MenuItem value="">Seleccionar</MenuItem>
+              {(data?.catalogoRelevancia ?? []).map((item) => (
+                <MenuItem key={item.id} value={String(item.id)}>
+                  {item.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              select
+              label="SENTIDO ESPERADO"
+              size="small"
+              fullWidth
+              value={idSentidoEsperado}
+              onChange={(e) => setIdSentidoEsperado(e.target.value)}
+              sx={fieldSx}
+            >
+              <MenuItem value="">Seleccionar</MenuItem>
+              {(data?.catalogoSentidoEsperado ?? []).map((item) => (
+                <MenuItem key={item.id} value={String(item.id)}>
+                  {item.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              select
+              label="TIPO DE AGREGACIÓN"
+              size="small"
+              fullWidth
+              value={idTipoAgregacion}
+              onChange={(e) => setIdTipoAgregacion(e.target.value)}
+              sx={fieldSx}
+            >
+              <MenuItem value="">Seleccionar</MenuItem>
+              {(data?.catalogoTipoAgregacion ?? []).map((item) => (
+                <MenuItem key={item.id} value={String(item.id)}>
+                  {item.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.25 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={guardarInfoEditable}
+              disabled={savingInfoEditable || loading}
+              sx={{ borderRadius: 2, fontWeight: 900 }}
+            >
+              {savingInfoEditable ? "Guardando..." : "GUARDAR"}
+            </Button>
+          </Box>
+        </Paper>
+
+        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
             <ChecklistRoundedIcon fontSize="small" />
             <Typography sx={{ fontWeight: 950 }}>Detalle Línea Base</Typography>
           </Stack>
@@ -485,7 +687,7 @@ export default function PeiIndicadorDetalleModal({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+            gridTemplateColumns: { xs: "1fr", md: "1fr 0.92fr 1fr" },
             gap: 2,
           }}
         >
@@ -560,6 +762,116 @@ export default function PeiIndicadorDetalleModal({
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
               <CalendarMonthRoundedIcon fontSize="small" />
               <Typography sx={{ fontWeight: 950 }}>
+                Valores Ejecutado Semestre I por Indicador
+              </Typography>
+            </Stack>
+
+            {loading ? (
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={18} />
+                <Typography variant="body2">Cargando valores Semestre I...</Typography>
+              </Stack>
+            ) : !data?.valoresEjecutadoSemestreIPorAnio ||
+              data.valoresEjecutadoSemestreIPorAnio.length === 0 ? (
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                No existen años de META para este indicador y por tanto no hay ejecutado de
+                Semestre I a registrar.
+              </Alert>
+            ) : (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: 1.1,
+                }}
+              >
+                {(data?.valoresEjecutadoSemestreIPorAnio ?? []).map((item) => {
+                  const valorSemestreI = semestreIForm[item.idAnioProyeccion] ?? "0";
+                  const valorMeta = metaPorAnioMap.get(item.idAnioProyeccion) ?? 0;
+                  const avance = calcularAvancePorcentaje(valorSemestreI, valorMeta);
+
+                  return (
+                    <Box
+                      key={item.idAnioProyeccion}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
+                        gap: 0.8,
+                        alignItems: "center",
+                      }}
+                    >
+                      <TextField
+                        label=""
+                        value={valorSemestreI}
+                        size="small"
+                        fullWidth
+                        onChange={(e) =>
+                          setSemestreIForm((prev) => ({
+                            ...prev,
+                            [item.idAnioProyeccion]: e.target.value,
+                          }))
+                        }
+                        sx={valueTextFieldSx}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Chip
+                                size="small"
+                                label={String(item.anio)}
+                                variant="outlined"
+                                sx={{
+                                  borderRadius: 999,
+                                  fontWeight: 900,
+                                  height: 20,
+                                  minWidth: 56,
+                                  "& .MuiChip-label": {
+                                    px: 0.7,
+                                    fontSize: 10.5,
+                                  },
+                                }}
+                              />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+
+                      <Chip
+                        label={avance == null ? "—" : formatPercent(avance)}
+                        variant="outlined"
+                        color={avance != null && avance >= 100 ? "success" : "default"}
+                        sx={avanceChipSx}
+                      />
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", display: "block", mt: 1 }}
+            >
+              * El porcentaje de avance del Semestre I se calcula contra la meta anual y no se
+              guarda en base de datos.
+            </Typography>
+
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.25 }}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={guardarSemestreI}
+                disabled={savingSemestreI || loading}
+                sx={{ borderRadius: 2, fontWeight: 900 }}
+              >
+                {savingSemestreI ? "Guardando..." : "GUARDAR"}
+              </Button>
+            </Box>
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+              <CalendarMonthRoundedIcon fontSize="small" />
+              <Typography sx={{ fontWeight: 950 }}>
                 Valores Ejecutado Anual por Indicador
               </Typography>
             </Stack>
@@ -582,43 +894,65 @@ export default function PeiIndicadorDetalleModal({
                   gap: 1.1,
                 }}
               >
-                {(data?.valoresEjecutadoPorAnio ?? []).map((item) => (
-                  <TextField
-                    key={item.idAnioProyeccion}
-                    label=""
-                    value={ejecutadoForm[item.idAnioProyeccion] ?? "0"}
-                    size="small"
-                    fullWidth
-                    onChange={(e) =>
-                      setEjecutadoForm((prev) => ({
-                        ...prev,
-                        [item.idAnioProyeccion]: e.target.value,
-                      }))
-                    }
-                    sx={valueTextFieldSx}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Chip
-                            size="small"
-                            label={String(item.anio)}
-                            variant="outlined"
-                            sx={{
-                              borderRadius: 999,
-                              fontWeight: 900,
-                              height: 20,
-                              minWidth: 56,
-                              "& .MuiChip-label": {
-                                px: 0.7,
-                                fontSize: 10.5,
-                              },
-                            }}
-                          />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                ))}
+                {(data?.valoresEjecutadoPorAnio ?? []).map((item) => {
+                  const valorEjecutado = ejecutadoForm[item.idAnioProyeccion] ?? "0";
+                  const valorMeta = metaPorAnioMap.get(item.idAnioProyeccion) ?? 0;
+                  const avance = calcularAvancePorcentaje(valorEjecutado, valorMeta);
+
+                  return (
+                    <Box
+                      key={item.idAnioProyeccion}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
+                        gap: 0.8,
+                        alignItems: "center",
+                      }}
+                    >
+                      <TextField
+                        label=""
+                        value={valorEjecutado}
+                        size="small"
+                        fullWidth
+                        onChange={(e) =>
+                          setEjecutadoForm((prev) => ({
+                            ...prev,
+                            [item.idAnioProyeccion]: e.target.value,
+                          }))
+                        }
+                        sx={valueTextFieldSx}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Chip
+                                size="small"
+                                label={String(item.anio)}
+                                variant="outlined"
+                                sx={{
+                                  borderRadius: 999,
+                                  fontWeight: 900,
+                                  height: 20,
+                                  minWidth: 56,
+                                  "& .MuiChip-label": {
+                                    px: 0.7,
+                                    fontSize: 10.5,
+                                  },
+                                }}
+                              />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+
+                      <Chip
+                        label={avance == null ? "—" : formatPercent(avance)}
+                        variant="outlined"
+                        color={avance != null && avance >= 100 ? "success" : "default"}
+                        sx={avanceChipSx}
+                      />
+                    </Box>
+                  );
+                })}
               </Box>
             )}
 
@@ -626,7 +960,7 @@ export default function PeiIndicadorDetalleModal({
               variant="caption"
               sx={{ color: "text.secondary", display: "block", mt: 1 }}
             >
-              * Estos valores corresponden al ejecutado real anual y sí se pueden editar.
+              * Estos valores corresponden al ejecutado real anual y sí se pueden editar. El porcentaje de avance se calcula en pantalla contra la meta anual y no se guarda en base de datos.
             </Typography>
 
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.25 }}>
@@ -646,6 +980,27 @@ export default function PeiIndicadorDetalleModal({
 
       <DialogActions sx={{ px: 2.5, pb: 2 }}>
         <Box sx={{ flex: 1 }} />
+
+        <Button
+          onClick={() => setOpenFichaModal(true)}
+          variant="contained"
+          color="primary"
+          startIcon={<AttachFileRoundedIcon />}
+          sx={{ fontWeight: 900, borderRadius: 2, px: 2.5 }}
+        >
+          FICHA
+        </Button>
+
+        <Button
+          onClick={() => setOpenInfoModal(true)}
+          variant="contained"
+          color="info"
+          startIcon={<InfoOutlinedIcon />}
+          sx={{ fontWeight: 900, borderRadius: 2, px: 2.5 }}
+        >
+          INFO
+        </Button>
+
         <Button
           onClick={onClose}
           variant="outlined"
@@ -655,5 +1010,26 @@ export default function PeiIndicadorDetalleModal({
         </Button>
       </DialogActions>
     </Dialog>
+
+      <PeiIndicadorFichaModal
+        open={openFichaModal}
+        onClose={() => setOpenFichaModal(false)}
+        idPeiOeiAei={idPeiOeiAei}
+        idIndicadorNombre={idIndicadorNombre}
+        codigoIndicador={codigoIndicadorView}
+        nombreIndicador={nombreIndicadorView}
+        tipoNivel={data?.tipoNivel ?? null}
+      />
+
+      <PeiIndicadorInfoModal
+        open={openInfoModal}
+        onClose={() => setOpenInfoModal(false)}
+        idPeiOeiAei={idPeiOeiAei}
+        idIndicadorNombre={idIndicadorNombre}
+        codigoIndicador={codigoIndicadorView}
+        nombreIndicador={nombreIndicadorView}
+        tipoNivel={data?.tipoNivel ?? null}
+      />
+    </>
   );
 }

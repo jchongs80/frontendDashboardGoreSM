@@ -38,6 +38,7 @@ type Props = {
   idUe: number;
   idCc: number;
   idPoiAnio: number;
+  idPeriodo: number;
   unidadLabel?: string;
   oer?: OerPrefill | null;
   onClose: () => void;
@@ -63,6 +64,7 @@ export default function PdrcAerModal({
   idUe,
   idCc,
   idPoiAnio,
+  idPeriodo,
   unidadLabel,
   oer,
   onClose,
@@ -89,7 +91,7 @@ export default function PdrcAerModal({
   const loadAcciones = async (idObjetivo: number) => {
     setLoading(true);
     try {
-      const list = await PdrcOeAeAction.getAccionesByObjetivoPoi(idObjetivo, idUe, idCc, idPoiAnio, false);
+      const list = await PdrcOeAeAction.getAccionesByObjetivoPoi(idObjetivo, idUe, idCc, idPoiAnio, idPeriodo, false);
       const safe = list ?? [];
       setAcciones(safe);
 
@@ -113,7 +115,7 @@ export default function PdrcAerModal({
     if (!idUe || !idCc || !idPoiAnio || !oer?.idObjetivo) return;
     void loadAcciones(oer.idObjetivo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, idUe, idCc, idPoiAnio, oer?.idObjetivo]);
+  }, [open, idUe, idCc, idPoiAnio, idPeriodo, oer?.idObjetivo]);
 
   const toggleAccion = (idAccion: number) => {
     setSelectedAcciones((prev) => {
@@ -147,7 +149,7 @@ export default function PdrcAerModal({
 
     setSaving(true);
     try {
-      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, oer.idObjetivo, idsAccion);
+      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, idPeriodo, oer.idObjetivo, idsAccion);
       setSnack({ open: true, msg: "AER asignadas correctamente.", sev: "success" });
       onSaved?.();
       onClose();

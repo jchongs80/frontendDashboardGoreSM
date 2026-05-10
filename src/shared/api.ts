@@ -7,6 +7,12 @@ export type ApiResponse<T> = {
   errors?: string[];
 };
 
+export type DownloadBlobResult = {
+  blob: Blob;
+  fileName: string;
+  contentType: string;
+};
+
 const API_URL = import.meta.env?.VITE_API_URL ?? "";
 
 function getToken(): string | null {
@@ -27,23 +33,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function buildApiUrl(path: string): string {
+  const base = (API_URL ?? "").replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return base ? `${base}${p}` : p;
+}
+
 function buildErrorMessage(payload: unknown, fallback: string): string {
   if (isRecord(payload)) {
     const msg = payload["message"];
     const errors = payload["errors"];
 
     if (typeof msg === "string" && msg.trim().length) {
-    if (Array.isArray(errors) && errors.length) {
-      const parts = errors.filter((x) => typeof x === "string") as string[];
-      if (parts.length) return clip(`${msg}: ${parts.join(" | ")}`);
+      if (Array.isArray(errors) && errors.length) {
+        const parts = errors.filter((x) => typeof x === "string") as string[];
+        if (parts.length) return clip(`${msg}: ${parts.join(" | ")}`);
+      }
+
+      return clip(msg);
     }
-    return clip(msg);
-  }
-
 
     if (Array.isArray(errors) && errors.length) {
       const parts = errors.filter((x) => typeof x === "string") as string[];
-      if (parts.length) return parts.join(" | ");
+      if (parts.length) return clip(parts.join(" | "));
     }
   }
 
@@ -71,12 +83,32 @@ async function parseResponseBody(res: Response): Promise<unknown> {
   }
 }
 
+function getFileNameFromContentDisposition(
+  contentDisposition: string | null,
+  fallbackFileName: string
+): string {
+  if (!contentDisposition) return fallbackFileName;
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/["]/g, ""));
+    } catch {
+      return utf8Match[1].replace(/["]/g, "");
+    }
+  }
+
+  const normalMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+  if (normalMatch?.[1]) {
+    return normalMatch[1].replace(/["]/g, "");
+  }
+
+  return fallbackFileName;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
-
-  const base = (API_URL ?? "").replace(/\/+$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
-  const url = base ? `${base}${p}` : p;
+  const url = buildApiUrl(path);
 
   const isFormData =
     typeof FormData !== "undefined" && init?.body instanceof FormData;
@@ -96,31 +128,66 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(buildErrorMessage(payload, `HTTP ${res.status} - ${path}`));
   }
 
-  // Wrapper ApiResponseDto<T>
   if (isRecord(payload) && "success" in payload) {
     const success = payload["success"];
+
     if (success === false) {
       throw new Error(buildErrorMessage(payload, "Error inesperado"));
     }
+
     return (payload["data"] as T) ?? (undefined as unknown as T);
   }
 
-  // JSON “plano”
   return payload as T;
 }
 
+async function downloadBlob(
+  path: string,
+  fallbackFileName = "archivo"
+): Promise<DownloadBlobResult> {
+  const token = getToken();
+  const url = buildApiUrl(path);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const contentType = res.headers.get("content-type") || "";
+
+  if (!res.ok) {
+    const payload = await parseResponseBody(res);
+    throw new Error(buildErrorMessage(payload, `HTTP ${res.status} - ${path}`));
+  }
+
+  if (contentType.toLowerCase().includes("text/html")) {
+    const html = await res.text();
+
+    throw new Error(
+      clip(
+        `El endpoint devolvió HTML en lugar del archivo. Verifica VITE_API_URL, ruta del backend o autenticación. Respuesta: ${html}`,
+        600
+      )
+    );
+  }
+
+  const blob = await res.blob();
+
+  const fileName = getFileNameFromContentDisposition(
+    res.headers.get("content-disposition"),
+    fallbackFileName
+  );
+
+  return {
+    blob,
+    fileName,
+    contentType,
+  };
+}
+
 export const api = {
-  patch: <T>(path: string, body?: unknown) =>
-  request<T>(path, {
-    method: "PATCH",
-    body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-  }),
-
-/** opcional: alias para acostumbrarte a delete() */
-delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-
-
-
   get: <T>(path: string) => request<T>(path),
 
   post: <T>(path: string, body?: unknown) =>
@@ -135,5 +202,15 @@ delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
       body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
     }),
 
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: "PATCH",
+      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+    }),
+
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  downloadBlob,
 };

@@ -82,6 +82,17 @@ export default function Sidebar({
     { text: "Bloquear pantalla", icon: <LockRoundedIcon />, path: "/login" },
   ];
 
+  const dashboardItems: SidebarItem[] = [
+    { text: "Home", icon: <SpaceDashboardRoundedIcon />, path: "/dashboard/" },
+    { text: "Comparativo", icon: <GridViewRoundedIcon />, path: "/dashboard/comparativo" },
+    { text: "Pei", icon: <GridViewRoundedIcon />, path: "/dashboard/Pei" },
+    { text: "Poi", icon: <GridViewRoundedIcon />, path: "/dashboard/Poi" },
+    { text: "Pdrc", icon: <GridViewRoundedIcon />, path: "/dashboard/Pdrc" },
+    { text: "Prcp", icon: <GridViewRoundedIcon />, path: "/dashboard/Prcp" },
+    { text: "Ag", icon: <GridViewRoundedIcon />, path: "/dashboard/ag" },
+    { text: "Paisajes", icon: <GridViewRoundedIcon />, path: "/dashboard/Paisaje" },
+  ];
+
   const catalogItems: SidebarItem[] = [
     { text: "Dimensiones", icon: <GridViewRoundedIcon />, path: "/catalogos/dimensiones" },
     { text: "Fuentes de Datos", icon: <DescriptionRoundedIcon />, path: "/catalogos/fuentes-datos" },
@@ -124,6 +135,11 @@ export default function Sidebar({
       icon: <WorkspacePremiumRoundedIcon />,
       path: "/planeamiento/prcp-op-pi-mp",
     },
+    {
+      text: "PAISAJES",
+      icon: <WorkspacePremiumRoundedIcon />,
+      path: "/planeamiento/psj-paisajes",
+    },
   ];
 
   const cargaMasivaItems: SidebarItem[] = [
@@ -161,6 +177,11 @@ export default function Sidebar({
     { text: "Alineamientos Instrumentos", icon: <AccountTreeRoundedIcon />, path: "/alineamiento/instrumentos" },
   ];
 
+  const isDashboardActive = useMemo(
+    () => location.pathname.startsWith("/dashboard"),
+    [location.pathname]
+  );
+
   const isCatalogActive = useMemo(
     () => location.pathname.startsWith("/catalogos"),
     [location.pathname]
@@ -188,6 +209,7 @@ export default function Sidebar({
     [location.pathname]
   );
 
+  const [openDashboards, setOpenDashboards] = useState<boolean>(isDashboardActive);
   const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
   const [openPlaneamiento, setOpenPlaneamiento] = useState<boolean>(isPlaneamientoActive);
   const [openCargaMasiva, setOpenCargaMasiva] = useState<boolean>(isCargaMasivaActive);
@@ -195,12 +217,14 @@ export default function Sidebar({
   const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
 
   useEffect(() => {
+    if (isDashboardActive) setOpenDashboards(true);
     if (isCatalogActive) setOpenCatalogs(true);
     if (isPlaneamientoActive) setOpenPlaneamiento(true);
     if (isCargaMasivaActive) setOpenCargaMasiva(true);
     if (isAdminActive) setOpenAdmin(true);
     if (isAlineamientoActive) setOpenAlineamiento(true);
   }, [
+    isDashboardActive,
     isCatalogActive,
     isPlaneamientoActive,
     isCargaMasivaActive,
@@ -443,6 +467,16 @@ export default function Sidebar({
       >
         <List disablePadding>
           <NavButton text="Dashboards" icon={<SpaceDashboardRoundedIcon />} path="/" />
+
+          {renderSection(
+            "Dashboard",
+            <FolderOpenRoundedIcon />,
+            dashboardItems,
+            openDashboards,
+            setOpenDashboards,
+            isDashboardActive
+          )}
+
 
           {renderSection(
             "Catálogos",

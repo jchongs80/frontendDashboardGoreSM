@@ -301,7 +301,7 @@ export default function AgIndicadorDetalleModal({
         <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
             <ChecklistRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Detalle Línea Base</Typography>
+            <Typography sx={{ fontWeight: 950 }}>Detalle Serie Histórica</Typography>
           </Stack>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" }, gap: 1.1 }}>

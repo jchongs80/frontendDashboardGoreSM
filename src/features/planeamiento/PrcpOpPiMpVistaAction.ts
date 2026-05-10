@@ -21,6 +21,14 @@ function unwrapList<T>(resp: unknown): T[] {
   return [];
 }
 
+function unwrapData<T>(resp: unknown): T | null {
+  if (resp == null) return null;
+  if (isRecord(resp) && "data" in resp) {
+    return ((resp as ApiResponseDto<T>).data ?? null) as T | null;
+  }
+  return resp as T;
+}
+
 export type PrcpPeriodoDto = {
   idPeriodo: number;
   codigo: string | null;
@@ -37,10 +45,22 @@ export type PrcpObjetivoPrioritarioDto = {
   idObjetivoPrioritario: number;
   codigo: string | null;
   descripcion: string | null;
+  codigoUnidad?: string | null;
+  nombreUnidad?: string | null;
+};
+
+export type PrcpMedidaPoliticaDto = {
+  idMedidaPolitica: number;
+  codigo: string | null;
+  denominacion: string | null;
+  idUnidad?: number | null;
+  codigoUnidad?: string | null;
+  nombreUnidad?: string | null;
 };
 
 export type PrcpOpPiMpMasterDto = {
   idPrcpOpPiMp: number;
+  idPeriodo: number;
   idObjetivoPrioritario: number;
   idProblemaIdentificado: number;
   idMedidaPolitica: number;
@@ -50,10 +70,14 @@ export type PrcpOpPiMpMasterDto = {
   descripcionProblemaIdentificado: string;
   codigoMedidaPolitica: string;
   descripcionMedidaPolitica: string;
+  hitosJulio2025: string;
+  hitosJulio2028: string;
+  hitosJulio2030: string;
   cantidadIndicadores: number;
 };
 
 export type PrcpOpPiMpDetailDto = {
+  idPrcpOpPiMp: number;
   idIndicadorNombre: number;
   codigoIndicador: string;
   nombreIndicador: string;
@@ -99,6 +123,36 @@ export type PrcpIndicadorEjecutadoUpdateRequestDto = {
   valores: PrcpIndicadorEjecutadoUpdateItemDto[];
 };
 
+export type PrcpIndicadorInfoEditableDto = {
+  idPrcpOpPiMp: number;
+  idIndicadorNombre: number;
+  unidadMedida: string | null;
+  tipoIndicador: string | null;
+};
+
+export type PrcpIndicadorInfoEditableUpdateRequestDto = {
+  idPrcpOpPiMp: number;
+  idIndicadorNombre: number;
+  unidadMedida: string | null;
+  tipoIndicador: string | null;
+};
+
+export type PrcpIndicadorLineaBaseEditableDto = {
+  idPrcpOpPiMp: number;
+  idIndicadorNombre: number;
+  anioProyeccion: number | null;
+  tipoValor: string | null;
+  valorLineaBase: number | null;
+};
+
+export type PrcpIndicadorLineaBaseEditableUpdateRequestDto = {
+  idPrcpOpPiMp: number;
+  idIndicadorNombre: number;
+  anioProyeccion: number | null;
+  tipoValor: string | null;
+  valorLineaBase: number | null;
+};
+
 export type PrcpIndicadorDetalleResponseDto = {
   idIndicadorNombre: number;
   codigoIndicador: string;
@@ -124,6 +178,8 @@ export type PrcpIndicadorDetalleResponseDto = {
   nombreUnidadMedida: string;
   idTipoIndicador: number;
   nombreTipoIndicador: string;
+  informacionEditable?: PrcpIndicadorInfoEditableDto | null;
+  lineaBaseEditable?: PrcpIndicadorLineaBaseEditableDto | null;
   lineaBase?: PrcpIndicadorDetalleLineaBaseDto | null;
   valoresMetaPorAnio: PrcpIndicadorValorMetaPorAnioDto[];
   valoresEjecutadoPorAnio: PrcpIndicadorEjecutadoPorAnioDto[];
@@ -140,17 +196,34 @@ export const PrcpOpPiMpVistaAction = {
     return unwrapList<PrcpUnidadOrgDto>(resp);
   },
 
-  async getObjetivosPrioritarios(idPeriodo: number, idUnidad: number) {
+  async getObjetivosPrioritarios(idPeriodo: number) {
     const resp = await api.get<unknown>(
-      `/api/PrcpOpPiMpVista/objetivos-prioritarios?idPeriodo=${idPeriodo}&idUnidad=${idUnidad}`
+      `/api/PrcpOpPiMpVista/objetivos-prioritarios?idPeriodo=${idPeriodo}`
     );
     return unwrapList<PrcpObjetivoPrioritarioDto>(resp);
   },
 
-  async getMaster(idPeriodo: number, idUnidad: number, idObjetivoPrioritario: number) {
+  async getMedidasPoliticas(idPeriodo: number, idObjetivoPrioritario?: number | null) {
+    const qp = new URLSearchParams({ idPeriodo: String(idPeriodo) });
+
+    if (idObjetivoPrioritario != null && idObjetivoPrioritario > 0) {
+      qp.append("idObjetivoPrioritario", String(idObjetivoPrioritario));
+    }
+
     const resp = await api.get<unknown>(
-      `/api/PrcpOpPiMpVista/master?idPeriodo=${idPeriodo}&idUnidad=${idUnidad}&idObjetivoPrioritario=${idObjetivoPrioritario}`
+      `/api/PrcpOpPiMpVista/medidas-politicas?${qp.toString()}`
     );
+    return unwrapList<PrcpMedidaPoliticaDto>(resp);
+  },
+
+  async getMaster(idPeriodo: number, idObjetivoPrioritario: number, idMedidaPolitica: number) {
+    const qp = new URLSearchParams({
+      idPeriodo: String(idPeriodo),
+      idObjetivoPrioritario: String(idObjetivoPrioritario || 0),
+      idMedidaPolitica: String(idMedidaPolitica || 0),
+    });
+
+    const resp = await api.get<unknown>(`/api/PrcpOpPiMpVista/master?${qp.toString()}`);
     return unwrapList<PrcpOpPiMpMasterDto>(resp);
   },
 
@@ -159,15 +232,41 @@ export const PrcpOpPiMpVistaAction = {
     return unwrapList<PrcpOpPiMpDetailDto>(resp);
   },
 
+  async getDetailByMaster(
+    idPeriodo: number,
+    idMedidaPolitica: number,
+    idObjetivoPrioritario?: number | null
+  ) {
+    const qp = new URLSearchParams({
+      idPeriodo: String(idPeriodo),
+      idMedidaPolitica: String(idMedidaPolitica),
+    });
+
+    if (idObjetivoPrioritario != null && idObjetivoPrioritario > 0) {
+      qp.append("idObjetivoPrioritario", String(idObjetivoPrioritario));
+    }
+
+    const resp = await api.get<unknown>(`/api/PrcpOpPiMpVista/detail?${qp.toString()}`);
+    return unwrapList<PrcpOpPiMpDetailDto>(resp);
+  },
+
   async getIndicadorDetalle(idPrcpOpPiMp: number, idIndicadorNombre: number) {
-    const resp = await api.get<PrcpIndicadorDetalleResponseDto>(
+    const resp = await api.get<unknown>(
       `/api/PrcpOpPiMpVista/indicador-detalle?idPrcpOpPiMp=${idPrcpOpPiMp}&idIndicadorNombre=${idIndicadorNombre}`
     );
-    return resp ?? null;
+    return unwrapData<PrcpIndicadorDetalleResponseDto>(resp);
   },
 
   async guardarIndicadorEjecutado(payload: PrcpIndicadorEjecutadoUpdateRequestDto) {
     return await api.post(`/api/PrcpOpPiMpVista/indicador-ejecutado`, payload);
+  },
+
+  async guardarIndicadorInfoEditable(payload: PrcpIndicadorInfoEditableUpdateRequestDto) {
+    return await api.post(`/api/PrcpOpPiMpVista/indicador-info-editable`, payload);
+  },
+
+  async guardarIndicadorLineaBaseEditable(payload: PrcpIndicadorLineaBaseEditableUpdateRequestDto) {
+    return await api.post(`/api/PrcpOpPiMpVista/indicador-linea-base-editable`, payload);
   },
 };
 

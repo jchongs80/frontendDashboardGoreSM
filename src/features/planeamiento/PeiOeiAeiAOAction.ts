@@ -1,6 +1,7 @@
 import { api } from "../../shared/api";
 
 export type PoiAnioDto = { idPoiAnio: number; anio: number };
+export type PeriodoDto = { idPeriodo: number; codigo: string | null; descripcion: string | null };
 export type CcResponsableDto = { idCcResponsable: number; codigo: string | null; descripcion: string | null };
 export type CentroCostoDto = { idCentroCosto: number; codigo: string | null; nombre: string | null };
 
@@ -115,6 +116,9 @@ export const PeiOeiAeiAOAction = {
   async getAnios() {
     return (await api.get<PoiAnioDto[]>(`/api/PdrcOeAe/anios`)) ?? [];
   },
+  async getPeriodos() {
+    return (await api.get<PeriodoDto[]>(`/api/PeiOeiAeiAo/periodos`)) ?? [];
+  },
   async getCcResponsablesByUe(idUe: number) {
     return (await api.get<CcResponsableDto[]>(`/api/PdrcOeAe/ue/${idUe}/cc-responsables`)) ?? [];
   },
@@ -122,9 +126,9 @@ export const PeiOeiAeiAOAction = {
     return (await api.get<CentroCostoDto[]>(`/api/PdrcOeAe/cc-responsable/${idCcResp}/centros-costo`)) ?? [];
   },
 
-  async getMaster(idUe: number, idCc: number, idPoiAnio: number) {
+  async getMaster(idUe: number, idCc: number, idPoiAnio: number, idPeriodo: number) {
     return (
-      (await api.get<PeiOeiAeiAoMasterDto[]>(`/api/PeiOeiAeiAo/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/master`)) ??
+      (await api.get<PeiOeiAeiAoMasterDto[]>(`/api/PeiOeiAeiAo/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/periodo/${idPeriodo}/master`)) ??
       []
     );
   },

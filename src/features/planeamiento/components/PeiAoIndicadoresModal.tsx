@@ -265,7 +265,7 @@ export default function PeiAoIndicadoresModal({
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
               <Chip
                 icon={<TagRoundedIcon />}
-                label={`Nro POI: ${safe(nroRegistroPoi)}`}
+                label={`Nro Registro POI: ${safe(nroRegistroPoi)}`}
                 sx={{ fontWeight: 900, borderRadius: 999 }}
                 variant="outlined"
               />
@@ -317,7 +317,6 @@ export default function PeiAoIndicadoresModal({
             <ChecklistRoundedIcon fontSize="small" />
             <Typography sx={{ fontWeight: 950 }}>Detalle</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              (poi_oei_aei_ao)
             </Typography>
           </Stack>
 
@@ -451,7 +450,7 @@ export default function PeiAoIndicadoresModal({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Nombre de Unidades de Medida"
+                label="Nombre de Etapas"
                 size="small"
                 sx={{ ...fieldSxValueMinus2, width: "100%", mb: 1.0 }}
               />

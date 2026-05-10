@@ -20,47 +20,65 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
-
 import { useNavigate } from "react-router-dom";
+
 import {
-  PeiOeiAeiVistaAction,
-  type PeiPeriodoDto,
-  type PeiDimensionDto,
-  type PeiUnidadOrgDto,
-  type PeiOeiAeiMasterDto,
-  type PeiOeiAeiDetailDto,
-} from "../PeiOeiAeiVistaAction";
-import PeiIndicadorDetalleModal from "../components/PeiIndicadorDetalleModal";
+  PsjPaisajesVistaAction,
+  type PsjPeriodoDto,
+  type PsjDimensionDto,
+  type PsjIndicadorPdrcDto,
+  type PsjPaisajesMasterDto,
+  type PsjPaisajesDetailDto,
+} from "../PsjPaisajesVistaAction";
+import PsjIndicadorDetalleModal from "../components/PsjIndicadorDetalleModal";
 
 type DetailState = {
   loading: boolean;
-  data: PeiOeiAeiDetailDto[];
+  data: PsjPaisajesDetailDto[];
   error?: string;
 };
 
 type IndicadorModalState = {
   open: boolean;
-  idPeiOeiAei: number;
+  idPsjOerAer: number;
   idIndicadorNombre: number;
   codigoIndicador: string;
   nombreIndicador: string;
-  tipoNivel: "OEI" | "AEI";
-  codigoOei: string;
-  enunciadoOei: string;
-  codigoAei?: string | null;
-  enunciadoAei?: string | null;
+  tipoNivel: "OER" | "AER";
+  codigoOe: string;
+  enunciadoOe: string;
+  codigoAe?: string | null;
+  enunciadoAe?: string | null;
 };
 
 function safeText(value?: string | null): string {
   const txt = (value ?? "").toString().trim();
   return txt.length === 0 ? "—" : txt;
 }
+
+function buildIndicadorPdrcLabel(o?: PsjIndicadorPdrcDto | null): string {
+  if (!o) return "—";
+
+  const etiqueta = (o.etiqueta ?? "").trim();
+  if (etiqueta) return etiqueta;
+
+  const partes = [
+    (o as any).codigoEntidad ?? "",
+    (o as any).codigoIndicador ?? "",
+    (o as any).nombreIndicador ?? "",
+    (o as any).anio != null ? String((o as any).anio) : "",
+  ]
+    .map((x) => (x ?? "").toString().trim())
+    .filter((x) => x.length > 0);
+
+  return partes.length > 0 ? partes.join(" · ") : "—";
+}
+
 const comboSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 2.5,
@@ -77,37 +95,37 @@ const comboSx = {
   },
 } as const;
 
-export default function PeiOeiAeiPage(): React.ReactElement {
+export default function PsjPaisajesPage(): React.ReactElement {
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingTabla, setLoadingTabla] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingTabla, setLoadingTabla] = useState(false);
 
-  const [periodos, setPeriodos] = useState<PeiPeriodoDto[]>([]);
-  const [dimensiones, setDimensiones] = useState<PeiDimensionDto[]>([]);
-  const [unidades, setUnidades] = useState<PeiUnidadOrgDto[]>([]);
+  const [periodos, setPeriodos] = useState<PsjPeriodoDto[]>([]);
+  const [dimensiones, setDimensiones] = useState<PsjDimensionDto[]>([]);
+  const [indicadoresPdrc, setIndicadoresPdrc] = useState<PsjIndicadorPdrcDto[]>([]);
 
-  const [idPeriodoSel, setIdPeriodoSel] = useState<number>(0);
-  const [idDimensionSel, setIdDimensionSel] = useState<number>(0);
-  const [idUnidadSel, setIdUnidadSel] = useState<number>(0);
+  const [idPeriodoSel, setIdPeriodoSel] = useState(0);
+  const [idDimensionSel, setIdDimensionSel] = useState(0);
+  const [idPdrcIndicadorValorSel, setIdPdrcIndicadorValorSel] = useState(0);
 
-  const [rows, setRows] = useState<PeiOeiAeiMasterDto[]>([]);
-  const [qSearch, setQSearch] = useState<string>("");
+  const [rows, setRows] = useState<PsjPaisajesMasterDto[]>([]);
+  const [qSearch, setQSearch] = useState("");
 
   const [openRowMap, setOpenRowMap] = useState<Record<number, boolean>>({});
   const [detailMap, setDetailMap] = useState<Record<number, DetailState>>({});
 
   const [indicadorModal, setIndicadorModal] = useState<IndicadorModalState>({
     open: false,
-    idPeiOeiAei: 0,
+    idPsjOerAer: 0,
     idIndicadorNombre: 0,
     codigoIndicador: "",
     nombreIndicador: "",
-    tipoNivel: "AEI",
-    codigoOei: "",
-    enunciadoOei: "",
-    codigoAei: "",
-    enunciadoAei: "",
+    tipoNivel: "AER",
+    codigoOe: "",
+    enunciadoOe: "",
+    codigoAe: "",
+    enunciadoAe: "",
   });
 
   const periodoSelectedObj = useMemo(
@@ -120,9 +138,10 @@ export default function PeiOeiAeiPage(): React.ReactElement {
     [dimensiones, idDimensionSel]
   );
 
-  const unidadSelectedObj = useMemo(
-    () => unidades.find((x) => x.idUnidad === idUnidadSel) ?? null,
-    [unidades, idUnidadSel]
+  const indicadorPdrcSelectedObj = useMemo(
+    () =>
+      indicadoresPdrc.find((x) => x.idPdrcIndicadorValor === idPdrcIndicadorValorSel) ?? null,
+    [indicadoresPdrc, idPdrcIndicadorValorSel]
   );
 
   const rowsFiltered = useMemo(() => {
@@ -130,27 +149,30 @@ export default function PeiOeiAeiPage(): React.ReactElement {
     if (!q) return rows;
 
     return rows.filter((r) =>
-      `${r.tipoNivel ?? ""} ${r.codigoOei ?? ""} ${r.enunciadoOei ?? ""} ${r.codigoAei ?? ""} ${r.enunciadoAei ?? ""}`
+      `${r.tipoNivel ?? ""} ${r.codigoOe ?? ""} ${r.enunciadoOe ?? ""} ${r.codigoAe ?? ""} ${r.enunciadoAe ?? ""}`
         .toLowerCase()
         .includes(q)
     );
   }, [rows, qSearch]);
 
-  const oeiCount = useMemo(() => {
-    const ids = new Set(rows.map((x) => x.idObjetivo));
-    return ids.size;
-  }, [rows]);
+  const oeCount = useMemo(() => new Set(rows.map((x) => x.idObjetivo)).size, [rows]);
 
-  const aeiCount = useMemo(() => {
-    return rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AEI").length;
-  }, [rows]);
+  const aeCount = useMemo(
+    () => rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AER").length,
+    [rows]
+  );
 
   const totalRows = useMemo(() => rows.length, [rows]);
 
-  const getIndicadoresCount = (row: PeiOeiAeiMasterDto): number => row.cantidadIndicadores ?? 0;
+  const getIndicadoresCount = (row: PsjPaisajesMasterDto) => row.cantidadIndicadores ?? 0;
 
   const filterByTexto = <
-    T extends { codigo: string | null; descripcion?: string | null; nombre?: string | null }
+    T extends {
+      codigo?: string | null;
+      descripcion?: string | null;
+      nombre?: string | null;
+      etiqueta?: string | null;
+    }
   >(
     options: readonly T[],
     inputValue: string
@@ -158,41 +180,49 @@ export default function PeiOeiAeiPage(): React.ReactElement {
     const q = inputValue.trim().toLowerCase();
     if (!q) return options.slice() as T[];
 
-    return options.filter((o) =>
-      `${o.codigo ?? ""} ${o.descripcion ?? ""} ${o.nombre ?? ""}`
-        .toLowerCase()
-        .includes(q)
-    ) as T[];
+    return options.filter((o) => {
+      const texto =
+        `${o.codigo ?? ""} ${o.descripcion ?? ""} ${o.nombre ?? ""} ${o.etiqueta ?? ""}`.toLowerCase();
+
+      return texto.includes(q);
+    }) as T[];
   };
 
   async function loadCombos() {
     setLoading(true);
     try {
-      const [periodosDb, dimensionesDb, unidadesDb] = await Promise.all([
-        PeiOeiAeiVistaAction.getPeriodos(),
-        PeiOeiAeiVistaAction.getDimensiones(),
-        PeiOeiAeiVistaAction.getUnidadesOrganizacionales(),
+      const [periodosDb, dimensionesDb, indicadoresDb] = await Promise.all([
+        PsjPaisajesVistaAction.getPeriodos(),
+        PsjPaisajesVistaAction.getDimensiones(),
+        PsjPaisajesVistaAction.getIndicadoresPdrc(),
       ]);
 
       setPeriodos(periodosDb ?? []);
       setDimensiones(dimensionesDb ?? []);
-      setUnidades(unidadesDb ?? []);
+      setIndicadoresPdrc(indicadoresDb ?? []);
 
       setIdPeriodoSel(periodosDb?.[0]?.idPeriodo ?? 0);
       setIdDimensionSel(dimensionesDb?.[0]?.idDimension ?? 0);
-      setIdUnidadSel(unidadesDb?.[0]?.idUnidad ?? 0);
-    } catch (e) {
-      console.error(e);
+      setIdPdrcIndicadorValorSel(indicadoresDb?.[0]?.idPdrcIndicadorValor ?? 0);
+    } catch (error) {
+      console.error(error);
       setPeriodos([]);
       setDimensiones([]);
-      setUnidades([]);
+      setIndicadoresPdrc([]);
+      setIdPeriodoSel(0);
+      setIdDimensionSel(0);
+      setIdPdrcIndicadorValorSel(0);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadTabla(idPeriodo: number, idDimension: number, idUnidad: number) {
-    if (!idPeriodo || !idDimension || !idUnidad) {
+  async function loadTabla(
+    idPeriodo: number,
+    idDimension: number,
+    idPdrcIndicadorValor: number
+  ) {
+    if (!idPeriodo || !idDimension || !idPdrcIndicadorValor) {
       setRows([]);
       setOpenRowMap({});
       setDetailMap({});
@@ -201,12 +231,17 @@ export default function PeiOeiAeiPage(): React.ReactElement {
 
     setLoadingTabla(true);
     try {
-      const data = await PeiOeiAeiVistaAction.getMaster(idPeriodo, idDimension, idUnidad);
+      const data = await PsjPaisajesVistaAction.getMaster(
+        idPeriodo,
+        idDimension,
+        idPdrcIndicadorValor
+      );
+
       setRows(data ?? []);
       setOpenRowMap({});
       setDetailMap({});
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setRows([]);
       setOpenRowMap({});
       setDetailMap({});
@@ -215,8 +250,8 @@ export default function PeiOeiAeiPage(): React.ReactElement {
     }
   }
 
-  async function toggleRowDetail(r: PeiOeiAeiMasterDto) {
-    const idKey = r.idPeiOeiAei;
+  async function toggleRowDetail(r: PsjPaisajesMasterDto) {
+    const idKey = r.idPsjOerAer;
 
     setOpenRowMap((prev) => ({
       ...prev,
@@ -231,7 +266,7 @@ export default function PeiOeiAeiPage(): React.ReactElement {
         [idKey]: { loading: true, data: [] },
       }));
 
-      const data = await PeiOeiAeiVistaAction.getDetail(idKey);
+      const data = await PsjPaisajesVistaAction.getDetail(idKey);
 
       setDetailMap((prev) => ({
         ...prev,
@@ -246,44 +281,40 @@ export default function PeiOeiAeiPage(): React.ReactElement {
     }
   }
 
-  async function reloadRowDetail(idPeiOeiAei: number) {
+  async function reloadRowDetail(idPsjOerAer: number) {
     try {
       setDetailMap((prev) => ({
         ...prev,
-        [idPeiOeiAei]: { loading: true, data: [] },
+        [idPsjOerAer]: { loading: true, data: [] },
       }));
 
-      const data = await PeiOeiAeiVistaAction.getDetail(idPeiOeiAei);
+      const data = await PsjPaisajesVistaAction.getDetail(idPsjOerAer);
 
       setDetailMap((prev) => ({
         ...prev,
-        [idPeiOeiAei]: { loading: false, data: data ?? [] },
+        [idPsjOerAer]: { loading: false, data: data ?? [] },
       }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "No se pudo recargar el detalle.";
       setDetailMap((prev) => ({
         ...prev,
-        [idPeiOeiAei]: { loading: false, data: [], error: msg },
+        [idPsjOerAer]: { loading: false, data: [], error: msg },
       }));
     }
   }
 
-  async function onRefresh() {
-    await loadTabla(idPeriodoSel, idDimensionSel, idUnidadSel);
-  }
-
-  function openIndicadorModal(row: PeiOeiAeiMasterDto, indicador: PeiOeiAeiDetailDto) {
+  function openIndicadorModal(row: PsjPaisajesMasterDto, indicador: PsjPaisajesDetailDto) {
     setIndicadorModal({
       open: true,
-      idPeiOeiAei: row.idPeiOeiAei,
+      idPsjOerAer: row.idPsjOerAer,
       idIndicadorNombre: indicador.idIndicadorNombre,
       codigoIndicador: indicador.codigoIndicador,
       nombreIndicador: indicador.nombreIndicador,
       tipoNivel: row.tipoNivel,
-      codigoOei: row.codigoOei,
-      enunciadoOei: row.enunciadoOei,
-      codigoAei: row.codigoAei ?? null,
-      enunciadoAei: row.enunciadoAei ?? null,
+      codigoOe: row.codigoOe,
+      enunciadoOe: row.enunciadoOe,
+      codigoAe: row.codigoAe ?? null,
+      enunciadoAe: row.enunciadoAe ?? null,
     });
   }
 
@@ -292,10 +323,10 @@ export default function PeiOeiAeiPage(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    if (!loading && idPeriodoSel && idDimensionSel && idUnidadSel) {
-      void loadTabla(idPeriodoSel, idDimensionSel, idUnidadSel);
+    if (!loading && idPeriodoSel && idDimensionSel && idPdrcIndicadorValorSel) {
+      void loadTabla(idPeriodoSel, idDimensionSel, idPdrcIndicadorValorSel);
     }
-  }, [loading, idPeriodoSel, idDimensionSel, idUnidadSel]);
+  }, [loading, idPeriodoSel, idDimensionSel, idPdrcIndicadorValorSel]);
 
   if (loading) {
     return (
@@ -334,21 +365,24 @@ export default function PeiOeiAeiPage(): React.ReactElement {
 
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              PEI: OEI / AEI
+              PAISAJES
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Vista por Periodo, Dimensión y Unidad Organizacional
+              Vista por Periodo, Dimensión e Indicador PDRC
             </Typography>
           </Box>
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={`OEI: ${oeiCount}`} variant="outlined" />
-          <Chip label={`AEI: ${aeiCount}`} variant="outlined" />
+          <Chip label={`OE: ${oeCount}`} variant="outlined" />
+          <Chip label={`AE: ${aeCount}`} variant="outlined" />
           <Chip label={`Registros: ${totalRows}`} variant="outlined" />
 
           <Tooltip title="Refrescar" arrow>
-            <IconButton onMouseDown={(e) => e.currentTarget.blur()} onClick={onRefresh}>
+            <IconButton
+              onMouseDown={(e) => e.currentTarget.blur()}
+              onClick={() => void loadTabla(idPeriodoSel, idDimensionSel, idPdrcIndicadorValorSel)}
+            >
               <RefreshRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -365,57 +399,68 @@ export default function PeiOeiAeiPage(): React.ReactElement {
           boxShadow: "0 10px 30px rgba(0,0,0,.06)",
         }}
       >
-    <Box sx={{ width: "100%", mb: 2 }}>
-  <Stack
-    direction={{ xs: "column", md: "row" }}
-    spacing={2}
-    sx={{ width: "100%", mb: 2 }}
-  >
-<Autocomplete
-  options={periodos}
-  value={periodoSelectedObj}
-  onChange={(_e, newValue) => setIdPeriodoSel(newValue?.idPeriodo ?? 0)}
-  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
-  isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
-  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-  renderInput={(params) => <TextField {...params} label="Periodo" size="small" />}
-  sx={{ flex: 1, ...comboSx }}
-/>
+        <Box sx={{ width: "100%", mb: 2 }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            sx={{ width: "100%", mb: 2 }}
+          >
+            <Autocomplete
+              options={periodos}
+              value={periodoSelectedObj}
+              onChange={(_e, newValue) => setIdPeriodoSel(newValue?.idPeriodo ?? 0)}
+              getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
+              isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
+              filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+              renderInput={(params) => <TextField {...params} label="Periodo" size="small" />}
+              sx={{ flex: 1, ...comboSx }}
+            />
 
-<Autocomplete
-  options={dimensiones}
-  value={dimensionSelectedObj}
-  onChange={(_e, newValue) => setIdDimensionSel(newValue?.idDimension ?? 0)}
-  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
-  isOptionEqualToValue={(o, v) => o.idDimension === v.idDimension}
-  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-  renderInput={(params) => <TextField {...params} label="Dimensión" size="small" />}
-  sx={{ flex: 1, ...comboSx }}
-/>
-  </Stack>
+            <Autocomplete
+              options={dimensiones}
+              value={dimensionSelectedObj}
+              onChange={(_e, newValue) => setIdDimensionSel(newValue?.idDimension ?? 0)}
+              getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
+              isOptionEqualToValue={(o, v) => o.idDimension === v.idDimension}
+              filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+              renderInput={(params) => <TextField {...params} label="Dimensión" size="small" />}
+              sx={{ flex: 1, ...comboSx }}
+            />
+          </Stack>
 
-  <Stack direction="column" sx={{ width: "100%" }}>
-<Autocomplete
-  options={unidades}
-  value={unidadSelectedObj}
-  onChange={(_e, newValue) => setIdUnidadSel(newValue?.idUnidad ?? 0)}
-  getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
-  isOptionEqualToValue={(o, v) => o.idUnidad === v.idUnidad}
-  filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-  renderInput={(params) => (
-    <TextField {...params} label="Unidad Organizacional" size="small" />
-  )}
-  sx={{ width: "100%", ...comboSx }}
-/>
-  </Stack>
-</Box>
+          <Stack direction="column" sx={{ width: "100%" }}>
+            <Autocomplete
+              options={indicadoresPdrc}
+              value={indicadorPdrcSelectedObj}
+              onChange={(_e, newValue) =>
+                setIdPdrcIndicadorValorSel(newValue?.idPdrcIndicadorValor ?? 0)
+              }
+              getOptionLabel={(o) => buildIndicadorPdrcLabel(o)}
+              isOptionEqualToValue={(o, v) =>
+                o.idPdrcIndicadorValor === v.idPdrcIndicadorValor
+              }
+              filterOptions={(options, state) => {
+                const q = state.inputValue.trim().toLowerCase();
+                if (!q) return options;
+
+                return options.filter((o) =>
+                  buildIndicadorPdrcLabel(o).toLowerCase().includes(q)
+                );
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Indicador PDRC" size="small" />
+              )}
+              sx={{ width: "100%", ...comboSx }}
+            />
+          </Stack>
+        </Box>
 
         <Divider sx={{ my: 2 }} />
 
         <TextField
           value={qSearch}
           onChange={(e) => setQSearch(e.target.value)}
-          placeholder="Buscar por nivel, OEI o AEI..."
+          placeholder="Buscar por nivel, OE o AE..."
           fullWidth
           size="small"
           sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
@@ -435,11 +480,14 @@ export default function PeiOeiAeiPage(): React.ReactElement {
             <TableRow>
               <TableCell sx={{ width: 88 }} />
               <TableCell sx={{ fontWeight: 900, width: 90 }}>Nivel</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado OEI</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado AEI</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 150, ...sxStickyActionHeader }} align="right">
+              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OE</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Enunciado OE</TableCell>
+              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AE</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Enunciado AE</TableCell>
+              <TableCell
+                sx={{ fontWeight: 900, width: 150, ...sxStickyActionHeader }}
+                align="right"
+              >
                 Acción
               </TableCell>
             </TableRow>
@@ -465,12 +513,12 @@ export default function PeiOeiAeiPage(): React.ReactElement {
               </TableRow>
             ) : (
               rowsFiltered.map((r) => {
-                const open = !!openRowMap[r.idPeiOeiAei];
-                const detail = detailMap[r.idPeiOeiAei];
+                const open = !!openRowMap[r.idPsjOerAer];
+                const detail = detailMap[r.idPsjOerAer];
                 const indicadoresCount = getIndicadoresCount(r);
 
                 return (
-                  <React.Fragment key={r.idPeiOeiAei}>
+                  <React.Fragment key={r.idPsjOerAer}>
                     <TableRow hover>
                       <TableCell sx={{ width: 88, verticalAlign: "middle", py: 1.5 }}>
                         <Stack
@@ -493,8 +541,6 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                 borderColor: "divider",
                                 bgcolor: open ? "action.hover" : "transparent",
                                 boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": { transform: "translateY(-1px)" },
                               }}
                             >
                               {open ? (
@@ -505,54 +551,57 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                             </IconButton>
                           </Tooltip>
 
- 
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={`IND:${indicadoresCount}`}
+                            sx={{
+                              height: 20,
+                              borderRadius: 2,
+                              fontWeight: 900,
+                              "& .MuiChip-label": { px: 0.75, fontSize: 11 },
+                            }}
+                          />
                         </Stack>
                       </TableCell>
 
-                      <TableCell sx={{ verticalAlign: "middle" }}>
+                      <TableCell>
                         <Chip
                           size="small"
                           label={safeText(r.tipoNivel)}
-                          color={(r.tipoNivel ?? "").toUpperCase() === "AEI" ? "primary" : "secondary"}
+                          color={
+                            (r.tipoNivel ?? "").toUpperCase() === "AER" ? "primary" : "secondary"
+                          }
                           variant="outlined"
                           sx={{ fontWeight: 900 }}
                         />
                       </TableCell>
 
-                      <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoOei)}
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>{safeText(r.codigoOe)}</TableCell>
 
                       <TableCell
                         sx={{
                           whiteSpace: "normal",
                           wordBreak: "break-word",
                           overflowWrap: "break-word",
-                          verticalAlign: "middle",
                         }}
                       >
-                        {safeText(r.enunciadoOei)}
+                        {safeText(r.enunciadoOe)}
                       </TableCell>
 
-                      <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoAei)}
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>{safeText(r.codigoAe)}</TableCell>
 
                       <TableCell
                         sx={{
                           whiteSpace: "normal",
                           wordBreak: "break-word",
                           overflowWrap: "break-word",
-                          verticalAlign: "middle",
                         }}
                       >
-                        {safeText(r.enunciadoAei)}
+                        {safeText(r.enunciadoAe)}
                       </TableCell>
 
-                      <TableCell
-                        align="right"
-                        sx={{ verticalAlign: "middle", width: 150, ...sxStickyActionCell }}
-                      >
+                      <TableCell align="right" sx={{ width: 150, ...sxStickyActionCell }}>
                         <Stack
                           direction="row"
                           spacing={0.75}
@@ -582,12 +631,6 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                 border: "1px solid",
                                 borderColor: "divider",
                                 bgcolor: "rgba(59,130,246,.10)",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": {
-                                  transform: "translateY(-1px)",
-                                  bgcolor: "rgba(59,130,246,.16)",
-                                },
                               }}
                             >
                               <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
@@ -613,9 +656,9 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                   Detalle Indicadores
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {r.tipoNivel === "AEI"
-                                    ? `AEI: ${safeText(r.codigoAei)} — ${safeText(r.enunciadoAei)}`
-                                    : `OEI: ${safeText(r.codigoOei)} — ${safeText(r.enunciadoOei)}`}
+                                  {r.tipoNivel === "AER"
+                                    ? `AE: ${safeText(r.codigoAe)} — ${safeText(r.enunciadoAe)}`
+                                    : `OE: ${safeText(r.codigoOe)} — ${safeText(r.enunciadoOe)}`}
                                 </Typography>
                               </Stack>
 
@@ -623,7 +666,7 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                 <IconButton
                                   size="small"
                                   onMouseDown={(e) => e.currentTarget.blur()}
-                                  onClick={() => void reloadRowDetail(r.idPeiOeiAei)}
+                                  onClick={() => void reloadRowDetail(r.idPsjOerAer)}
                                   sx={{
                                     borderRadius: 2,
                                     border: "1px solid",
@@ -649,7 +692,11 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                 No hay indicadores registrados para este registro.
                               </Alert>
                             ) : (
-                              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                              <TableContainer
+                                component={Paper}
+                                variant="outlined"
+                                sx={{ borderRadius: 2 }}
+                              >
                                 <Table size="small">
                                   <TableHead>
                                     <TableRow>
@@ -659,7 +706,10 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                       <TableCell sx={{ fontWeight: 900 }}>
                                         Nombre Indicador
                                       </TableCell>
-                                      <TableCell align="right" sx={{ fontWeight: 900, width: 120 }}>
+                                      <TableCell
+                                        align="right"
+                                        sx={{ fontWeight: 900, width: 120 }}
+                                      >
                                         Acción
                                       </TableCell>
                                     </TableRow>
@@ -692,9 +742,6 @@ export default function PeiOeiAeiPage(): React.ReactElement {
                                                 border: "1px solid",
                                                 borderColor: "divider",
                                                 bgcolor: "rgba(59,130,246,.10)",
-                                                "&:hover": {
-                                                  bgcolor: "rgba(59,130,246,.16)",
-                                                },
                                               }}
                                             >
                                               <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
@@ -719,7 +766,7 @@ export default function PeiOeiAeiPage(): React.ReactElement {
         </Table>
       </TableContainer>
 
-      <PeiIndicadorDetalleModal
+      <PsjIndicadorDetalleModal
         open={indicadorModal.open}
         onClose={() =>
           setIndicadorModal((prev) => ({
@@ -727,14 +774,14 @@ export default function PeiOeiAeiPage(): React.ReactElement {
             open: false,
           }))
         }
-        idPeiOeiAei={indicadorModal.idPeiOeiAei}
+        idPsjOerAer={indicadorModal.idPsjOerAer}
         idIndicadorNombre={indicadorModal.idIndicadorNombre}
         codigoIndicador={indicadorModal.codigoIndicador}
         nombreIndicador={indicadorModal.nombreIndicador}
-        oei={`${safeText(indicadorModal.codigoOei)} - ${safeText(indicadorModal.enunciadoOei)}`}
-        aei={
-          indicadorModal.tipoNivel === "AEI"
-            ? `${safeText(indicadorModal.codigoAei)} - ${safeText(indicadorModal.enunciadoAei)}`
+        oe={`${safeText(indicadorModal.codigoOe)} - ${safeText(indicadorModal.enunciadoOe)}`}
+        ae={
+          indicadorModal.tipoNivel === "AER"
+            ? `${safeText(indicadorModal.codigoAe)} - ${safeText(indicadorModal.enunciadoAe)}`
             : "—"
         }
       />

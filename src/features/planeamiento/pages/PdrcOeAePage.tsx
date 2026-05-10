@@ -48,6 +48,7 @@ import type {
   CcResponsableDto,
   CentroCostoDto,
   PoiAnioDto,
+  PeriodoDto,
   PeiOeiAeiDetalleRowDto,
 } from "../PdrcOeAeAction";
 
@@ -133,6 +134,10 @@ export default function PdrcOeAePage() {
 
   const [ueLabel, setUeLabel] = useState<string>("Unidad Ejecutora: —");
 
+  // ✅ PERIODO
+  const [periodos, setPeriodos] = useState<PeriodoDto[]>([]);
+  const [idPeriodoSel, setIdPeriodoSel] = useState<number>(0);
+
   // ✅ AÑO
   const [anios, setAnios] = useState<PoiAnioDto[]>([]);
   const [idPoiAnioSel, setIdPoiAnioSel] = useState<number>(0);
@@ -187,6 +192,8 @@ export default function PdrcOeAePage() {
     severity: "info",
   });
 
+  const periodoSelectedObj = useMemo(() => periodos.find((x) => x.idPeriodo === idPeriodoSel) ?? null, [periodos, idPeriodoSel]);
+
   const anioSelectedObj = useMemo(
     () => anios.find((x) => x.idPoiAnio === idPoiAnioSel) ?? null,
     [anios, idPoiAnioSel]
@@ -223,8 +230,8 @@ export default function PdrcOeAePage() {
     return options.filter((o) => `${o.codigo ?? ""} ${o.nombre ?? ""}`.toLowerCase().includes(q)) as T[];
   };
 
-  async function loadTabla(idUeLocal: number, idCc: number, idPoiAnio: number) {
-    if (!idUeLocal || !idCc || !idPoiAnio) {
+  async function loadTabla(idUeLocal: number, idCc: number, idPoiAnio: number, idPeriodo: number) {
+    if (!idUeLocal || !idCc || !idPoiAnio || !idPeriodo) {
       setRows([]);
       setPeiResumenMap({});
       setOpenRowMap({});
@@ -234,7 +241,7 @@ export default function PdrcOeAePage() {
 
     setLoadingTabla(true);
     try {
-      const data = await PdrcOeAeAction.getAsignacionesOerAer(idUeLocal, idCc, idPoiAnio);
+      const data = await PdrcOeAeAction.getAsignacionesOerAer(idUeLocal, idCc, idPoiAnio, idPeriodo);
       setRows(data ?? []);
 
       // ✅ Chips OEI/AEI (modelo nuevo): por AER + CC
@@ -269,7 +276,7 @@ export default function PdrcOeAePage() {
     const firstCc = list?.[0]?.idCentroCosto ?? 0;
     setIdCcSel(firstCc);
 
-    await loadTabla(idUeParam, firstCc, idPoiAnioSel);
+    await loadTabla(idUeParam, firstCc, idPoiAnioSel, idPeriodoSel);
   }
 
   async function loadInit() {
@@ -284,6 +291,11 @@ export default function PdrcOeAePage() {
       const ue = await UnidadEjecutoraAction.getById(idUeParam);
       if (ue) setUeLabel(`Unidad Ejecutora: ${ue.codigo ?? "—"} - ${ue.nombre ?? "—"}`);
       else setUeLabel("Unidad Ejecutora: —");
+
+      const periodosDb = await PdrcOeAeAction.getPeriodos();
+      setPeriodos(periodosDb ?? []);
+      const firstPeriodo = periodosDb?.[0]?.idPeriodo ?? 0;
+      setIdPeriodoSel(firstPeriodo);
 
       // ✅ Años (primero)
       const aniosDb = await PdrcOeAeAction.getAnios();
@@ -319,11 +331,17 @@ export default function PdrcOeAePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idUeParam]);
 
+  const onPeriodoChange = async (_event: React.SyntheticEvent, newValue: PeriodoDto | null) => {
+    const newId = newValue?.idPeriodo ?? 0;
+    setIdPeriodoSel(newId);
+    await loadTabla(idUeParam, idCcSel, idPoiAnioSel, newId);
+  };
+
   const onAnioChange = async (_event: React.SyntheticEvent, newValue: PoiAnioDto | null) => {
     const newId = newValue?.idPoiAnio ?? 0;
     setIdPoiAnioSel(newId);
 
-    await loadTabla(idUeParam, idCcSel, newId);
+    await loadTabla(idUeParam, idCcSel, newId, idPeriodoSel);
   };
 
   const onCcRespAutoChange = async (_event: React.SyntheticEvent, newValue: CcResponsableDto | null) => {
@@ -355,11 +373,11 @@ export default function PdrcOeAePage() {
       return;
     }
 
-    await loadTabla(idUeParam, newCc, idPoiAnioSel);
+    await loadTabla(idUeParam, newCc, idPoiAnioSel, idPeriodoSel);
   };
 
   const onRefresh = async () => {
-    await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+    await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
   };
 
   // ✅ Master/Detail: carga detalle OEI-AEI por fila
@@ -470,7 +488,7 @@ export default function PdrcOeAePage() {
       setOpenDeleteDlg(false);
       setDeleteTarget(null);
 
-      await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+      await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "No se pudo eliminar la asignación.";
       setSnack({ open: true, severity: "error", message: msg });
@@ -560,26 +578,23 @@ export default function PdrcOeAePage() {
         boxShadow: "0 10px 30px rgba(0,0,0,.06)",
       }}
     >
-        {/* Fila 1: Año + CC Responsable */}
+        {/* Fila 1: Periodo + CC Responsable */}
         <Stack direction="row" spacing={2} sx={{ width: "100%", mb: 2 }}>
-          {/* ✅ Año */}
           <Autocomplete
-            options={anios}
-            value={anioSelectedObj}
-            onChange={onAnioChange}
-            getOptionLabel={(o) => `${o.anio}`}
-            isOptionEqualToValue={(o, v) => o.idPoiAnio === v.idPoiAnio}
+            options={periodos}
+            value={periodoSelectedObj}
+            onChange={onPeriodoChange}
+            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
+            isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
             noOptionsText="Sin resultados"
-            ListboxProps={{ style: { maxHeight: 240 } }}
-            renderInput={(params) => <TextField {...params} label="Año" size="small" />}
-            sx={{
-              width: { xs: 120, md: 120 },
-              flex: "0 0 120px",
-              "& .MuiOutlinedInput-root": { borderRadius: 2.5 },
-            }}
+            filterOptions={(options, state) => filterByCodigoDescripcion(options as any, state.inputValue)}
+            ListboxProps={{ style: { maxHeight: 320 } }}
+            renderInput={(params) => (
+              <TextField {...params} label="Periodo" placeholder="Buscar periodo..." size="small" />
+            )}
+            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
           />
 
-          {/* ✅ CC Responsable */}
           <Autocomplete
             options={ccRespList}
             value={ccRespSelectedObj}
@@ -594,39 +609,49 @@ export default function PdrcOeAePage() {
             )}
             sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
             renderOption={(props, option) => (
-            <li {...props}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                <Box
-                  sx={{
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 900,
-                    border: "1px solid",
-                    borderColor: "rgba(77, 77, 77, 0.35)",
-                    bgcolor: "rgba(255, 255, 255, 0.1)",
-                    color: "rgba(0, 0, 0, 0.95)",
-                    minWidth: 64,
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {option.codigo ?? "—"}
+              <li {...props}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      border: "1px solid",
+                      borderColor: "rgba(77, 77, 77, 0.35)",
+                      bgcolor: "rgba(255, 255, 255, 0.1)",
+                      color: "rgba(0, 0, 0, 0.95)",
+                      minWidth: 64,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {option.codigo ?? "—"}
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
+                    {option.descripcion ?? "—"}
+                  </Typography>
                 </Box>
-
-      <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
-        {option.descripcion ?? "—"}
-      </Typography>
-    </Box>
-  </li>
-)}
+              </li>
+            )}
           />
         </Stack>
 
-        {/* Fila 2: Centro de Costo */}
-        <Stack direction="row" sx={{ width: "100%" }}>
-          {/* ✅ Centro de Costo */}
+        {/* Fila 2: Año + Centro de Costo */}
+        <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+          <Autocomplete
+            options={anios}
+            value={anioSelectedObj}
+            onChange={onAnioChange}
+            getOptionLabel={(o) => `${o.anio}`}
+            isOptionEqualToValue={(o, v) => o.idPoiAnio === v.idPoiAnio}
+            noOptionsText="Sin resultados"
+            ListboxProps={{ style: { maxHeight: 240 } }}
+            renderInput={(params) => <TextField {...params} label="Año" size="small" />}
+            sx={{ width: { xs: 120, md: 120 }, flex: "0 0 120px", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+          />
+
           <Autocomplete
             options={ccList}
             value={ccSelectedObj}
@@ -642,35 +667,34 @@ export default function PdrcOeAePage() {
             )}
             sx={{ width: "100%", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
             renderOption={(props, option) => (
-            <li {...props}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                <Box
-                  sx={{
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 900,
-                    border: "1px solid",
-                    borderColor: "rgba(77, 77, 77, 0.35)",
-                              bgcolor: "rgba(255, 255, 255, 0.1)",
-                              color: "rgba(0, 0, 0, 0.95)",
-                    minWidth: 64,
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {option.codigo ?? "—"}
+              <li {...props}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      border: "1px solid",
+                      borderColor: "rgba(77, 77, 77, 0.35)",
+                      bgcolor: "rgba(255, 255, 255, 0.1)",
+                      color: "rgba(0, 0, 0, 0.95)",
+                      minWidth: 64,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {option.codigo ?? "—"}
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
+                    {option.nombre ?? "—"}
+                  </Typography>
                 </Box>
-      <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
-        {option.nombre ?? "—"}
-      </Typography>
-    </Box>
-  </li>
-)}
+              </li>
+            )}
           />
         </Stack>
-
         <Divider sx={{ my: 2 }} />
 
         <Typography variant="caption" color="text.secondary">
@@ -696,9 +720,9 @@ export default function PdrcOeAePage() {
               <TableRow>
                 <TableCell sx={{ width: 42 }} />
                 <TableCell sx={{ fontWeight: 800 }}>Código OER</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Descripción OER</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Objetivo Estratégico Regional</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Código AER</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Descripción AER</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Acción Estratégica Regional</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 800, width: 170 }}>
                   Acción
                 </TableCell>
@@ -719,7 +743,7 @@ export default function PdrcOeAePage() {
                 <TableRow>
                   <TableCell colSpan={6}>
                     <Alert severity="info" sx={{ borderRadius: 2 }}>
-                      No hay OER/AER asignadas para la combinación seleccionada (Año + UE + Centro de Costo).
+                      No hay OER/AER asignadas para la combinación seleccionada (Periodo + Año + UE + Centro de Costo).
                     </Alert>
                   </TableCell>
                 </TableRow>
@@ -929,9 +953,9 @@ export default function PdrcOeAePage() {
                                     <TableHead>
                                       <TableRow>
                                         <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OEI</TableCell>
-                                        <TableCell sx={{ fontWeight: 900 }}>Enunciado OEI</TableCell>
+                                        <TableCell sx={{ fontWeight: 900 }}>Objetivo Estratégico Institucional (Enunciado)</TableCell>
                                         <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AEI</TableCell>
-                                        <TableCell sx={{ fontWeight: 900 }}>Enunciado AEI</TableCell>
+                                        <TableCell sx={{ fontWeight: 900 }}>Acción Estratégica Institucional (Enunciado)</TableCell>
                                       </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -1049,10 +1073,11 @@ export default function PdrcOeAePage() {
         idUe={idUeParam}
         idCc={idCcSel}
         idPoiAnio={idPoiAnioSel}
+        idPeriodo={idPeriodoSel}
         unidadLabel={ccRespSelectedLabel}
         onSaved={async () => {
           setOpenOerAerModal(false);
-          await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+          await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
         }}
       />
 
@@ -1062,11 +1087,12 @@ export default function PdrcOeAePage() {
         idUe={idUeParam}
         idCc={idCcSel}
         idPoiAnio={idPoiAnioSel}
+        idPeriodo={idPeriodoSel}
         oer={oerRowForAer}
         unidadLabel={ccRespSelectedLabel}
         onSaved={async () => {
           setOpenAerModal(false);
-          await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+          await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
         }}
       />
 
@@ -1082,7 +1108,7 @@ export default function PdrcOeAePage() {
         aerCodigo={peiCtx?.aerCodigo}
         aerEnunciado={peiCtx?.aerEnunciado}
         onSaved={async () => {
-          await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+          await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
           setOpenPeiModal(false);
         }}
       />

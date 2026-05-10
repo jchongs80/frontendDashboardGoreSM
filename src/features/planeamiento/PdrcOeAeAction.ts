@@ -4,6 +4,12 @@ import { api } from "../../shared/api";
 
 export type PoiAnioDto = { idPoiAnio: number; anio: number };
 
+export type PeriodoDto = {
+  idPeriodo: number;
+  codigo: string | null;
+  descripcion: string | null;
+};
+
 export type CcResponsableDto = {
   idCcResponsable: number;
   codigo: string | null;
@@ -64,6 +70,12 @@ export const PdrcOeAeAction = {
     return resp ?? [];
   },
 
+  // ✅ Periodos (instrumento 7)
+  async getPeriodos() {
+    const resp = await api.get<PeriodoDto[]>(`/api/PdrcOeAe/periodos`);
+    return resp ?? [];
+  },
+
   // ✅ CC responsables por UE
   async getCcResponsablesByUe(idUe: number) {
     const resp = await api.get<CcResponsableDto[]>(`/api/PdrcOeAe/ue/${idUe}/cc-responsables`);
@@ -79,17 +91,17 @@ export const PdrcOeAeAction = {
   },
 
   // ✅ Tabla principal (UE + CC + Año)
-  async getAsignacionesOerAer(idUe: number, idCc: number, idPoiAnio: number) {
+  async getAsignacionesOerAer(idUe: number, idCc: number, idPoiAnio: number, idPeriodo: number) {
     const resp = await api.get<PdrcOerAerAsignadoListDto[]>(
-      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/asignaciones`
+      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/periodo/${idPeriodo}/asignaciones`
     );
     return resp ?? [];
   },
 
   // ✅ OER disponibles por UE + CC + Año (modal)
-  async getObjetivosByUeCc(idUe: number, idCc: number, idPoiAnio: number) {
+  async getObjetivosByUeCc(idUe: number, idCc: number, idPoiAnio: number, idPeriodo: number) {
     const resp = await api.get<PdrcOerListDto[]>(
-      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/objetivos`
+      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/periodo/${idPeriodo}/objetivos`
     );
     return resp ?? [];
   },
@@ -100,19 +112,20 @@ export const PdrcOeAeAction = {
     idUe: number,
     idCc: number,
     idPoiAnio: number,
+    idPeriodo: number,
     incluirInactivos = false
   ) {
     const resp = await api.get<PdrcAccionUnidadListDto[]>(
-      `/api/PdrcOeAe/objetivo/${idObjetivo}/acciones?idUe=${idUe}&idCc=${idCc}&idPoiAnio=${idPoiAnio}&incluirInactivos=${incluirInactivos}`
+      `/api/PdrcOeAe/objetivo/${idObjetivo}/acciones?idUe=${idUe}&idCc=${idCc}&idPoiAnio=${idPoiAnio}&idPeriodo=${idPeriodo}&incluirInactivos=${incluirInactivos}`
     );
     return resp ?? [];
   },
 
   // ✅ Asignar AER (institucional + poi_oer_aer por Año)
-  async asignarAccionesPoi(idUe: number, idCc: number, idPoiAnio: number, idObjetivo: number, idsAccion: number[]) {
+  async asignarAccionesPoi(idUe: number, idCc: number, idPoiAnio: number, idPeriodo: number, idObjetivo: number, idsAccion: number[]) {
     const payload: AsignarAccionesPoiRequestDto = { idsAccion };
     await api.post(
-      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/objetivo/${idObjetivo}/acciones/asignar`,
+      `/api/PdrcOeAe/ue/${idUe}/cc/${idCc}/anio/${idPoiAnio}/periodo/${idPeriodo}/objetivo/${idObjetivo}/acciones/asignar`,
       payload
     );
     return true;

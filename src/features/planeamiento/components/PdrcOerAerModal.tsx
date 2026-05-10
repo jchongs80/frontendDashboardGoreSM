@@ -36,6 +36,7 @@ type Props = {
   idUe: number;
   idCc: number;
   idPoiAnio: number;
+  idPeriodo: number;
   unidadLabel?: string;
   onClose: () => void;
   onSaved?: () => void;
@@ -59,6 +60,7 @@ export default function PdrcOerAerModal({
   idUe,
   idCc,
   idPoiAnio,
+  idPeriodo,
   unidadLabel,
   onClose,
   onSaved,
@@ -90,7 +92,7 @@ export default function PdrcOerAerModal({
   useEffect(() => {
     if (!open) return;
 
-    if (!idUe || !idCc || !idPoiAnio) {
+    if (!idUe || !idCc || !idPoiAnio || !idPeriodo) {
       setOer([]);
       setAcciones([]);
       setOerSelected(null);
@@ -106,7 +108,7 @@ export default function PdrcOerAerModal({
         setAcciones([]);
         setSelectedAcciones(new Set());
 
-        const list = await PdrcOeAeAction.getObjetivosByUeCc(idUe, idCc, idPoiAnio);
+        const list = await PdrcOeAeAction.getObjetivosByUeCc(idUe, idCc, idPoiAnio, idPeriodo);
         setOer(list ?? []);
       } catch (e: unknown) {
         setOer([]);
@@ -115,13 +117,13 @@ export default function PdrcOerAerModal({
         setLoadingOer(false);
       }
     })();
-  }, [open, idUe, idCc, idPoiAnio]);
+  }, [open, idUe, idCc, idPoiAnio, idPeriodo]);
 
   const loadAcciones = async (idObjetivo: number) => {
     setLoadingAer(true);
     try {
       setAcciones([]);
-      const list = await PdrcOeAeAction.getAccionesByObjetivoPoi(idObjetivo, idUe, idCc, idPoiAnio, false);
+      const list = await PdrcOeAeAction.getAccionesByObjetivoPoi(idObjetivo, idUe, idCc, idPoiAnio, idPeriodo, false);
 
       const safe = list ?? [];
       setAcciones(safe);
@@ -169,7 +171,7 @@ export default function PdrcOerAerModal({
 
     setSaving(true);
     try {
-      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, oerSelected.idObjetivo, idsAccion);
+      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, idPeriodo, oerSelected.idObjetivo, idsAccion);
       setSnack({ open: true, msg: "Asignación guardada correctamente.", sev: "success" });
       onSaved?.();
       onClose();

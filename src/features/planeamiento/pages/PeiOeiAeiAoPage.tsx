@@ -41,6 +41,7 @@ import { UnidadEjecutoraAction } from "../UnidadEjecutoraAction";
 import {
   PeiOeiAeiAOAction,
   type PoiAnioDto,
+  type PeriodoDto,
   type CcResponsableDto,
   type CentroCostoDto,
   type PeiOeiAeiAoMasterDto,
@@ -123,6 +124,9 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
   // =========================
   // Filters
   // =========================
+  const [periodos, setPeriodos] = useState<PeriodoDto[]>([]);
+  const [idPeriodoSel, setIdPeriodoSel] = useState<number>(0);
+
   const [anios, setAnios] = useState<PoiAnioDto[]>([]);
   const [idPoiAnioSel, setIdPoiAnioSel] = useState<number>(0);
 
@@ -131,6 +135,8 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
 
   const [ccList, setCcList] = useState<CentroCostoDto[]>([]);
   const [idCcSel, setIdCcSel] = useState<number>(0);
+
+  const periodoSelectedObj = useMemo(() => periodos.find((x) => x.idPeriodo === idPeriodoSel) ?? null, [periodos, idPeriodoSel]);
 
   const anioSelectedObj = useMemo(
     () => anios.find((x) => x.idPoiAnio === idPoiAnioSel) ?? null,
@@ -201,8 +207,8 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
   // =========================
   // Loaders
   // =========================
-  async function loadTabla(idUeLocal: number, idCc: number, idPoiAnio: number) {
-    if (!idUeLocal || !idCc || !idPoiAnio) {
+  async function loadTabla(idUeLocal: number, idCc: number, idPoiAnio: number, idPeriodo: number) {
+    if (!idUeLocal || !idCc || !idPoiAnio || !idPeriodo) {
       setRows([]);
       setOpenRowMap({});
       setDetailMap({});
@@ -211,7 +217,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
 
     setLoadingTabla(true);
     try {
-      const data = await PeiOeiAeiAOAction.getMaster(idUeLocal, idCc, idPoiAnio);
+      const data = await PeiOeiAeiAOAction.getMaster(idUeLocal, idCc, idPoiAnio, idPeriodo);
       setRows(data ?? []);
       setOpenRowMap({});
       setDetailMap({});
@@ -232,7 +238,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
     const firstCc = list?.[0]?.idCentroCosto ?? 0;
     setIdCcSel(firstCc);
 
-    await loadTabla(idUeParam, firstCc, idPoiAnioSel);
+    await loadTabla(idUeParam, firstCc, idPoiAnioSel, idPeriodoSel);
   }
 
   async function loadInit() {
@@ -246,6 +252,11 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
       const ue = await UnidadEjecutoraAction.getById(idUeParam);
       if (ue) setUeLabel(`Unidad Ejecutora: ${ue.codigo ?? "—"} - ${ue.nombre ?? "—"}`);
       else setUeLabel("Unidad Ejecutora: —");
+
+      const periodosDb = await PeiOeiAeiAOAction.getPeriodos();
+      setPeriodos(periodosDb ?? []);
+      const firstPeriodo = periodosDb?.[0]?.idPeriodo ?? 0;
+      setIdPeriodoSel(firstPeriodo);
 
       const aniosDb = await PeiOeiAeiAOAction.getAnios();
       setAnios(aniosDb ?? []);
@@ -277,10 +288,16 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idUeParam]);
 
+  const onPeriodoChange = async (_event: React.SyntheticEvent, newValue: PeriodoDto | null) => {
+    const newId = newValue?.idPeriodo ?? 0;
+    setIdPeriodoSel(newId);
+    await loadTabla(idUeParam, idCcSel, idPoiAnioSel, newId);
+  };
+
   const onAnioChange = async (_event: React.SyntheticEvent, newValue: PoiAnioDto | null) => {
     const newId = newValue?.idPoiAnio ?? 0;
     setIdPoiAnioSel(newId);
-    await loadTabla(idUeParam, idCcSel, newId);
+    await loadTabla(idUeParam, idCcSel, newId, idPeriodoSel);
   };
 
   const onCcRespAutoChange = async (_event: React.SyntheticEvent, newValue: CcResponsableDto | null) => {
@@ -310,7 +327,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
       return;
     }
 
-    await loadTabla(idUeParam, newCc, idPoiAnioSel);
+    await loadTabla(idUeParam, newCc, idPoiAnioSel, idPeriodoSel);
   };
 
   // =========================
@@ -345,7 +362,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
   };
 
   const onRefresh = async () => {
-    await loadTabla(idUeParam, idCcSel, idPoiAnioSel);
+    await loadTabla(idUeParam, idCcSel, idPoiAnioSel, idPeriodoSel);
   };
 
   // ✅ Ojito del MASTER: abre modal con OER/AER (no toca expand/collapse)
@@ -450,7 +467,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
 
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              POI: OEI / AEI / AO PeiOeiAeiAoPage.tsx
+              POI: OEI / AEI / AO
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {ueLabel}
@@ -504,19 +521,18 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
       >
         <Stack direction="row" spacing={2} sx={{ width: "100%", mb: 2 }}>
           <Autocomplete
-            options={anios}
-            value={anioSelectedObj}
-            onChange={onAnioChange}
-            getOptionLabel={(o) => `${o.anio}`}
-            isOptionEqualToValue={(o, v) => o.idPoiAnio === v.idPoiAnio}
+            options={periodos}
+            value={periodoSelectedObj}
+            onChange={onPeriodoChange}
+            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
+            isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
             noOptionsText="Sin resultados"
-            ListboxProps={{ style: { maxHeight: 240 } }}
-            renderInput={(params) => <TextField {...params} label="Año" size="small" />}
-            sx={{
-              width: { xs: 120, md: 120 },
-              flex: "0 0 120px",
-              "& .MuiOutlinedInput-root": { borderRadius: 2.5 },
-            }}
+            filterOptions={(options, state) => filterByCodigoDescripcion(options as any, state.inputValue)}
+            ListboxProps={{ style: { maxHeight: 320 } }}
+            renderInput={(params) => (
+              <TextField {...params} label="Periodo" size="small" placeholder="Buscar periodo…" />
+            )}
+            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
           />
 
           <Autocomplete
@@ -533,28 +549,10 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
               return (
                 <li key={key} {...rest}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                    <Box
-                      sx={{
-                        px: 1,
-                        py: 0.25,
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 900,
-                        border: "1px solid",
-                        borderColor: "rgba(77, 77, 77, 0.35)",
-                        bgcolor: "rgba(255, 255, 255, 0.1)",
-                        color: "rgba(0, 0, 0, 0.95)",
-                        minWidth: 64,
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid", borderColor: "rgba(77, 77, 77, 0.35)", bgcolor: "rgba(255, 255, 255, 0.1)", color: "rgba(0, 0, 0, 0.95)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
                       {option.codigo ?? "—"}
                     </Box>
-
-                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
-                      {option.descripcion ?? "—"}
-                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>{option.descripcion ?? "—"}</Typography>
                   </Box>
                 </li>
               );
@@ -566,7 +564,19 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
           />
         </Stack>
 
-        <Stack direction="row" sx={{ width: "100%" }}>
+        <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+          <Autocomplete
+            options={anios}
+            value={anioSelectedObj}
+            onChange={onAnioChange}
+            getOptionLabel={(o) => `${o.anio}`}
+            isOptionEqualToValue={(o, v) => o.idPoiAnio === v.idPoiAnio}
+            noOptionsText="Sin resultados"
+            ListboxProps={{ style: { maxHeight: 240 } }}
+            renderInput={(params) => <TextField {...params} label="Año" size="small" />}
+            sx={{ width: { xs: 120, md: 120 }, flex: "0 0 120px", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+          />
+
           <Autocomplete
             options={ccList}
             value={ccSelectedObj}
@@ -582,28 +592,10 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
               return (
                 <li key={key} {...rest}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                    <Box
-                      sx={{
-                        px: 1,
-                        py: 0.25,
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 900,
-                        border: "1px solid",
-                        borderColor: "rgba(77, 77, 77, 0.35)",
-                        bgcolor: "rgba(255, 255, 255, 0.1)",
-                        color: "rgba(0, 0, 0, 0.95)",
-                        minWidth: 64,
-                        textAlign: "center",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid", borderColor: "rgba(77, 77, 77, 0.35)", bgcolor: "rgba(255, 255, 255, 0.1)", color: "rgba(0, 0, 0, 0.95)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
                       {option.codigo ?? "—"}
                     </Box>
-
-                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>
-                      {option.nombre ?? "—"}
-                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>{option.nombre ?? "—"}</Typography>
                   </Box>
                 </li>
               );
@@ -645,9 +637,9 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
             <TableRow>
               <TableCell sx={{ width: 110 }} />
               <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado OEI</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Objetivo Estratégico Institucional (Enunciado)</TableCell>
               <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado AEI</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Acción Estratégica Institucional (Enunciado)</TableCell>
               <TableCell sx={{ fontWeight: 900, width: 180, ...sxStickyActionHeader }} align="right">
                 Acción
               </TableCell>
@@ -668,7 +660,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
               <TableRow>
                 <TableCell colSpan={6}>
                   <Alert severity="info" sx={{ borderRadius: 2, width: "100%" }}>
-                    No hay registros para la combinación seleccionada (Año + UE + CC Responsable + Centro de costo).
+                    No hay registros para la combinación seleccionada (Periodo + Año + UE + CC Responsable + Centro de costo).
                   </Alert>
                 </TableCell>
               </TableRow>

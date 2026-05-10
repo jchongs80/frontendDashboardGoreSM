@@ -351,9 +351,9 @@ export default function AgPoRecoInprPage(): React.ReactElement {
             <TableRow>
               <TableCell sx={{ width: 88 }} />
               <TableCell sx={{ fontWeight: 900, width: 140 }}>Código RC</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Descripción RC</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}> Resultado Concertado</TableCell>
               <TableCell sx={{ fontWeight: 900, width: 140 }}>Código IP</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Descripción IP</TableCell>
+              <TableCell sx={{ fontWeight: 900 }}>Intervención Prioritaria</TableCell>
               <TableCell sx={{ fontWeight: 900, width: 150, ...sxStickyActionHeader }} align="right">Acción</TableCell>
             </TableRow>
           </TableHead>

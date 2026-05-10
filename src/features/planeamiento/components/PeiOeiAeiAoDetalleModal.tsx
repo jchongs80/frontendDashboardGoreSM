@@ -147,7 +147,7 @@ export default function PeiOeiAeiAoDetalleModal({
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
               <Chip
                 icon={<TagRoundedIcon />}
-                label={`Nro POI: ${nroRegistroPoi}`}
+                label={`Nro Registro POI: ${nroRegistroPoi}`}
                 sx={{ fontWeight: 900, borderRadius: 999 }}
                 variant="outlined"
               />
