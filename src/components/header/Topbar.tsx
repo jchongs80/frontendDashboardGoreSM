@@ -20,8 +20,10 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import LoginRoundedIcon from "@mui/icons-material/LoginRounded";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "./../../features/auth/AuthContext";
 
 type Props = {
@@ -42,13 +44,14 @@ export default function Topbar({
   onToggleCollapsedSidebar,
   sidebarCollapsed,
 }: Props) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  const nombre = user?.nombreCompleto ?? "Usuario";
-  const perfil = user?.perfil ?? "Sin perfil";
+  const nombre = user?.nombreCompleto ?? "Visitante";
+  const perfil = user?.perfil ?? "Dashboard público";
 
   return (
     <AppBar
@@ -235,27 +238,45 @@ export default function Topbar({
                 {nombre}
               </Typography>
               <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.3 }}>
-                {user?.email ?? ""}
+                {isAuthenticated ? user?.email ?? "" : "Acceso público al módulo Dashboard"}
               </Typography>
             </Box>
 
             <Divider />
 
-            <MenuItem
-              onClick={async () => {
-                setAnchorEl(null);
-                await logout();
-              }}
-              sx={{
-                py: 1.2,
-                fontSize: 13.5,
-              }}
-            >
-              <ListItemIcon>
-                <LogoutRoundedIcon fontSize="small" />
-              </ListItemIcon>
-              Cerrar sesión
-            </MenuItem>
+            {isAuthenticated ? (
+              <MenuItem
+                onClick={async () => {
+                  setAnchorEl(null);
+                  await logout();
+                }}
+                sx={{
+                  py: 1.2,
+                  fontSize: 13.5,
+                }}
+              >
+                <ListItemIcon>
+                  <LogoutRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Cerrar sesión
+              </MenuItem>
+            ) : (
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  navigate("/login");
+                }}
+                sx={{
+                  py: 1.2,
+                  fontSize: 13.5,
+                }}
+              >
+                <ListItemIcon>
+                  <LoginRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Iniciar sesión
+              </MenuItem>
+            )}
           </Menu>
         </Box>
       </Toolbar>

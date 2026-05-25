@@ -20,9 +20,17 @@ type Props = {
   periodos: OptionItem[];
   aniosProyeccion: OptionItem[];
   unidadesOrganizacionales?: OptionItem[];
+  dimensionesAg?: OptionItem[];
+  politicasAg?: OptionItem[];
   objetivosPrioritarios?: OptionItem[];
+  oerPdrc?: OptionItem[];
+  aerPdrc?: OptionItem[];
+  mostrarDimensionAg?: boolean;
   mostrarUnidadOrganizacional?: boolean;
+  mostrarPoliticaAg?: boolean;
   mostrarObjetivoPrioritario?: boolean;
+  mostrarOerPdrc?: boolean;
+  mostrarAerPdrc?: boolean;
   unidadConductoraObjetivo?: string;
   mostrarUnidadConductoraObjetivo?: boolean;
   mostrarNivelAvance?: boolean;
@@ -41,9 +49,17 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
     periodos,
     aniosProyeccion,
     unidadesOrganizacionales = [],
+    dimensionesAg = [],
+    politicasAg = [],
     objetivosPrioritarios = [],
+    oerPdrc = [],
+    aerPdrc = [],
+    mostrarDimensionAg = false,
     mostrarUnidadOrganizacional = false,
+    mostrarPoliticaAg = false,
     mostrarObjetivoPrioritario = false,
+    mostrarOerPdrc = false,
+    mostrarAerPdrc = false,
     unidadConductoraObjetivo = "",
     mostrarUnidadConductoraObjetivo = false,
     mostrarNivelAvance = false,
@@ -56,8 +72,13 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
     onChange({
       ...value,
       idPeriodo: raw === "" ? null : Number(raw),
+      idAnioProyeccion: null,
+      idDimension: null,
       idUnidad: null,
+      idPolitica: null,
       idObjetivoPrioritario: null,
+      idOer: null,
+      idAer: null,
     });
   }
 
@@ -67,6 +88,19 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
     onChange({
       ...value,
       idAnioProyeccion: raw === "" ? null : Number(raw),
+    });
+  }
+
+  function handleDimensionAgChange(event: SelectChangeEvent<number | string>) {
+    const raw = event.target.value;
+
+    onChange({
+      ...value,
+      idDimension: raw === "" ? null : Number(raw),
+      idUnidad: null,
+      idPolitica: null,
+      idOer: null,
+      idAer: null,
     });
   }
 
@@ -85,6 +119,37 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
     onChange({
       ...value,
       idUnidad: raw === "" ? null : Number(raw),
+      idPolitica: null,
+      idOer: null,
+      idAer: null,
+    });
+  }
+
+  function handlePoliticaAgChange(event: SelectChangeEvent<number | string>) {
+    const raw = event.target.value;
+
+    onChange({
+      ...value,
+      idPolitica: raw === "" ? null : Number(raw),
+    });
+  }
+
+  function handleOerPdrcChange(event: SelectChangeEvent<number | string>) {
+    const raw = event.target.value;
+
+    onChange({
+      ...value,
+      idOer: raw === "" ? null : Number(raw),
+      idAer: null,
+    });
+  }
+
+  function handleAerPdrcChange(event: SelectChangeEvent<number | string>) {
+    const raw = event.target.value;
+
+    onChange({
+      ...value,
+      idAer: raw === "" ? null : Number(raw),
     });
   }
 
@@ -157,6 +222,28 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
         </Box>
 
 
+        {mostrarDimensionAg ? (
+          <Box sx={{ minWidth: { xs: "100%", md: 300 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="dashboard-ag-dimension-label">Dimensión</InputLabel>
+              <Select
+                labelId="dashboard-ag-dimension-label"
+                value={value.idDimension ?? ""}
+                label="Dimensión"
+                onChange={handleDimensionAgChange}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {dimensionesAg.map((item) => (
+                  <MenuItem key={String(item.value)} value={item.value}>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        ) : null}
+
+
         {mostrarObjetivoPrioritario ? (
           <Box sx={{ minWidth: { xs: "100%", md: 360 } }}>
             <FormControl fullWidth size="small">
@@ -212,6 +299,71 @@ export default function DashboardHeaderFilters(props: Props): React.ReactElement
             </FormControl>
           </Box>
         ) : null}
+
+        {mostrarOerPdrc ? (
+          <Box sx={{ minWidth: { xs: "100%", md: 420 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="dashboard-pdrc-oer-label">OER</InputLabel>
+              <Select
+                labelId="dashboard-pdrc-oer-label"
+                value={value.idOer ?? ""}
+                label="OER"
+                onChange={handleOerPdrcChange}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                {oerPdrc.map((item) => (
+                  <MenuItem key={String(item.value)} value={item.value}>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        ) : null}
+
+        {mostrarAerPdrc ? (
+          <Box sx={{ minWidth: { xs: "100%", md: 420 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="dashboard-pdrc-aer-label">AER</InputLabel>
+              <Select
+                labelId="dashboard-pdrc-aer-label"
+                value={value.idAer ?? ""}
+                label="AER"
+                onChange={handleAerPdrcChange}
+                disabled={!value.idOer}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                {aerPdrc.map((item) => (
+                  <MenuItem key={String(item.value)} value={item.value}>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        ) : null}
+
+        {mostrarPoliticaAg ? (
+          <Box sx={{ minWidth: { xs: "100%", md: 420 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="dashboard-ag-politica-label">Política</InputLabel>
+              <Select
+                labelId="dashboard-ag-politica-label"
+                value={value.idPolitica ?? ""}
+                label="Política"
+                onChange={handlePoliticaAgChange}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {politicasAg.map((item) => (
+                  <MenuItem key={String(item.value)} value={item.value}>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        ) : null}
+
 
         {mostrarNivelAvance ? (
           <Box sx={{ minWidth: { xs: "100%", md: 220 } }}>

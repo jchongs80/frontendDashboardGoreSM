@@ -5,7 +5,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
   Drawer,
   LinearProgress,
   Paper,
@@ -155,23 +154,71 @@ type MiniCardProps = {
 };
 
 function MiniCard({ title, value, icon, borderColor = "rgba(0,0,0,0.12)" }: MiniCardProps): React.ReactElement {
+  const normalizedBorder = String(borderColor);
+  const isGreen = normalizedBorder.includes("34,197,94");
+  const isOrange = normalizedBorder.includes("249,115,22");
+  const isPurple = normalizedBorder.includes("124,58,237");
+
+  const accent = isGreen
+    ? "rgb(22,163,74)"
+    : isOrange
+      ? "rgb(234,88,12)"
+      : isPurple
+        ? "rgb(124,58,237)"
+        : "rgb(37,99,235)";
+
+  const bg = isGreen
+    ? "rgba(34,197,94,.08)"
+    : isOrange
+      ? "rgba(249,115,22,.08)"
+      : isPurple
+        ? "rgba(124,58,237,.08)"
+        : "rgba(37,99,235,.08)";
+
   return (
     <Paper
       variant="outlined"
       sx={{
-        p: 1.4,
-        borderRadius: 2.5,
+        p: 1.55,
+        minHeight: 104,
+        borderRadius: 3,
         borderColor,
-        backgroundColor: "rgba(255,255,255,0.96)",
+        background: "linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(248,250,252,.90) 100%)",
+        boxShadow: "0 12px 28px rgba(15,23,42,.06)",
+        position: "relative",
+        overflow: "hidden",
+        "&:before": {
+          content: '\"\"',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          bgcolor: accent,
+          opacity: 0.85,
+        },
       }}
     >
-      <Stack direction="row" spacing={0.8} alignItems="center">
-        {icon}
-        <Typography sx={{ fontSize: 12.5, color: "text.secondary", fontWeight: 800 }}>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            borderRadius: 2.2,
+            display: "grid",
+            placeItems: "center",
+            color: accent,
+            bgcolor: bg,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
+          {icon}
+        </Box>
+        <Typography sx={{ fontSize: 12.3, color: "text.secondary", fontWeight: 900 }}>
           {title}
         </Typography>
       </Stack>
-      <Typography sx={{ mt: 0.7, fontSize: 22, fontWeight: 950 }}>
+      <Typography sx={{ mt: 1.05, fontSize: 25, fontWeight: 950, letterSpacing: "-.02em" }}>
         {value}
       </Typography>
     </Paper>
@@ -293,29 +340,90 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
   const progressColor = getProgressColor(ultimo.avance);
   const instrumentoKey = (instrumento ?? "").trim().toUpperCase();
   const esPrcp = instrumentoKey === "PRCP";
+  const esAg = instrumentoKey === "AG";
+  const esPdrc = instrumentoKey === "PDRC";
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: { xs: 370, sm: 620, md: 720 }, p: 2.2 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <InsightsRoundedIcon />
-            <Box>
-              <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-                Resumen ejecutivo del indicador
-              </Typography>
-              <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
-                Meta, ejecutado, avance, semestre I, línea base e información complementaria
-              </Typography>
-            </Box>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: { xs: "100%", sm: 650, md: 760 },
+          borderTopLeftRadius: { xs: 0, sm: 18 },
+          borderBottomLeftRadius: { xs: 0, sm: 18 },
+          overflow: "hidden",
+          bgcolor: "#f8fafc",
+          boxShadow: "-24px 0 60px rgba(15,23,42,.22)",
+        },
+      }}
+    >
+      <Box sx={{ height: "100%", overflowY: "auto", bgcolor: "#f8fafc" }}>
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 5,
+            px: 2.4,
+            py: 1.8,
+            bgcolor: "rgba(255,255,255,.96)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(148,163,184,.24)",
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.4}>
+            <Stack direction="row" spacing={1.15} alignItems="center" sx={{ minWidth: 0 }}>
+              <Box
+                sx={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "rgb(22,163,74)",
+                  bgcolor: "rgba(220,252,231,.85)",
+                  border: "1px solid rgba(34,197,94,.28)",
+                  boxShadow: "0 12px 26px rgba(34,197,94,.12)",
+                  flex: "0 0 auto",
+                }}
+              >
+                <InsightsRoundedIcon fontSize="small" />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 950, fontSize: 18.5, lineHeight: 1.1 }}>
+                  Resumen ejecutivo del indicador
+                </Typography>
+                <Typography
+                  sx={{
+                    mt: 0.25,
+                    fontSize: 12.3,
+                    color: "text.secondary",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: { xs: 250, sm: 500 },
+                  }}
+                >
+                  Meta, ejecutado, avance, semestre I, línea base e información complementaria
+                </Typography>
+              </Box>
+            </Stack>
+
+            <IconButton
+              onClick={onClose}
+              sx={{
+                border: "1px solid rgba(148,163,184,.35)",
+                bgcolor: "rgba(255,255,255,.86)",
+                "&:hover": { bgcolor: "rgba(241,245,249,.95)" },
+              }}
+            >
+              <CloseRoundedIcon />
+            </IconButton>
           </Stack>
+        </Box>
 
-          <IconButton onClick={onClose}>
-            <CloseRoundedIcon />
-          </IconButton>
-        </Stack>
-
-        <Divider sx={{ my: 2 }} />
+        <Box sx={{ p: 2.2 }}>
 
         {loading ? (
           <Stack direction="row" spacing={1.5} alignItems="center">
@@ -335,46 +443,113 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
             <Paper
               variant="outlined"
               sx={{
-                p: 1.7,
-                borderRadius: 2.5,
-                borderColor: "rgba(37,99,235,0.35)",
+                p: 1.8,
+                borderRadius: 3.2,
+                borderColor: "rgba(59,130,246,.32)",
                 background:
-                  "linear-gradient(180deg, rgba(37,99,235,0.08) 0%, rgba(255,255,255,0.98) 55%)",
+                  "linear-gradient(135deg, rgba(239,246,255,.98) 0%, rgba(255,255,255,.98) 52%, rgba(245,243,255,.78) 100%)",
+                boxShadow: "0 18px 42px rgba(37,99,235,.10)",
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '\"\"',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  background: "linear-gradient(90deg, #2563eb, #7c3aed, #16a34a)",
+                },
               }}
             >
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-                <Chip
-                  size="small"
-                  label={data.instrumento}
-                  sx={{ borderRadius: 999, fontWeight: 900 }}
-                />
-                <Chip
-                  size="small"
-                  label={`Código: ${data.codigoIndicador}`}
-                  variant="outlined"
-                  sx={{ borderRadius: 999, fontWeight: 800 }}
-                />
-                <Chip
-                  size="small"
-                  label={ultimo.semaforo}
-                  variant="outlined"
-                  sx={{ borderRadius: 999, ...getSemaforoChipSx(ultimo.semaforo) }}
-                />
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.6} alignItems={{ sm: "flex-start" }}>
+                <Box
+                  sx={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "rgb(37,99,235)",
+                    bgcolor: "rgba(37,99,235,.10)",
+                    border: "1px solid rgba(37,99,235,.25)",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  <TimelineRoundedIcon />
+                </Box>
+
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap alignItems="center" sx={{ mb: 0.9 }}>
+                    <Chip
+                      size="small"
+                      label={data.instrumento}
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 950,
+                        bgcolor: "rgba(37,99,235,.10)",
+                        color: "rgb(37,99,235)",
+                      }}
+                    />
+                    <Chip
+                      size="small"
+                      label={`Código: ${data.codigoIndicador}`}
+                      variant="outlined"
+                      sx={{ borderRadius: 999, fontWeight: 900, bgcolor: "rgba(255,255,255,.80)" }}
+                    />
+                    <Chip
+                      size="small"
+                      label={ultimo.semaforo}
+                      variant="outlined"
+                      sx={{ borderRadius: 999, ...getSemaforoChipSx(ultimo.semaforo) }}
+                    />
+                  </Stack>
+
+                  <Typography sx={{ fontWeight: 950, lineHeight: 1.25, fontSize: 16.2 }}>
+                    {data.nombreIndicador}
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      mt: 1.1,
+                      display: "grid",
+                      gridTemplateColumns: { xs: "1fr", sm: data.nivel2 ? "1fr 1fr" : "1fr" },
+                      gap: 0.8,
+                    }}
+                  >
+                    <Box sx={{ p: 1, borderRadius: 2.2, bgcolor: "rgba(255,255,255,.72)", border: "1px solid rgba(148,163,184,.20)" }}>
+                      <Typography sx={{ fontSize: 11.2, color: "text.secondary", fontWeight: 900 }}>
+                        {esAg ? "Política" : esPrcp ? "Objetivo prioritario" : esPdrc ? "OER" : "OEI"}
+                      </Typography>
+                      <Typography sx={{ mt: 0.25, fontSize: 12.6, fontWeight: 800, color: "rgb(51,65,85)" }}>
+                        {safeText(data.nivel1)}
+                      </Typography>
+                    </Box>
+
+                    {data.nivel2 ? (
+                      <Box sx={{ p: 1, borderRadius: 2.2, bgcolor: "rgba(255,255,255,.72)", border: "1px solid rgba(148,163,184,.20)" }}>
+                        <Typography sx={{ fontSize: 11.2, color: "text.secondary", fontWeight: 900 }}>
+                          {esAg ? "Resultado concertado" : esPrcp ? "Medida política" : esPdrc ? "AER" : "AEI"}
+                        </Typography>
+                        <Typography sx={{ mt: 0.25, fontSize: 12.6, fontWeight: 800, color: "rgb(51,65,85)" }}>
+                          {safeText(data.nivel2)}
+                        </Typography>
+                      </Box>
+                    ) : null}
+                  </Box>
+
+                  {(esAg || esPdrc) && data.nivel3 ? (
+                    <Box sx={{ mt: 0.8, p: 1, borderRadius: 2.2, bgcolor: "rgba(255,255,255,.72)", border: "1px solid rgba(148,163,184,.20)" }}>
+                      <Typography sx={{ fontSize: 11.2, color: "text.secondary", fontWeight: 900 }}>
+                        {esAg ? "Intervención prioritaria" : "Dimensión / Unidad"}
+                      </Typography>
+                      <Typography sx={{ mt: 0.25, fontSize: 12.6, fontWeight: 800, color: "rgb(51,65,85)" }}>
+                        {safeText(data.nivel3)}
+                      </Typography>
+                    </Box>
+                  ) : null}
+                </Box>
               </Stack>
-
-              <Typography sx={{ mt: 1.2, fontWeight: 950, lineHeight: 1.28 }}>
-                {data.nombreIndicador}
-              </Typography>
-
-              <Typography sx={{ mt: 0.8, fontSize: 13, color: "text.secondary" }}>
-                <b>{esPrcp ? "Objetivo prioritario" : "OEI"}:</b> {safeText(data.nivel1)}
-              </Typography>
-
-              {data.nivel2 ? (
-                <Typography sx={{ mt: 0.25, fontSize: 13, color: "text.secondary" }}>
-                  <b>{esPrcp ? "Medida política" : "AEI"}:</b> {safeText(data.nivel2)}
-                </Typography>
-              ) : null}
             </Paper>
 
             <Box
@@ -413,7 +588,7 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               />
             </Box>
 
-            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2.5 }}>
+            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
               <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ mb: 0.8 }}>
                 <Typography sx={{ fontWeight: 900, fontSize: 13.2 }}>
                   Progreso anual del indicador
@@ -438,7 +613,7 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               />
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.6, borderRadius: 2.5 }}>
+            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <InfoOutlinedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -453,10 +628,29 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
                   gap: 0.7,
                 }}
               >
-                {esPrcp ? (
+                {esAg ? (
+                  <>
+                    <InfoRow label="Línea base" value={data.lineaBase ? `${data.lineaBase.anio} | ${data.lineaBase.tipoValor ?? "BASE"} | ${formatNumber(data.lineaBase.valor)}` : "—"} />
+                    <InfoRow label="Fuente" value={data.fuente} />
+                    <InfoRow label="Tendencia" value={data.tendencia} />
+                    <InfoRow label="Método de cálculo" value={data.metodoCalculo} />
+                    <InfoRow label="Unidad de medida" value={data.unidadMedida} />
+                    <InfoRow label="Tipo de indicador" value={data.tipoIndicador} />
+                    <InfoRow label="Tipo de valor" value={data.tipoValor} />
+                  </>
+                ) : esPrcp ? (
                   <>
                     <InfoRow label="Unidad de medida" value={data.unidadMedida} />
                     <InfoRow label="Sentido" value={data.tipoIndicador ?? data.sentidoEsperado} />
+                  </>
+                ) : esPdrc ? (
+                  <>
+                    <InfoRow label="Línea base" value={data.lineaBase ? `${data.lineaBase.anio} | ${data.lineaBase.tipoValor ?? "BASE"} | ${formatNumber(data.lineaBase.valor)}` : "—"} />
+                    <InfoRow label="Nivel" value={data.nivel2 ? "AER" : "OER"} />
+                    <InfoRow label="OER" value={data.nivel1} />
+                    <InfoRow label="AER" value={data.nivel2} />
+                    <InfoRow label="Tipo de valor" value={data.tipoValor} />
+                    <InfoRow label="Tipo de medición" value={data.tipoIndicador ?? data.unidadMedida} />
                   </>
                 ) : (
                   <>
@@ -471,7 +665,7 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               </Box>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.6, borderRadius: 2.5 }}>
+            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <CategoryRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -480,18 +674,37 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               </Stack>
 
               <Stack spacing={0.8}>
-                <InfoRow
-                  label="Factores que contribuyeron o dificultaron el avance"
-                  value={data.factoresAvance}
-                />
-                <InfoRow
-                  label="Medidas recomendadas"
-                  value={data.medidasRecomendadas}
-                />
+                {esAg ? (
+                  <>
+                    <InfoRow
+                      label="Factores que favorecieron el avance o logro de los resultados"
+                      value={data.factoresFavorecieronAvance ?? data.factoresAvance}
+                    />
+                    <InfoRow
+                      label="Factores que influenciaron en los retrocesos o estancamiento de los resultados"
+                      value={data.factoresRetrocesoEstancamiento}
+                    />
+                    <InfoRow
+                      label="Recomendaciones"
+                      value={data.recomendaciones ?? data.medidasRecomendadas}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InfoRow
+                      label="Factores que contribuyeron o dificultaron el avance"
+                      value={data.factoresAvance}
+                    />
+                    <InfoRow
+                      label="Medidas recomendadas"
+                      value={data.medidasRecomendadas}
+                    />
+                  </>
+                )}
               </Stack>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.6, borderRadius: 2.5 }}>
+            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <AttachFileRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -514,7 +727,7 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               )}
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.6, borderRadius: 2.5 }}>
+            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <TimelineRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -599,13 +812,29 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               </Box>
             </Paper>
 
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2, fontWeight: 900 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", pt: 0.2 }}>
+              <Button
+                onClick={onClose}
+                variant="outlined"
+                sx={{
+                  borderRadius: 2.3,
+                  fontWeight: 950,
+                  px: 3.2,
+                  minHeight: 38,
+                  borderColor: "rgba(15,23,42,.55)",
+                  color: "rgb(15,23,42)",
+                  "&:hover": {
+                    borderColor: "rgba(15,23,42,.85)",
+                    bgcolor: "rgba(15,23,42,.04)",
+                  },
+                }}
+              >
                 Cerrar
               </Button>
             </Box>
           </Stack>
         ) : null}
+        </Box>
       </Box>
     </Drawer>
   );

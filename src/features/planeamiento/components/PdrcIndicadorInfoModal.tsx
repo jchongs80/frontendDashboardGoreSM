@@ -19,14 +19,15 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 
-import { PeiOeiAeiVistaAction } from "../PeiOeiAeiVistaAction";
+import { PdrcOerAerVistaAction } from "../PdrcOerAerVistaAction";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  idPeiOeiAei: number;
+  idPdrcOerAer: number;
   idIndicadorNombre: number;
   codigoIndicador?: string | null;
   nombreIndicador?: string | null;
@@ -48,10 +49,33 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
-export default function PeiIndicadorInfoModal({
+const fieldSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.96)",
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(0,0,0,0.18)",
+  },
+  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.45)",
+  },
+  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.7)",
+  },
+} as const;
+
+const sectionCardSx = {
+  borderRadius: 3,
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.92)",
+  boxShadow: "0 10px 24px rgba(0,0,0,.06)",
+} as const;
+
+export default function PdrcIndicadorInfoModal({
   open,
   onClose,
-  idPeiOeiAei,
+  idPdrcOerAer,
   idIndicadorNombre,
   codigoIndicador,
   nombreIndicador,
@@ -66,7 +90,7 @@ export default function PeiIndicadorInfoModal({
   const [medidasRecomendadas, setMedidasRecomendadas] = useState<string>("");
 
   const loadInfo = async () => {
-    if (!idPeiOeiAei || !idIndicadorNombre) {
+    if (!idPdrcOerAer || !idIndicadorNombre) {
       setFactoresAvance("");
       setMedidasRecomendadas("");
       return;
@@ -77,8 +101,8 @@ export default function PeiIndicadorInfoModal({
     setSuccessMsg("");
 
     try {
-      const info = await PeiOeiAeiVistaAction.getIndicadorInfo(
-        idPeiOeiAei,
+      const info = await PdrcOerAerVistaAction.getIndicadorInfo(
+        idPdrcOerAer,
         idIndicadorNombre
       );
 
@@ -96,7 +120,7 @@ export default function PeiIndicadorInfoModal({
   useEffect(() => {
     if (!open) return;
     void loadInfo();
-  }, [open, idPeiOeiAei, idIndicadorNombre]);
+  }, [open, idPdrcOerAer, idIndicadorNombre]);
 
   async function guardarInfo() {
     try {
@@ -104,8 +128,8 @@ export default function PeiIndicadorInfoModal({
       setErrorMsg("");
       setSuccessMsg("");
 
-      await PeiOeiAeiVistaAction.guardarIndicadorInfo({
-        idPeiOeiAei,
+      await PdrcOerAerVistaAction.guardarIndicadorInfo({
+        idPdrcOerAer,
         idIndicadorNombre,
         factoresAvance,
         medidasRecomendadas,
@@ -123,61 +147,65 @@ export default function PeiIndicadorInfoModal({
     <Dialog
       open={open}
       onClose={onClose}
-      fullWidth={false}
-      maxWidth={false}
+      fullWidth
+      maxWidth="md"
       PaperProps={{
         sx: {
-          width: { xs: "calc(100vw - 24px)", md: 820, lg: 900 },
-          maxWidth: "calc(100vw - 24px)",
-          borderRadius: 4,
+          borderRadius: 3,
           overflow: "hidden",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(248,251,255,.96) 100%)",
+          width: { xs: "96vw", sm: "90vw", md: 760 },
+          maxWidth: "760px",
           boxShadow: "0 24px 70px rgba(15,23,42,.22)",
         },
       }}
     >
       <DialogTitle
         sx={{
-          px: 3,
-          py: 2,
+          px: 2.4,
+          py: 1.7,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          borderBottom: "1px solid rgba(15,23,42,.08)",
-          background:
-            "linear-gradient(90deg, rgba(239,246,255,.95) 0%, rgba(255,255,255,.98) 55%, rgba(255,255,255,.95) 100%)",
+          background: "linear-gradient(180deg, rgba(239,246,255,.95), rgba(255,255,255,.96))",
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
           <Box
             sx={{
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
               color: "#2563eb",
               background: "linear-gradient(135deg, rgba(219,234,254,.95), rgba(255,255,255,.92))",
               border: "1px solid rgba(37,99,235,.22)",
+              boxShadow: "0 10px 22px rgba(37,99,235,.12)",
               flexShrink: 0,
             }}
           >
-            <InfoOutlinedIcon />
+            <InfoOutlinedIcon fontSize="small" />
           </Box>
+
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-              <Typography sx={{ fontSize: 20, fontWeight: 950, letterSpacing: "-0.03em", color: "#0f172a" }}>
-                Información del Indicador PEI
+              <Typography sx={{ fontSize: 18, fontWeight: 950, letterSpacing: "-0.02em", color: "#0f172a" }}>
+                Información del Indicador PDRC
               </Typography>
               <Chip
                 size="small"
-                variant="outlined"
                 label={safeText(tipoNivel)}
-                sx={{ height: 24, borderRadius: 999, fontWeight: 950, color: "#15803d", background: "rgba(240,253,244,.9)", borderColor: "rgba(34,197,94,.25)" }}
+                sx={{
+                  height: 24,
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  color: "#2563eb",
+                  border: "1px solid rgba(37,99,235,.22)",
+                  background: "rgba(239,246,255,.9)",
+                }}
               />
             </Stack>
-            <Typography sx={{ mt: 0.25, fontSize: 12.5, color: "#64748b", fontWeight: 650 }} noWrap>
+            <Typography sx={{ mt: 0.25, fontSize: 12.2, color: "#64748b", fontWeight: 700 }} noWrap>
               Indicador: {safeText(nombreIndicador)}
             </Typography>
           </Box>
@@ -188,15 +216,20 @@ export default function PeiIndicadorInfoModal({
         </Button>
       </DialogTitle>
 
-      <DialogContent
-        sx={{
-          px: { xs: 2.2, md: 3 },
-          py: 3,
-          background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.86))",
-        }}
-      >
-        {errorMsg ? <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>{errorMsg}</Alert> : null}
-        {successMsg ? <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{successMsg}</Alert> : null}
+      <Divider />
+
+      <DialogContent sx={{ p: 2.4, background: "linear-gradient(180deg, rgba(255,255,255,.95), rgba(248,250,252,.88))" }}>
+        {errorMsg ? (
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            {errorMsg}
+          </Alert>
+        ) : null}
+
+        {successMsg ? (
+          <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+            {successMsg}
+          </Alert>
+        ) : null}
 
         <Paper
           elevation={0}
@@ -273,49 +306,51 @@ export default function PeiIndicadorInfoModal({
         <Paper
           elevation={0}
           sx={{
-            p: 2.4,
+            p: 2.2,
             borderRadius: 3,
             border: "1px solid rgba(191,219,254,.9)",
-            background: "linear-gradient(180deg, rgba(239,246,255,.55), rgba(255,255,255,.95))",
-            boxShadow: "0 14px 34px rgba(15,23,42,.06)",
+            background: "linear-gradient(180deg, rgba(239,246,255,.55), rgba(255,255,255,.96))",
+            boxShadow: "0 12px 28px rgba(37,99,235,.06)",
           }}
         >
           {loading ? (
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
-              <Typography sx={{ fontSize: 13, color: "#64748b", fontWeight: 700 }}>Cargando información...</Typography>
+              <Typography variant="body2">Cargando información...</Typography>
             </Stack>
           ) : (
-            <Stack spacing={2}>
+            <Stack spacing={2.2}>
               <Box>
-                <Typography sx={{ mb: 0.8, fontSize: 14.5, color: "#1d4ed8", fontWeight: 950 }}>
-                  Análisis del avance
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <InfoOutlinedIcon sx={{ fontSize: 18, color: "#2563eb" }} />
+                  <Typography sx={{ fontSize: 15, fontWeight: 950, color: "#1d4ed8" }}>Análisis del avance</Typography>
+                </Stack>
                 <TextField
                   label="¿Cuáles son los factores que contribuyeron (logro) o dificultaron (problemas) el nivel de avance del logro esperado?"
                   value={factoresAvance}
                   onChange={(e) => setFactoresAvance(e.target.value)}
                   fullWidth
                   multiline
-                  minRows={6}
-                  maxRows={12}
-                  sx={premiumTextAreaSx}
+                  minRows={5}
+                  maxRows={10}
+                  sx={premiumInfoFieldSx}
                 />
               </Box>
 
               <Box>
-                <Typography sx={{ mb: 0.8, fontSize: 14.5, color: "#1d4ed8", fontWeight: 950 }}>
-                  Recomendaciones
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <InfoOutlinedIcon sx={{ fontSize: 18, color: "#2563eb" }} />
+                  <Typography sx={{ fontSize: 15, fontWeight: 950, color: "#1d4ed8" }}>Recomendaciones</Typography>
+                </Stack>
                 <TextField
                   label="Medidas recomendadas para mejorar la implementación"
                   value={medidasRecomendadas}
                   onChange={(e) => setMedidasRecomendadas(e.target.value)}
                   fullWidth
                   multiline
-                  minRows={6}
-                  maxRows={12}
-                  sx={premiumTextAreaSx}
+                  minRows={5}
+                  maxRows={10}
+                  sx={premiumInfoFieldSx}
                 />
               </Box>
             </Stack>
@@ -323,18 +358,24 @@ export default function PeiIndicadorInfoModal({
         </Paper>
       </DialogContent>
 
-      <DialogActions sx={{ px: { xs: 2.2, md: 3 }, py: 2.2, borderTop: "1px solid rgba(15,23,42,.08)", background: "rgba(255,255,255,.9)" }}>
+      <DialogActions sx={{ px: 2.4, py: 2, borderTop: "1px solid rgba(15,23,42,.08)", background: "rgba(255,255,255,.82)" }}>
         <Box sx={{ flex: 1 }} />
+
         <Button
           onClick={guardarInfo}
           variant="contained"
           startIcon={<SaveRoundedIcon />}
           disabled={loading || saving}
-          sx={{ minWidth: 150, height: 42, fontWeight: 950, borderRadius: 2.2, boxShadow: "0 12px 22px rgba(37,99,235,.24)" }}
+          sx={{ minWidth: 140, height: 42, fontWeight: 950, borderRadius: 2.2 }}
         >
           {saving ? "Guardando..." : "Guardar"}
         </Button>
-        <Button onClick={onClose} variant="outlined" sx={{ minWidth: 130, height: 42, fontWeight: 900, borderRadius: 2.2 }}>
+
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{ minWidth: 120, height: 42, fontWeight: 900, borderRadius: 2.2 }}
+        >
           Cerrar
         </Button>
       </DialogActions>
@@ -342,29 +383,24 @@ export default function PeiIndicadorInfoModal({
   );
 }
 
-const premiumTextAreaSx = {
+const premiumInfoFieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 3,
+    borderRadius: 2.4,
     backgroundColor: "rgba(255,255,255,.96)",
-    alignItems: "flex-start",
+    fontWeight: 700,
   },
   "& .MuiInputLabel-root": {
     fontSize: 12,
-    fontWeight: 750,
+    fontWeight: 800,
     color: "#64748b",
   },
-  "& .MuiInputBase-input": {
-    fontSize: 13.5,
-    lineHeight: 1.55,
-    color: "#0f172a",
-  },
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(148,163,184,.34)",
+    borderColor: "rgba(148,163,184,.38)",
   },
   "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
     borderColor: "rgba(37,99,235,.45)",
   },
   "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,.72)",
+    borderColor: "rgba(37,99,235,.70)",
   },
 } as const;

@@ -1,3 +1,4 @@
+// AJUSTE_POI_MODAL_INDICADORES_ESTILO_PEI_20260520
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
@@ -19,11 +20,14 @@ import {
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
-import FunctionsRoundedIcon from "@mui/icons-material/FunctionsRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 import {
@@ -96,15 +100,16 @@ function fmtNumber(n: number): string {
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 2.75,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.9)",
   },
-  "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(0,0,0,0.18)" },
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(148,163,184,.42)" },
   "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.45)",
+    borderColor: "rgba(37,99,235,0.48)",
   },
   "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.70)",
+    borderColor: "rgba(37,99,235,0.78)",
   },
 } as const;
 
@@ -112,15 +117,103 @@ const fieldSx = {
 const fieldSxValueMinus2 = {
   ...fieldSx,
   "& .MuiInputBase-input": {
-    fontSize: "12px", // 2px menos dentro del input
+    fontSize: "13px",
+    fontWeight: 800,
+    color: "#0f172a",
+    letterSpacing: "-0.01em",
+  },
+  "& .MuiInputLabel-root": {
+    fontSize: "12px",
+    fontWeight: 800,
+    color: "#64748b",
+  },
+  "& .MuiInputBase-root": {
+    minHeight: 42,
   },
 } as const;
 
 const sectionCardSx = {
   borderRadius: 3,
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "rgba(255,255,255,0.88)",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+  border: "1px solid rgba(191,219,254,.85)",
+  background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.90))",
+  boxShadow: "0 12px 28px rgba(15,23,42,.055)",
+} as const;
+
+const dialogPaperSx = {
+  width: { xs: "calc(100vw - 24px)", sm: 760, md: 820 },
+  maxWidth: "calc(100vw - 24px)",
+  borderRadius: 4,
+  overflow: "hidden",
+  background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.96) 100%)",
+  boxShadow: "0 24px 70px rgba(15,23,42,0.24)",
+} as const;
+
+const headerIconSx = {
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  display: "grid",
+  placeItems: "center",
+  color: "#2563eb",
+  background: "linear-gradient(135deg, rgba(219,234,254,.95), rgba(255,255,255,.92))",
+  border: "1px solid rgba(59,130,246,.24)",
+  boxShadow: "0 12px 26px rgba(37,99,235,.13)",
+  flexShrink: 0,
+} as const;
+
+const summaryCardSx = {
+  p: { xs: 2.1, md: 2.55 },
+  mb: 2.25,
+  borderRadius: 3,
+  border: "1px solid rgba(148,163,184,.32)",
+  background: "rgba(255,255,255,.82)",
+  boxShadow: "0 10px 28px rgba(15,23,42,.05)",
+} as const;
+
+const blueSectionCardSx = {
+  ...sectionCardSx,
+  border: "1px solid rgba(191,219,254,.9)",
+  background: "rgba(255,255,255,.9)",
+  boxShadow: "0 12px 28px rgba(37,99,235,.05)",
+} as const;
+
+const greenSectionCardSx = {
+  ...sectionCardSx,
+  border: "1px solid rgba(191,219,254,.9)",
+  background: "rgba(255,255,255,.9)",
+  boxShadow: "0 12px 28px rgba(37,99,235,.05)",
+} as const;
+
+const orangeSectionCardSx = {
+  ...sectionCardSx,
+  border: "1px solid rgba(147,197,253,.85)",
+  background: "rgba(239,246,255,.78)",
+  boxShadow: "0 12px 28px rgba(37,99,235,.06)",
+} as const;
+
+const monthlyOrangeCardSx = {
+  ...sectionCardSx,
+  border: "1px solid rgba(251,146,60,.58)",
+  background: "linear-gradient(180deg, rgba(255,247,237,.94) 0%, rgba(255,255,255,.96) 100%)",
+  boxShadow: "0 14px 30px rgba(217,119,6,.10)",
+} as const;
+
+const monthlyOrangeFieldSx = {
+  ...fieldSx,
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.9)",
+  },
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(251,146,60,.34)" },
+  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(217,119,6,.55)",
+  },
+  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(217,119,6,.78)",
+  },
+  "& .MuiInputBase-input": { py: 0.95, fontSize: 13 },
+  "& input": { textAlign: "right" },
 } as const;
 
 export default function PeiAoIndicadoresModal({
@@ -164,8 +257,6 @@ export default function PeiAoIndicadoresModal({
     return valuesMap.get(selected.idIndicador) ?? Array(12).fill(0);
   }, [selected, valuesMap]);
 
-  const total = useMemo(() => currentMonths.reduce((acc, x) => acc + toNumber(x), 0), [currentMonths]);
-
   // Indicadores
   useEffect(() => {
     if (!open) return;
@@ -205,117 +296,167 @@ export default function PeiAoIndicadoresModal({
     <Dialog
       open={open}
       onClose={onClose}
-      fullWidth
-      maxWidth="md"
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          overflow: "hidden",
-          width: { xs: "96vw", sm: "86vw", md: 750 },
-          maxWidth: "750px",
-        },
-      }}
+      fullWidth={false}
+      maxWidth={false}
+      PaperProps={{ sx: dialogPaperSx }}
     >
       <DialogTitle
         sx={{
-          pb: 1.0,
+          px: 3,
+          py: 2.1,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "linear-gradient(180deg, rgba(27,111,238,0.10) 0%, rgba(27,111,238,0) 100%)",
+          borderBottom: "1px solid rgba(15,23,42,0.08)",
+          background:
+            "linear-gradient(90deg, rgba(239,246,255,0.96) 0%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 100%)",
         }}
       >
-        <Stack spacing={0.25}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <AccountTreeRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950, letterSpacing: 0.2 }}>
-              Unidad de Medida por Actividad Operativa
-            </Typography>
-            <Chip size="small" variant="outlined" label="Detalle" sx={{ borderRadius: 999, fontWeight: 800 }} />
-          </Stack>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+          <Box sx={headerIconSx}>
+            <TrendingUpRoundedIcon />
+          </Box>
 
-<Typography variant="body2" sx={{ color: "text.secondary", fontSize: "12px" }}>
-  AO: <b>{safe(nombreAo)}</b>
-</Typography>
-        </Stack>
-
-        <Tooltip title="Cerrar">
-          <IconButton onClick={onClose} sx={{ borderRadius: 2 }}>
-            <CloseRoundedIcon />
-          </IconButton>
-        </Tooltip>
-      </DialogTitle>
-
-      <Divider />
-
-      <DialogContent sx={{ pt: 2 }}>
-        {/* Card superior */}
-        <Paper
-          elevation={0}
-          sx={{
-            p: 1.5,
-            borderRadius: 3,
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: "rgba(248,250,255,0.9)",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-            mb: 2,
-          }}
-        >
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+              <Typography sx={{ fontSize: 21, fontWeight: 950, letterSpacing: "-0.03em", color: "#0f172a" }}>
+                Unidad de Medida por Actividad Operativa
+              </Typography>
               <Chip
-                icon={<TagRoundedIcon />}
-                label={`Nro Registro POI: ${safe(nroRegistroPoi)}`}
-                sx={{ fontWeight: 900, borderRadius: 999 }}
-                variant="outlined"
-              />
-              <Chip
-                icon={<TagRoundedIcon />}
-                label={`Código AO: ${safe(codigoAo)}`}
-                sx={{ fontWeight: 800, borderRadius: 999 }}
-                variant="outlined"
-              />
-              <Chip
-                icon={<CalendarMonthRoundedIcon />}
-                label={`Año: ${anioLabel ?? "—"}`}
-                sx={{ fontWeight: 800, borderRadius: 999 }}
-                variant="outlined"
+                size="small"
+                label="Detalle"
+                sx={{
+                  height: 26,
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  color: "#1d4ed8",
+                  border: "1px solid rgba(59,130,246,.25)",
+                  background: "rgba(219,234,254,.78)",
+                }}
               />
             </Stack>
+            <Typography sx={{ mt: 0.25, fontSize: 13, color: "#64748b", fontWeight: 600 }} noWrap>
+              AO: {safe(nombreAo)}
+            </Typography>
+          </Box>
+        </Stack>
 
-            <Box sx={{ flex: 1 }} />
+        <Stack direction="row" spacing={1.25} alignItems="center">
+          <Chip
+            label={loading ? "Cargando..." : "Resumen"}
+            icon={<Box component="span" sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: loading ? "#94a3b8" : "#16a34a" }} />}
+            sx={{
+              height: 34,
+              borderRadius: 2,
+              fontWeight: 900,
+              color: loading ? "#64748b" : "#15803d",
+              border: loading ? "1px solid rgba(148,163,184,.35)" : "1px solid rgba(34,197,94,.25)",
+              background: loading ? "rgba(248,250,252,.95)" : "rgba(240,253,244,.95)",
+              boxShadow: "0 8px 18px rgba(15,23,42,.06)",
+              "& .MuiChip-icon": { ml: 1.1 },
+            }}
+          />
+          <Tooltip title="Cerrar">
+            <IconButton onClick={onClose} sx={{ borderRadius: 2, color: "#475569" }}>
+              <CloseRoundedIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </DialogTitle>
 
-            <Chip
-              size="small"
-              label={loading ? "Cargando…" : "Resumen"}
-              color={loading ? "default" : "success"}
-              variant={loading ? "outlined" : "filled"}
-              sx={{ borderRadius: 999, fontWeight: 900 }}
-            />
-          </Stack>
+      <DialogContent sx={{ px: { xs: 2.2, md: 3.2 }, py: 3, background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.88))" }}>
+        {/* Card superior */}
+        <Paper elevation={0} sx={summaryCardSx}>
+          <Box
+            sx={{
+              display: "grid",
+              // Ajuste visual del card superior:
+              // 88px = columna del ícono; 190px = datos POI/AO/Año.
+              // Si necesitas mover la línea divisoria, modifica el valor 190px.
+              // Menor valor mueve la línea a la izquierda; mayor valor la mueve a la derecha.
+              gridTemplateColumns: { xs: "1fr", md: "88px 190px minmax(0, 1fr)" },
+              gap: 2,
+              alignItems: "center",
+            }}
+          >
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                color: "#15803d",
+                border: "1px solid rgba(34,197,94,.25)",
+                background: "linear-gradient(135deg, rgba(240,253,244,.92), rgba(255,255,255,.95))",
+              }}
+            >
+              <DescriptionRoundedIcon fontSize="large" />
+            </Box>
 
-          <Box sx={{ mt: 1.0 }}>
-<Typography
-  variant="body2"
-  sx={{
-    color: "text.secondary",
-    whiteSpace: "pre-line",
-    fontSize: "10.5px", // ✅ 12.5 - 2 = 10.5
-  }}
->
-  OER: {safe(oer)}
-  {"\n"}AER: {safe(aer)}
-  {"\n"}OEI: {safe(oei)}
-  {"\n"}AEI: {safe(aei)}
-</Typography>
+            <Stack
+              spacing={1.25}
+              sx={{
+                minWidth: 0,
+                pr: { xs: 0, md: 2 },
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#64748b", fontWeight: 800 }}>Nro Registro POI</Typography>
+                <Typography sx={{ fontSize: 15, color: "#0f172a", fontWeight: 950 }}>{safe(nroRegistroPoi)}</Typography>
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#64748b", fontWeight: 800 }}>Código AO</Typography>
+                <Typography sx={{ fontSize: 15, color: "#0f172a", fontWeight: 950 }}>{safe(codigoAo)}</Typography>
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#64748b", fontWeight: 800 }}>Año</Typography>
+                <Typography sx={{ fontSize: 15, color: "#0f172a", fontWeight: 950 }}>{anioLabel ?? "—"}</Typography>
+              </Box>
+            </Stack>
+
+            <Box
+              sx={{
+                borderLeft: { xs: "none", md: "1px solid rgba(148,163,184,.35)" },
+                pl: { xs: 0, md: 2.25 },
+                minWidth: 0,
+              }}
+            >
+              <Stack spacing={0.65}>
+                {[
+                  ["OER", safe(oer)],
+                  ["AER", safe(aer)],
+                  ["OEI", safe(oei)],
+                  ["AEI", safe(aei)],
+                ].map(([label, value]) => (
+                  <Typography
+                    key={label}
+                    sx={{
+                      fontSize: 12.5,
+                      color: "#475569",
+                      fontWeight: 700,
+                      lineHeight: 1.55,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    <Box component="span" sx={{ color: "#0f172a", fontWeight: 950 }}>
+                      {label}:
+                    </Box>{" "}
+                    {value}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
           </Box>
         </Paper>
 
         {/* Detalle */}
-        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <ChecklistRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Detalle</Typography>
+        <Paper elevation={0} sx={{ ...blueSectionCardSx, p: { xs: 2.1, md: 2.55 }, mb: 2.25 }}>
+          <Stack direction="row" spacing={1.1} alignItems="center" sx={{ mb: 1.6 }}>
+            <SettingsRoundedIcon sx={{ color: "#2563eb" }} />
+            <Typography sx={{ fontSize: 17, fontWeight: 950, color: "#1d4ed8" }}>Detalle</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
             </Typography>
           </Stack>
@@ -405,10 +546,10 @@ export default function PeiAoIndicadoresModal({
         </Paper>
 
         {/* Unidad de Medida */}
-        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
+        <Paper elevation={0} sx={{ ...greenSectionCardSx, p: { xs: 2.1, md: 2.45 }, mb: 2.25 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <ChecklistRoundedIcon fontSize="small" />
-<Typography sx={{ fontWeight: 950 }}>
+            <ChecklistRoundedIcon sx={{ color: "#16a34a" }} />
+<Typography sx={{ fontSize: 17, fontWeight: 950, color: "#15803d" }}>
   Unidad de Medida:{" "}
   <Box
     component="span"
@@ -425,82 +566,65 @@ export default function PeiAoIndicadoresModal({
             </Tooltip>
           </Stack>
 
-          <Autocomplete
-            options={data?.indicadores ?? []}
-            value={selected}
-            onChange={(_e, v) => setSelected(v)}
-            getOptionLabel={(o) => o?.nombre ?? ""}
-            isOptionEqualToValue={(o, v) => o.idIndicador === v.idIndicador}
-            noOptionsText={loading ? "Cargando..." : "Sin indicadores"}
-
-            // ✅ NUEVO: baja 2px el tamaño del texto del dropdown
-            ListboxProps={{
-              sx: {
-                "& .MuiAutocomplete-option": {
-                  fontSize: "12px", // antes ~14px
-                },
-              },
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) 180px" },
+              gap: 1.25,
+              alignItems: "flex-start",
             }}
-            renderOption={(props, option) => (
-              <li {...props} style={{ fontSize: 12 }}>
-                {option?.nombre ?? ""}
-              </li>
-            )}
+          >
+            <Autocomplete
+              options={data?.indicadores ?? []}
+              value={selected}
+              onChange={(_e, v) => setSelected(v)}
+              getOptionLabel={(o) => combo(o?.codigo ?? null, o?.nombre ?? null)}
+              isOptionEqualToValue={(o, v) => o.idIndicador === v.idIndicador}
+              noOptionsText={loading ? "Cargando..." : "Sin indicadores"}
 
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Nombre de Etapas"
-                size="small"
-                sx={{ ...fieldSxValueMinus2, width: "100%", mb: 1.0 }}
-              />
-            )}
-          />
-
-          <Box sx={{ display: "flex", gap: 1.25, justifyContent: "flex-start", alignItems: "flex-start" }}>
-            <TextField
-              label="Código"
-              value={selected?.codigo ?? ""}
-              size="small"
-              InputProps={{
-                readOnly: true,
-                startAdornment: <InputAdornment position="start">#</InputAdornment>,
+              // ✅ NUEVO: baja 2px el tamaño del texto del dropdown
+              ListboxProps={{
+                sx: {
+                  "& .MuiAutocomplete-option": {
+                    fontSize: "12px", // antes ~14px
+                  },
+                },
               }}
-              sx={{ ...fieldSxValueMinus2, width: 180 }}
+              renderOption={(props, option) => (
+                <li {...props} style={{ fontSize: 12 }}>
+                  {combo(option?.codigo ?? null, option?.nombre ?? null)}
+                </li>
+              )}
+
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Nombre de Etapas"
+                  size="small"
+                  sx={{ ...fieldSxValueMinus2, width: "100%" }}
+                />
+              )}
             />
+
             <TextField
               label="Unidad"
               value={selected?.unidad ?? ""}
               size="small"
+              fullWidth
               InputProps={{
                 readOnly: true,
                 startAdornment: <InputAdornment position="start">∑</InputAdornment>,
               }}
-              sx={{ ...fieldSxValueMinus2, width: 180 }}
+              sx={fieldSxValueMinus2}
             />
           </Box>
         </Paper>
 
         {/* Valores por Mes */}
-        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
+        <Paper elevation={0} sx={{ ...monthlyOrangeCardSx, p: { xs: 2.1, md: 2.45 } }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <CalendarMonthRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Valores / Cantidades por Mes</Typography>
-
-            <Box sx={{ flex: 1 }} />
-
-            <Chip
-              icon={<FunctionsRoundedIcon />}
-              label={`TOTAL:  ${fmtNumber(total)}`}
-              variant="filled"
-              color="primary"
-              sx={{
-                borderRadius: 999,
-                fontWeight: 950,
-                bgcolor: "rgba(37,99,235,0.12)",
-                color: "rgba(37,99,235,0.95)",
-              }}
-            />
+            <CalendarMonthRoundedIcon sx={{ color: "#d97706" }} />
+            <Typography sx={{ fontSize: 17, fontWeight: 950, color: "#c2410c" }}>Valores / Cantidades por Mes</Typography>
           </Stack>
 
           <Box
@@ -527,32 +651,27 @@ export default function PeiAoIndicadoresModal({
                         variant="outlined"
                         sx={{
                           borderRadius: 999,
-                          fontWeight: 900,
-                          height: 20,
-                          "& .MuiChip-label": { px: 0.7, fontSize: 11 },
+                          fontWeight: 950,
+                          height: 22,
+                          color: "#d97706",
+                          background: "rgba(255,237,213,.72)",
+                          borderColor: "rgba(251,146,60,.46)",
+                          "& .MuiChip-label": { px: 0.8, fontSize: 11 },
                         }}
                       />
                     </InputAdornment>
                   ),
                 }}
-                sx={{
-                  ...fieldSx,
-                  "& .MuiInputBase-input": { py: 0.95, fontSize: 13 },
-                  "& input": { textAlign: "right" },
-                }}
+                sx={monthlyOrangeFieldSx}
               />
             ))}
           </Box>
-
-          <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1.0 }}>
-            * El TOTAL es la suma de Enero a Diciembre para el indicador seleccionado.
-          </Typography>
         </Paper>
       </DialogContent>
 
-      <DialogActions sx={{ px: 2.5, pb: 2 }}>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid rgba(15,23,42,0.08)", background: "rgba(255,255,255,.94)" }}>
         <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} variant="outlined" sx={{ fontWeight: 900, borderRadius: 2, px: 2.5 }}>
+        <Button onClick={onClose} variant="outlined" sx={{ fontWeight: 950, borderRadius: 2, px: 3.2, height: 40, color: "#0f172a", borderColor: "rgba(15,23,42,.55)", "&:hover": { borderColor: "#0f172a", background: "rgba(15,23,42,.03)" } }}>
           CERRAR
         </Button>
       </DialogActions>

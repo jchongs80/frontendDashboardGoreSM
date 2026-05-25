@@ -1,3 +1,4 @@
+// AJUSTE_VISUAL_POI_FONDO_ATENUADO_MODELO_PEI_20260520
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
@@ -32,6 +33,13 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
+import BusinessRoundedIcon from "@mui/icons-material/BusinessRounded";
+import AnalyticsRoundedIcon from "@mui/icons-material/AnalyticsRounded";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
 
 import PeiOeiAeiResumenModal from "../components/PeiOeiAeiResumenModal";
 import PeiOeiAeiAoDetalleModal from "../components/PeiOeiAeiAoDetalleModal";
@@ -439,87 +447,149 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
     );
   }
 
-  // === estilos sticky para Acción (móvil/angosto) ===
-  const sxStickyActionHeader = {
-    position: "sticky" as const,
-    right: 0,
-    zIndex: 3,
-    bgcolor: "background.paper",
-    boxShadow: "-8px 0 12px rgba(0,0,0,.05)",
-  };
-
-  const sxStickyActionCell = {
-    position: "sticky" as const,
-    right: 0,
-    zIndex: 2,
-    bgcolor: "background.paper",
-    boxShadow: "-8px 0 12px rgba(0,0,0,.05)",
-  };
-
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <IconButton onClick={() => navigate(-1)} aria-label="Volver">
-            <ArrowBackRoundedIcon />
-          </IconButton>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        p: { xs: 2, md: 3 },
+        background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+      }}
+    >
+      {/* Header premium */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+          <Tooltip title="Volver" arrow>
+            <IconButton
+              onClick={() => navigate(-1)}
+              aria-label="Volver"
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: 2.5,
+                border: "1px solid rgba(148,163,184,.30)",
+                bgcolor: "rgba(255,255,255,.92)",
+                boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+                "&:hover": { bgcolor: "rgba(239,246,255,.95)", transform: "translateY(-1px)" },
+              }}
+            >
+              <ArrowBackRoundedIcon sx={{ color: "#2563eb" }} />
+            </IconButton>
+          </Tooltip>
 
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h4" sx={{ fontWeight: 950, letterSpacing: "-.04em", lineHeight: 1 }}>
               POI: OEI / AEI / AO
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.55, fontWeight: 600 }} noWrap>
               {ueLabel}
             </Typography>
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={`OEI: ${oeiCount}`} variant="outlined" />
-          <Chip label={`AEI: ${aeiCount}`} variant="outlined" />
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Chip
+            label={`OEI: ${oeiCount}`}
+            size="small"
+            sx={{
+              height: 30,
+              borderRadius: 999,
+              fontWeight: 900,
+              color: "#0369a1",
+              bgcolor: "rgba(14,165,233,.10)",
+              border: "1px solid rgba(14,165,233,.32)",
+            }}
+          />
+          <Chip
+            label={`AEI: ${aeiCount}`}
+            size="small"
+            sx={{
+              height: 30,
+              borderRadius: 999,
+              fontWeight: 900,
+              color: "#6d28d9",
+              bgcolor: "rgba(124,58,237,.055)",
+              border: "1px solid rgba(124,58,237,.30)",
+            }}
+          />
+          <Chip
+            label={`Registros: ${rowsFiltered.length}`}
+            size="small"
+            sx={{ height: 30, borderRadius: 999, fontWeight: 900, bgcolor: "#fff", border: "1px solid rgba(15,23,42,.14)" }}
+          />
 
           <Tooltip title="Refrescar" arrow>
-            <IconButton onMouseDown={(e) => e.currentTarget.blur()} onClick={onRefresh}>
-              <RefreshRoundedIcon />
+            <IconButton
+              onMouseDown={(e) => e.currentTarget.blur()}
+              onClick={onRefresh}
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: 2.5,
+                border: "1px solid rgba(148,163,184,.30)",
+                bgcolor: "#fff",
+                boxShadow: "0 10px 24px rgba(15,23,42,.07)",
+                "&:hover": { bgcolor: "rgba(239,246,255,.95)", transform: "translateY(-1px)" },
+              }}
+            >
+              <RefreshRoundedIcon sx={{ fontSize: 21, color: "#475569" }} />
             </IconButton>
           </Tooltip>
 
-          {/* Ojito superior: resumen OEI/AEI */}
           <Tooltip title="Ver resumen OEI/AEI" arrow>
             <IconButton
               onMouseDown={(e) => e.currentTarget.blur()}
               onClick={() => setOpenResumenModal(true)}
               sx={{
-                width: 44,
-                height: 44,
-                borderRadius: 3,
-                border: "1px solid",
-                borderColor: "rgba(59,130,246,.35)",
+                width: 42,
+                height: 42,
+                borderRadius: 2.5,
+                border: "1px solid rgba(59,130,246,.34)",
                 bgcolor: "rgba(59,130,246,.12)",
-                boxShadow: "0 10px 25px rgba(0,0,0,.08)",
-                transition: "all .15s ease",
+                boxShadow: "0 10px 24px rgba(37,99,235,.12)",
                 "&:hover": { bgcolor: "rgba(59,130,246,.18)", transform: "translateY(-1px)" },
               }}
             >
-              <VisibilityOutlinedIcon sx={{ fontSize: 22, color: "rgba(37,99,235,.95)" }} />
+              <VisibilityOutlinedIcon sx={{ fontSize: 21, color: "#2563eb" }} />
             </IconButton>
           </Tooltip>
         </Stack>
       </Stack>
 
-      {/* Filter Card */}
+      {/* Filtros premium */}
       <Paper
+        elevation={0}
         sx={{
-          mt: 2,
-          p: 2,
-          borderRadius: 3,
-          border: "1px solid",
-          borderColor: "divider",
-          boxShadow: "0 10px 30px rgba(0,0,0,.06)",
+          p: { xs: 1.6, md: 2 },
+          mb: 2.25,
+          borderRadius: 4,
+          border: "1px solid rgba(148,163,184,.26)",
+          bgcolor: "rgba(255,255,255,.96)",
+          boxShadow: "0 8px 24px rgba(15,23,42,.045)",
         }}
       >
-        <Stack direction="row" spacing={2} sx={{ width: "100%", mb: 2 }}>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+          <Box
+            sx={{
+              width: 38,
+              height: 38,
+              borderRadius: 2.5,
+              display: "grid",
+              placeItems: "center",
+              color: "#2563eb",
+              bgcolor: "rgba(59,130,246,.12)",
+            }}
+          >
+            <FilterAltRoundedIcon fontSize="small" />
+          </Box>
+          <Box>
+            <Typography sx={{ fontWeight: 950, fontSize: 18, lineHeight: 1.05 }}>Filtros de búsqueda</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Ajuste el contexto para consultar la estructura POI y sus actividades operativas.
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.15fr" }, gap: 1.4, mb: 1.4 }}>
           <Autocomplete
             options={periodos}
             value={periodoSelectedObj}
@@ -529,10 +599,8 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
             noOptionsText="Sin resultados"
             filterOptions={(options, state) => filterByCodigoDescripcion(options as any, state.inputValue)}
             ListboxProps={{ style: { maxHeight: 320 } }}
-            renderInput={(params) => (
-              <TextField {...params} label="Periodo" size="small" placeholder="Buscar periodo…" />
-            )}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            renderInput={(params) => <TextField {...params} label="Periodo" size="small" placeholder="Buscar periodo…" />}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#fff" } }}
           />
 
           <Autocomplete
@@ -549,22 +617,20 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
               return (
                 <li key={key} {...rest}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid", borderColor: "rgba(77, 77, 77, 0.35)", bgcolor: "rgba(255, 255, 255, 0.1)", color: "rgba(0, 0, 0, 0.95)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
+                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid rgba(148,163,184,.5)", bgcolor: "rgba(248,250,252,.9)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
                       {option.codigo ?? "—"}
                     </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>{option.descripcion ?? "—"}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{option.descripcion ?? "—"}</Typography>
                   </Box>
                 </li>
               );
             }}
-            renderInput={(params) => (
-              <TextField {...params} label="CC Responsable" size="small" placeholder="Buscar CC responsable…" />
-            )}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            renderInput={(params) => <TextField {...params} label="CC Responsable" size="small" placeholder="Buscar CC responsable…" />}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#fff" } }}
           />
-        </Stack>
+        </Box>
 
-        <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "160px 1fr" }, gap: 1.4, mb: 1.4 }}>
           <Autocomplete
             options={anios}
             value={anioSelectedObj}
@@ -574,7 +640,7 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
             noOptionsText="Sin resultados"
             ListboxProps={{ style: { maxHeight: 240 } }}
             renderInput={(params) => <TextField {...params} label="Año" size="small" />}
-            sx={{ width: { xs: 120, md: 120 }, flex: "0 0 120px", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#fff" } }}
           />
 
           <Autocomplete
@@ -592,26 +658,32 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
               return (
                 <li key={key} {...rest}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid", borderColor: "rgba(77, 77, 77, 0.35)", bgcolor: "rgba(255, 255, 255, 0.1)", color: "rgba(0, 0, 0, 0.95)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
+                    <Box sx={{ px: 1, py: 0.25, borderRadius: 999, fontSize: 12, fontWeight: 900, border: "1px solid rgba(148,163,184,.5)", bgcolor: "rgba(248,250,252,.9)", minWidth: 64, textAlign: "center", whiteSpace: "nowrap" }}>
                       {option.codigo ?? "—"}
                     </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 400, lineHeight: 1.2 }}>{option.nombre ?? "—"}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{option.nombre ?? "—"}</Typography>
                   </Box>
                 </li>
               );
             }}
-            renderInput={(params) => (
-              <TextField {...params} label="Centro de Costo" size="small" placeholder="Buscar centro de costo…" />
-            )}
-            sx={{ width: "100%", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            renderInput={(params) => <TextField {...params} label="Centro de Costo" size="small" placeholder="Buscar centro de costo…" />}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#fff" } }}
+          />
+        </Box>
+
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ xs: "stretch", md: "center" }} sx={{ mb: 1.4 }}>
+          <Chip
+            size="small"
+            icon={<BusinessRoundedIcon sx={{ fontSize: "16px !important" }} />}
+            label={`CC Responsable seleccionado: ${ccRespSelectedLabel}`}
+            sx={{ justifyContent: "flex-start", maxWidth: "100%", fontWeight: 800, bgcolor: "rgba(15,23,42,.04)", border: "1px solid rgba(148,163,184,.26)" }}
+          />
+          <Chip
+            size="small"
+            label={`Centro de costo: ${ccSelectedObj?.codigo ?? "—"} - ${ccSelectedObj?.nombre ?? "—"}`}
+            sx={{ justifyContent: "flex-start", maxWidth: "100%", fontWeight: 800, bgcolor: "rgba(59,130,246,.08)", color: "#1d4ed8", border: "1px solid rgba(59,130,246,.22)" }}
           />
         </Stack>
-
-        <Divider sx={{ my: 2 }} />
-
-        <Typography variant="caption" color="text.secondary">
-          CC Responsable seleccionado: <b>{ccRespSelectedLabel}</b>
-        </Typography>
 
         <TextField
           value={qSearch}
@@ -619,298 +691,305 @@ export default function PeiOeiAeiAoPage(): React.ReactElement {
           placeholder="Buscar OEI / AEI (código o enunciado)..."
           size="small"
           fullWidth
-          sx={{ mt: 2, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+          InputProps={{ startAdornment: <SearchRoundedIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} /> }}
+          sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "#fff" } }}
         />
       </Paper>
 
-      {/* Tabla master */}
-      <TableContainer
+      {/* Estructura premium */}
+      <Paper
+        elevation={0}
         sx={{
-          mt: 2,
-          borderRadius: 3,
-          border: "1px solid",
-          borderColor: "divider",
+          p: { xs: 1.6, md: 2 },
+          borderRadius: 4,
+          border: "1px solid rgba(148,163,184,.28)",
+          bgcolor: "rgba(255,255,255,.98)",
+          boxShadow: "0 8px 24px rgba(15,23,42,.045)",
         }}
       >
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 110 }} />
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Objetivo Estratégico Institucional (Enunciado)</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AEI</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Acción Estratégica Institucional (Enunciado)</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 180, ...sxStickyActionHeader }} align="right">
-                Acción
-              </TableCell>
-            </TableRow>
-          </TableHead>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.6 }}>
+          <Box
+            sx={{
+              width: 42,
+              height: 42,
+              borderRadius: 2.6,
+              display: "grid",
+              placeItems: "center",
+              color: "#2563eb",
+              bgcolor: "rgba(59,130,246,.12)",
+            }}
+          >
+            <AccountTreeRoundedIcon fontSize="small" />
+          </Box>
+          <Box>
+            <Typography sx={{ fontWeight: 950, fontSize: 18, lineHeight: 1.05 }}>Estructura OEI / AEI / AO</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Use los botones de expansión para revisar las actividades operativas asociadas por AEI.
+            </Typography>
+          </Box>
+        </Stack>
 
-          <TableBody>
-            {loadingTabla ? (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    <CircularProgress size={18} />
-                    <Typography variant="body2">Cargando OEI/AEI...</Typography>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ) : rowsFiltered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <Alert severity="info" sx={{ borderRadius: 2, width: "100%" }}>
-                    No hay registros para la combinación seleccionada (Periodo + Año + UE + CC Responsable + Centro de costo).
-                  </Alert>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rowsFiltered.map((r) => {
-                const idKey = r.idAei;
-                const open = !!openRowMap[idKey];
-                const detail = detailMap[idKey];
+        {loadingTabla ? (
+          <Stack spacing={1.2}>
+            <Skeleton variant="rounded" height={92} sx={{ borderRadius: 3 }} />
+            <Skeleton variant="rounded" height={92} sx={{ borderRadius: 3 }} />
+            <Skeleton variant="rounded" height={92} sx={{ borderRadius: 3 }} />
+          </Stack>
+        ) : rowsFiltered.length === 0 ? (
+          <Alert severity="info" sx={{ borderRadius: 3 }}>
+            No hay registros para la combinación seleccionada (Periodo + Año + UE + CC Responsable + Centro de costo).
+          </Alert>
+        ) : (
+          <Stack spacing={1.4}>
+            {rowsFiltered.map((r) => {
+              const idKey = r.idAei;
+              const open = !!openRowMap[idKey];
+              const detail = detailMap[idKey];
 
-                return (
-                  <React.Fragment key={`${r.idOei}-${r.idAei}`}>
-                    <TableRow hover>
-                      <TableCell sx={{ width: 110 }}>
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                          <Tooltip title={open ? "Ocultar detalle" : "Ver AO del AEI"} arrow>
-                            <IconButton
-                              size="small"
-                              onMouseDown={(e) => e.currentTarget.blur()}
-                              onClick={() => toggleRowDetail(r)}
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 2,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                bgcolor: open ? "action.hover" : "transparent",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": { transform: "translateY(-1px)" },
-                              }}
-                            >
-                              {open ? (
-                                <KeyboardArrowUpRoundedIcon sx={{ fontSize: 20 }} />
-                              ) : (
-                                <KeyboardArrowDownRoundedIcon sx={{ fontSize: 20 }} />
-                              )}
-                            </IconButton>
-                          </Tooltip>
+              return (
+                <Paper
+                  key={`${r.idOei}-${r.idAei}`}
+                  elevation={0}
+                  sx={{
+                    borderRadius: 3.2,
+                    overflow: "hidden",
+                    border: `1px solid ${open ? "rgba(124,58,237,.44)" : "rgba(59,130,246,.24)"}`,
+                    background: "#fff",
+                    boxShadow: open
+                      ? "0 16px 34px rgba(124,58,237,.08)"
+                      : "0 8px 24px rgba(15,23,42,.045)",
+                  }}
+                >
+                  <Box sx={{ p: { xs: 1.4, md: 1.6 } }}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "auto 1fr", md: "auto 74px minmax(210px,1fr) 92px minmax(240px,1.1fr) auto" },
+                        gap: { xs: 1, md: 1.6 },
+                        alignItems: "center",
+                      }}
+                    >
+                      <Tooltip title={open ? "Ocultar detalle" : "Ver AO del AEI"} arrow>
+                        <IconButton
+                          size="small"
+                          onMouseDown={(e) => e.currentTarget.blur()}
+                          onClick={() => toggleRowDetail(r)}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 2.2,
+                            border: "1px solid rgba(148,163,184,.35)",
+                            bgcolor: open ? "rgba(124,58,237,.12)" : "#fff",
+                            color: open ? "#7c3aed" : "#334155",
+                            boxShadow: "0 8px 18px rgba(15,23,42,.08)",
+                          }}
+                        >
+                          {open ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
+                        </IconButton>
+                      </Tooltip>
 
+                      <Chip
+                        label="OEI"
+                        sx={{
+                          width: { md: 64 },
+                          height: 30,
+                          borderRadius: 2,
+                          fontWeight: 950,
+                          color: "#fff",
+                          bgcolor: "#2563eb",
+                          justifySelf: { md: "center" },
+                        }}
+                      />
+
+                      <Box sx={{ minWidth: 0, gridColumn: { xs: "1 / -1", md: "auto" } }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Código OEI</Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography sx={{ fontWeight: 950, color: "#0f172a" }}>{r.oeiCodigo}</Typography>
                           <Chip
                             size="small"
-                            variant="outlined"
                             label={`AO: ${r.totalAo ?? 0}`}
+                            sx={{ height: 22, borderRadius: 999, fontWeight: 900, bgcolor: "rgba(59,130,246,.10)", color: "#1d4ed8", border: "1px solid rgba(59,130,246,.25)" }}
+                          />
+                        </Stack>
+                        <Typography sx={{ fontWeight: 900, lineHeight: 1.25, mt: 0.35 }}>{r.oeiEnunciado}</Typography>
+                      </Box>
+
+                      <Chip
+                        label="AEI"
+                        sx={{
+                          width: { md: 64 },
+                          height: 30,
+                          borderRadius: 2,
+                          fontWeight: 950,
+                          color: "#fff",
+                          bgcolor: "#7c3aed",
+                          justifySelf: { md: "center" },
+                          gridColumn: { xs: "1 / span 1", md: "auto" },
+                        }}
+                      />
+
+                      <Box sx={{ minWidth: 0, gridColumn: { xs: "2 / -1", md: "auto" } }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Código AEI</Typography>
+                        <Typography sx={{ fontWeight: 950, color: "#0f172a" }}>{r.aeiCodigo}</Typography>
+                        <Typography sx={{ fontWeight: 900, lineHeight: 1.25, mt: 0.35 }}>{r.aeiEnunciado}</Typography>
+                      </Box>
+
+                      <Stack direction="row" spacing={0.8} justifyContent="flex-end" alignItems="center" sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }}>
+                        <Tooltip title="Ver OER / AER" arrow>
+                          <IconButton
+                            size="small"
+                            onMouseDown={(e) => e.currentTarget.blur()}
+                            onClick={() => openOerAerFromMaster(r)}
                             sx={{
-                              height: 20,
-                              borderRadius: 2,
-                              fontWeight: 900,
-                              "& .MuiChip-label": { px: 0.75, fontSize: 11 },
+                              width: 38,
+                              height: 38,
+                              borderRadius: 2.3,
+                              border: "1px solid rgba(59,130,246,.30)",
+                              bgcolor: "rgba(59,130,246,.10)",
+                              color: "#2563eb",
+                              boxShadow: "0 8px 20px rgba(37,99,235,.12)",
+                              "&:hover": { bgcolor: "rgba(59,130,246,.18)", transform: "translateY(-1px)" },
                             }}
-                          />
+                          >
+                            <QueryStatsRoundedIcon sx={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Box>
+                  </Box>
+
+                  <Collapse in={open} timeout="auto" unmountOnExit>
+                    <Box sx={{ px: { xs: 1.2, md: 1.6 }, pb: 1.6 }}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.4,
+                          borderRadius: 3,
+                          border: "1px solid rgba(124,58,237,.26)",
+                          bgcolor: "rgba(255,255,255,.96)",
+                        }}
+                      >
+                        <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "stretch", md: "center" }} justifyContent="space-between" spacing={1.5} sx={{ mb: 1.2 }}>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Box sx={{ width: 32, height: 32, borderRadius: 2, display: "grid", placeItems: "center", color: "#7c3aed", bgcolor: "rgba(124,58,237,.12)" }}>
+                              <AssignmentTurnedInRoundedIcon fontSize="small" />
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontWeight: 950 }}>Detalle Actividad Operativa</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                AEI: {r.aeiCodigo} — {r.aeiEnunciado}
+                              </Typography>
+                            </Box>
+                          </Stack>
+
+                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" flexWrap="wrap" useFlexGap>
+                            <Chip size="small" variant="outlined" label={`CC Resp: ${ccRespSelectedLabel}`} sx={{ height: 23, fontWeight: 800, bgcolor: "#fff" }} />
+                            <Chip size="small" variant="outlined" label={`CC: ${ccSelectedObj?.codigo ?? "—"} - ${ccSelectedObj?.nombre ?? "—"}`} sx={{ height: 23, fontWeight: 800, bgcolor: "#fff" }} />
+                            <Tooltip title="Recargar detalle" arrow>
+                              <IconButton
+                                size="small"
+                                onMouseDown={(e) => e.currentTarget.blur()}
+                                onClick={() => reloadRowDetail(r)}
+                                sx={{ borderRadius: 2, border: "1px solid rgba(148,163,184,.35)", bgcolor: "#fff" }}
+                              >
+                                <RefreshRoundedIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
                         </Stack>
-                      </TableCell>
 
-                      <TableCell sx={{ fontWeight: 900 }}>{r.oeiCodigo}</TableCell>
-                      <TableCell sx={{ whiteSpace: "normal", wordBreak: "normal", overflowWrap: "break-word" }}>
-                        {r.oeiEnunciado}
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>{r.aeiCodigo}</TableCell>
-                      <TableCell sx={{ whiteSpace: "normal", wordBreak: "normal", overflowWrap: "break-word" }}>
-                        {r.aeiEnunciado}
-                      </TableCell>
+                        {detail?.loading ? (
+                          <Stack spacing={1}>
+                            <Skeleton variant="rounded" height={38} />
+                            <Skeleton variant="rounded" height={38} />
+                            <Skeleton variant="rounded" height={38} />
+                          </Stack>
+                        ) : detail?.error ? (
+                          <Alert severity="warning" sx={{ borderRadius: 2 }}>{detail.error}</Alert>
+                        ) : !detail?.data || detail.data.length === 0 ? (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>No hay Actividades Operativas registradas para este AEI.</Alert>
+                        ) : (
+                          <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2.5, border: "1px solid rgba(148,163,184,.28)", overflow: "hidden" }}>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow sx={{ bgcolor: "rgba(124,58,237,.055)" }}>
+                                  <TableCell sx={{ fontWeight: 950, color: "#6d28d9", width: 170 }}>Nro Registro POI</TableCell>
+                                  <TableCell sx={{ fontWeight: 950, color: "#6d28d9", width: 170 }}>Código AO</TableCell>
+                                  <TableCell sx={{ fontWeight: 950, color: "#6d28d9" }}>Actividad Operativa</TableCell>
+                                  <TableCell align="right" sx={{ fontWeight: 950, color: "#6d28d9", width: 130 }}>Acción</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {detail.data.map((d) => (
+                                  <TableRow key={d.idOeiAeiAo} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
+                                    <TableCell sx={{ fontWeight: 900 }}>{d.nroRegistroPoi}</TableCell>
+                                    <TableCell sx={{ fontWeight: 900 }}>{d.codigoAo}</TableCell>
+                                    <TableCell sx={{ whiteSpace: "normal", wordBreak: "break-word", fontWeight: 600 }}>{d.nombreAo}</TableCell>
+                                    <TableCell align="right">
+                                      <Tooltip title="Ver detalle AO" arrow>
+                                        <IconButton
+                                          size="small"
+                                          onMouseDown={(e) => e.currentTarget.blur()}
+                                          onClick={() => openDetalleAo(d.idOeiAeiAo, r)}
+                                          sx={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 2,
+                                            border: "1px solid rgba(59,130,246,.30)",
+                                            bgcolor: "rgba(59,130,246,.10)",
+                                            color: "#2563eb",
+                                            "&:hover": { bgcolor: "rgba(59,130,246,.18)" },
+                                          }}
+                                        >
+                                          <QueryStatsRoundedIcon sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                      </Tooltip>
 
-                      <TableCell align="right" sx={{ verticalAlign: "top", width: 180, ...sxStickyActionCell }}>
-                        <Stack direction="row" spacing={0.75} justifyContent="flex-end" alignItems="center">
-                          <Chip
-                            size="small"
-                            label={`AO: ${r.totalAo ?? 0}`}
-                            variant="outlined"
-                            sx={{ fontWeight: 900, height: 20, "& .MuiChip-label": { px: 0.75, fontSize: 11 } }}
-                          />
-                          <Tooltip title="Ver OER / AER" arrow>
-                            <IconButton
-                              size="small"
-                              onMouseDown={(e) => e.currentTarget.blur()}
-                              onClick={() => openOerAerFromMaster(r)}
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 2,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                bgcolor: "rgba(59,130,246,.10)",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": { transform: "translateY(-1px)", bgcolor: "rgba(59,130,246,.16)" },
-                              }}
-                            >
-                              <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Detail */}
-                    <TableRow>
-                      <TableCell colSpan={6} sx={{ p: 0, borderBottom: 0 }}>
-                        <Collapse in={open} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 2, bgcolor: "background.default" }}>
-                            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 1 }}>
-                              <Stack spacing={0.25}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
-                                  Detalle Actividad Operativa
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  AEI: {r.aeiCodigo} — {r.aeiEnunciado}
-                                </Typography>
-                              </Stack>
-
-                              <Stack direction="row" spacing={1} alignItems="center">
-                                <Stack spacing={0.6} alignItems="flex-end">
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    label={`CC Resp: ${ccRespSelectedLabel}`}
-                                    sx={{ height: 22, "& .MuiChip-label": { fontSize: 11 } }}
-                                  />
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    label={`CC: ${ccSelectedObj?.codigo ?? "—"} - ${ccSelectedObj?.nombre ?? "—"}`}
-                                    sx={{ height: 22, "& .MuiChip-label": { fontSize: 11 } }}
-                                  />
-                                </Stack>
-
-                                <Tooltip title="Recargar detalle" arrow>
-                                  <IconButton
-                                    size="small"
-                                    onMouseDown={(e) => e.currentTarget.blur()}
-                                    onClick={() => reloadRowDetail(r)}
-                                    sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}
-                                  >
-                                    <RefreshRoundedIcon sx={{ fontSize: 18 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              </Stack>
-                            </Stack>
-
-                            {detail?.loading ? (
-                              <Stack spacing={1}>
-                                <Skeleton variant="rounded" height={38} />
-                                <Skeleton variant="rounded" height={38} />
-                                <Skeleton variant="rounded" height={38} />
-                              </Stack>
-                            ) : detail?.error ? (
-                              <Alert severity="warning" sx={{ borderRadius: 2 }}>
-                                {detail.error}
-                              </Alert>
-                            ) : !detail?.data || detail.data.length === 0 ? (
-                              <Alert severity="info" sx={{ borderRadius: 2 }}>
-                                No hay Actividades Operativas registradas para este AEI.
-                              </Alert>
-                            ) : (
-                              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell sx={{ fontWeight: 900, width: 170 }}>Nro Registro POI</TableCell>
-                                      <TableCell sx={{ fontWeight: 900, width: 170 }}>Código AO</TableCell>
-                                      <TableCell sx={{ fontWeight: 900 }}>Actividad Operativa</TableCell>
-                                      <TableCell align="right" sx={{ fontWeight: 900, width: 120 }}>
-                                        Acción
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableHead>
-
-                                  <TableBody>
-                                    {detail.data.map((d) => (
-                                      <TableRow key={d.idOeiAeiAo} hover>
-                                        <TableCell sx={{ fontWeight: 900 }}>{d.nroRegistroPoi}</TableCell>
-                                        <TableCell sx={{ fontWeight: 900 }}>{d.codigoAo}</TableCell>
-                                        <TableCell sx={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-                                          {d.nombreAo}
-                                        </TableCell>
-
-                                        <TableCell align="right">
-                                          {/* Ojito: detalle AO */}
-                                          <Tooltip title="Ver detalle AO" arrow>
-                                            <IconButton
-                                              size="small"
-                                              onMouseDown={(e) => e.currentTarget.blur()}
-                                              onClick={() => openDetalleAo(d.idOeiAeiAo, r)}
-                                              sx={{
-                                                width: 30,
-                                                height: 30,
-                                                borderRadius: 2,
-                                                border: "1px solid",
-                                                borderColor: "divider",
-                                                bgcolor: "rgba(59,130,246,.10)",
-                                                "&:hover": {
-                                                  bgcolor: "rgba(59,130,246,.20)",
-                                                  borderColor: "rgba(59,130,246,.5)",
-                                                },
-                                              }}
-                                            >
-                                              <VisibilityOutlinedIcon sx={{ fontSize: 18, color: "rgba(37,99,235,.95)" }} />
-                                            </IconButton>
-                                          </Tooltip>
-
-                                          {/* ✅ NUEVO: Indicadores */}
-                                          {d.idOeiAeiAo > 0 && (
-  <Tooltip title="Ver unidades de medida" arrow>
-    <IconButton
-      size="small"
-      onMouseDown={(e) => e.currentTarget.blur()}
-      onClick={() =>
-        openIndicadoresForAo(
-          d.idOeiAeiAo,
-          d.nroRegistroPoi,
-          d.codigoAo,
-          d.nombreAo,
-          r
-        )
-      }
-      sx={{
-        width: 30,
-        height: 30,
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: "divider",
-        bgcolor: "rgba(59,130,246,.10)",
-        ml: 0.75,
-        "&:hover": {
-          bgcolor: "rgba(59,130,246,.20)",
-          borderColor: "rgba(59,130,246,.5)",
-        },
-      }}
-    >
-      <BarChartRoundedIcon sx={{ fontSize: 18, color: "rgba(37,99,235,.95)" }} />
-    </IconButton>
-  </Tooltip>
-)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            )}
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                                      {d.idOeiAeiAo > 0 && (
+                                        <Tooltip title="Ver unidades de medida" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onMouseDown={(e) => e.currentTarget.blur()}
+                                            onClick={() =>
+                                              openIndicadoresForAo(
+                                                d.idOeiAeiAo,
+                                                d.nroRegistroPoi,
+                                                d.codigoAo,
+                                                d.nombreAo,
+                                                r
+                                              )
+                                            }
+                                            sx={{
+                                              width: 32,
+                                              height: 32,
+                                              borderRadius: 2,
+                                              border: "1px solid rgba(37,99,235,.30)",
+                                              bgcolor: "rgba(37,99,235,.10)",
+                                              color: "#1d4ed8",
+                                              ml: 0.75,
+                                              "&:hover": { bgcolor: "rgba(37,99,235,.18)" },
+                                            }}
+                                          >
+                                            <BarChartRoundedIcon sx={{ fontSize: 18 }} />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </Paper>
+                    </Box>
+                  </Collapse>
+                </Paper>
+              );
+            })}
+          </Stack>
+        )}
+      </Paper>
 
       {/* Error del modal AO (si falla el GET byId) */}
       {aoModalError && (

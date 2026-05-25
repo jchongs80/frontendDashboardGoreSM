@@ -92,12 +92,10 @@ export default function DashboardPaisajePage(): React.ReactElement {
   async function loadCombos() {
     setLoadingCombos(true);
     try {
-      const [periodosResp, aniosResp] = await Promise.all([
-        DashboardCatalogoAction.getPeriodos("PAISAJE"),
-        DashboardCatalogoAction.getAniosProyeccion(),
-      ]);
-
+      const periodosResp = await DashboardCatalogoAction.getPeriodos("PAISAJE").catch(() => []);
       setPeriodos(periodosResp);
+
+      const aniosResp = await DashboardCatalogoAction.getAniosProyeccion(null, "PAISAJE").catch(() => []);
       setAniosProyeccion(aniosResp);
     } finally {
       setLoadingCombos(false);
@@ -127,6 +125,33 @@ export default function DashboardPaisajePage(): React.ReactElement {
   useEffect(() => {
     void loadCombos();
   }, []);
+
+  useEffect(() => {
+    let activo = true;
+
+    async function loadAniosPorPeriodo() {
+      try {
+        const aniosResp = await DashboardCatalogoAction.getAniosProyeccion(
+          filters.idPeriodo ?? null,
+          "PAISAJE"
+        );
+
+        if (activo) {
+          setAniosProyeccion(aniosResp);
+        }
+      } catch {
+        if (activo) {
+          setAniosProyeccion([]);
+        }
+      }
+    }
+
+    void loadAniosPorPeriodo();
+
+    return () => {
+      activo = false;
+    };
+  }, [filters.idPeriodo]);
 
   useEffect(() => {
     void loadData(filters);

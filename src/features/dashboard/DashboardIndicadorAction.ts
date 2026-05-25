@@ -55,11 +55,15 @@ export type DashboardIndicadorDetalleDto = {
   tendencia?: string | null;
   unidadMedida?: string | null;
   tipoIndicador?: string | null;
+  metodoCalculo?: string | null;
   relevancia?: string | null;
   sentidoEsperado?: string | null;
   tipoAgregacion?: string | null;
   factoresAvance?: string | null;
   medidasRecomendadas?: string | null;
+  factoresFavorecieronAvance?: string | null;
+  factoresRetrocesoEstancamiento?: string | null;
+  recomendaciones?: string | null;
   ficha?: DashboardIndicadorFichaDto | null;
   lineaBase?: DashboardIndicadorLineaBaseDto | null;
   valoresMeta: DashboardIndicadorValorDto[];

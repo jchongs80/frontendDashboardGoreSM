@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Divider,
@@ -16,7 +16,6 @@ import { useTheme } from "@mui/material/styles";
 import { useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 
 import SpaceDashboardRoundedIcon from "@mui/icons-material/SpaceDashboardRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import WidgetsRoundedIcon from "@mui/icons-material/WidgetsRounded";
@@ -25,9 +24,7 @@ import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
 import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
-import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 
 import HubRoundedIcon from "@mui/icons-material/HubRounded";
 import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
@@ -35,7 +32,6 @@ import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRou
 
 // ✅ ICONO NUEVO para Unidades Ejecutoras
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
-import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import logoFull from "../../assets/logo-goresam-full.png";
 import logoIcon from "../../assets/logo-goresam-icon.png";
@@ -43,7 +39,7 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 
 import { useAuth } from "./../../features/auth/AuthContext";
 
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 type Props = {
   widthExpanded: number;
@@ -72,48 +68,42 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const canManageUsers = !!user?.permisos?.puedeCrearUsuarios;
 
   const width = collapsed ? widthCollapsed : widthExpanded;
 
   const mainItems: SidebarItem[] = [
-    { text: "Dashboards", icon: <SpaceDashboardRoundedIcon />, path: "/" },
-    { text: "Bloquear pantalla", icon: <LockRoundedIcon />, path: "/login" },
+    {
+      text: isAuthenticated ? "Bloquear pantalla" : "Iniciar sesión",
+      icon: <LockRoundedIcon />,
+      path: "/login",
+    },
   ];
 
   const dashboardItems: SidebarItem[] = [
     { text: "Home", icon: <SpaceDashboardRoundedIcon />, path: "/dashboard/" },
     { text: "Comparativo", icon: <GridViewRoundedIcon />, path: "/dashboard/comparativo" },
-    { text: "Pei", icon: <GridViewRoundedIcon />, path: "/dashboard/Pei" },
-    { text: "Poi", icon: <GridViewRoundedIcon />, path: "/dashboard/Poi" },
-    { text: "Pdrc", icon: <GridViewRoundedIcon />, path: "/dashboard/Pdrc" },
-    { text: "Prcp", icon: <GridViewRoundedIcon />, path: "/dashboard/Prcp" },
-    { text: "Ag", icon: <GridViewRoundedIcon />, path: "/dashboard/ag" },
-    { text: "Paisajes", icon: <GridViewRoundedIcon />, path: "/dashboard/Paisaje" },
+    { text: "A.G.", icon: <GridViewRoundedIcon />, path: "/dashboard/ag" },
+    { text: "P.D.R.C.", icon: <GridViewRoundedIcon />, path: "/dashboard/Pdrc" },
+    { text: "P.E.I.", icon: <GridViewRoundedIcon />, path: "/dashboard/Pei" },
+    { text: "P.O.I.", icon: <GridViewRoundedIcon />, path: "/dashboard/Poi" },
+    { text: "P.R.C.P.", icon: <GridViewRoundedIcon />, path: "/dashboard/Prcp" },
   ];
 
   const catalogItems: SidebarItem[] = [
     { text: "Dimensiones", icon: <GridViewRoundedIcon />, path: "/catalogos/dimensiones" },
-    { text: "Fuentes de Datos", icon: <DescriptionRoundedIcon />, path: "/catalogos/fuentes-datos" },
     { text: "Instrumentos", icon: <SpaceDashboardRoundedIcon />, path: "/catalogos/instrumentos" },
-    { text: "Unidades de Medida", icon: <TableChartRoundedIcon />, path: "/catalogos/unidades-medida" },
+    { text: "Periodos", icon: <TableChartRoundedIcon />, path: "/catalogos/periodos" },
+    { text: "Resp. CC POI", icon: <ApartmentRoundedIcon />, path: "/catalogos/cc-responsables-poi" },
     { text: "Unidades Org.", icon: <WidgetsRoundedIcon />, path: "/catalogos/unidades-org" },
   ];
 
   const planeamientoItems: SidebarItem[] = [
-    { text: "Ejes Estratégicos", icon: <TrackChangesRoundedIcon />, path: "/planeamiento/ejes" },
-    { text: "Políticas", icon: <FlagRoundedIcon />, path: "/planeamiento/politicas" },
-    { text: "Objetivos", icon: <GroupRoundedIcon />, path: "/planeamiento/objetivos" },
-    { text: "Acciones", icon: <AccountTreeRoundedIcon />, path: "/planeamiento/acciones" },
-    //{ text: "Centros de Costo", icon: <WidgetsRoundedIcon />, path: "/planeamiento/centros-costo" },
-    //{ text: "POI", icon: <FolderRoundedIcon />, path: "/planeamiento/poi" },
-
-    // ✅ NUEVO BOTÓN (debajo de POI)
     {
-      text: "P.O.I.",
-      icon: <ApartmentRoundedIcon />,
-      path: "/planeamiento/unidades-ejecutoras",
+      text: "A.G.",
+      icon: <PolicyRoundedIcon />,
+      path: "/planeamiento/ag-po-reco-inpr",
     },
     {
       text: "P.D.R.C.",
@@ -126,19 +116,14 @@ export default function Sidebar({
       path: "/planeamiento/pei-oei-aei",
     },
     {
-      text: "A.G.",
-      icon: <PolicyRoundedIcon />,
-      path: "/planeamiento/ag-po-reco-inpr",
+      text: "P.O.I.",
+      icon: <ApartmentRoundedIcon />,
+      path: "/planeamiento/unidades-ejecutoras",
     },
     {
       text: "P.R.C.P.",
       icon: <WorkspacePremiumRoundedIcon />,
       path: "/planeamiento/prcp-op-pi-mp",
-    },
-    {
-      text: "PAISAJES",
-      icon: <WorkspacePremiumRoundedIcon />,
-      path: "/planeamiento/psj-paisajes",
     },
   ];
 
@@ -216,22 +201,6 @@ export default function Sidebar({
   const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
   const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
 
-  useEffect(() => {
-    if (isDashboardActive) setOpenDashboards(true);
-    if (isCatalogActive) setOpenCatalogs(true);
-    if (isPlaneamientoActive) setOpenPlaneamiento(true);
-    if (isCargaMasivaActive) setOpenCargaMasiva(true);
-    if (isAdminActive) setOpenAdmin(true);
-    if (isAlineamientoActive) setOpenAlineamiento(true);
-  }, [
-    isDashboardActive,
-    isCatalogActive,
-    isPlaneamientoActive,
-    isCargaMasivaActive,
-    isAdminActive,
-    isAlineamientoActive,
-  ]);
-
   const go = (path: string) => {
     navigate(path);
     if (!isMdUp) onCloseMobile();
@@ -254,7 +223,7 @@ export default function Sidebar({
     transition: "all .18s ease",
   });
 
-  const NavButton = ({
+  const renderNavButton = ({
     text,
     icon,
     path,
@@ -330,11 +299,14 @@ export default function Sidebar({
     icon: ReactNode,
     items: SidebarItem[],
     open: boolean,
-    setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+    setOpen: Dispatch<SetStateAction<boolean>>,
     active: boolean
-  ) => (
-    <Box sx={{ mt: 0.7 }}>
-      <ListItemButton onClick={() => setOpen((p) => !p)} sx={sectionButtonSx(active)}>
+  ) => {
+    const effectiveOpen = open || active;
+
+    return (
+      <Box sx={{ mt: 0.7 }}>
+        <ListItemButton onClick={() => setOpen((p) => !p)} sx={sectionButtonSx(active)}>
         <ListItemIcon
           sx={{
             minWidth: collapsed ? "auto" : 36,
@@ -357,13 +329,13 @@ export default function Sidebar({
                 letterSpacing: 0.15,
               }}
             />
-            {open ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
+            {effectiveOpen ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
           </>
         )}
       </ListItemButton>
 
       {!collapsed && (
-        <Collapse in={open} timeout={180} unmountOnExit>
+        <Collapse in={effectiveOpen} timeout={180} unmountOnExit>
           <Box
             sx={{
               ml: 2.1,
@@ -372,15 +344,14 @@ export default function Sidebar({
             }}
           >
             <List disablePadding sx={{ mt: 0.5 }}>
-              {items.map((it) => (
-                <NavButton key={it.text} {...it} nested />
-              ))}
+              {items.map((it) => renderNavButton({ ...it, nested: true }))}
             </List>
           </Box>
         </Collapse>
       )}
-    </Box>
-  );
+      </Box>
+    );
+  };
 
   const content = (
     <Box
@@ -395,7 +366,7 @@ export default function Sidebar({
     >
       <Box
         component={RouterLink}
-        to="/"
+        to="/dashboard"
         sx={{
           mx: collapsed ? 1.1 : 1.6,
           my: 1.5,
@@ -466,7 +437,7 @@ export default function Sidebar({
         }}
       >
         <List disablePadding>
-          <NavButton text="Dashboards" icon={<SpaceDashboardRoundedIcon />} path="/" />
+          {renderNavButton({ text: "Dashboards", icon: <SpaceDashboardRoundedIcon />, path: "/" })}
 
           {renderSection(
             "Dashboard",
@@ -478,34 +449,38 @@ export default function Sidebar({
           )}
 
 
-          {renderSection(
-            "Catálogos",
-            <FolderOpenRoundedIcon />,
-            catalogItems,
-            openCatalogs,
-            setOpenCatalogs,
-            isCatalogActive
-          )}
+          {isAuthenticated &&
+            renderSection(
+              "Catálogos",
+              <FolderOpenRoundedIcon />,
+              catalogItems,
+              openCatalogs,
+              setOpenCatalogs,
+              isCatalogActive
+            )}
 
-          {renderSection(
-            "Planeamiento",
-            <AccountTreeRoundedIcon />,
-            planeamientoItems,
-            openPlaneamiento,
-            setOpenPlaneamiento,
-            isPlaneamientoActive
-          )}
+          {isAuthenticated &&
+            renderSection(
+              "Planeamiento",
+              <AccountTreeRoundedIcon />,
+              planeamientoItems,
+              openPlaneamiento,
+              setOpenPlaneamiento,
+              isPlaneamientoActive
+            )}
 
-          {renderSection(
-            "Carga Masiva",
-            <CloudUploadRoundedIcon />,
-            cargaMasivaItems,
-            openCargaMasiva,
-            setOpenCargaMasiva,
-            isCargaMasivaActive
-          )}
+          {isAuthenticated &&
+            renderSection(
+              "Carga Masiva",
+              <CloudUploadRoundedIcon />,
+              cargaMasivaItems,
+              openCargaMasiva,
+              setOpenCargaMasiva,
+              isCargaMasivaActive
+            )}
 
-          {canManageUsers &&
+          {isAuthenticated &&
+            canManageUsers &&
             renderSection(
               "Administración",
               <AdminPanelSettingsRoundedIcon />,
@@ -515,22 +490,19 @@ export default function Sidebar({
               isAdminActive
             )}
 
-          {renderSection(
-            "Alineamiento",
-            <HubRoundedIcon />,
-            alineamientoItems,
-            openAlineamiento,
-            setOpenAlineamiento,
-            isAlineamientoActive
-          )}
+          {isAuthenticated &&
+            renderSection(
+              "Alineamiento",
+              <HubRoundedIcon />,
+              alineamientoItems,
+              openAlineamiento,
+              setOpenAlineamiento,
+              isAlineamientoActive
+            )}
 
           <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,0.10)" }} />
 
-          {mainItems
-            .filter((x) => !["Dashboards"].includes(x.text))
-            .map((it) => (
-              <NavButton key={it.text} {...it} />
-            ))}
+          {mainItems.map((it) => renderNavButton(it))}
         </List>
       </Box>
 

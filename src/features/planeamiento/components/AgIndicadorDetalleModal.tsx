@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  InputAdornment,
   Paper,
   Stack,
   TextField,
@@ -18,16 +17,19 @@ import {
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
-import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import TagRoundedIcon from "@mui/icons-material/TagRounded";
+import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
+import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 
 import {
   AgPoRecoInprVistaAction,
   type AgIndicadorDetalleResponseDto,
 } from "../AgPoRecoInprVistaAction";
+import AgIndicadorFichaModal from "./AgIndicadorFichaModal";
+import AgIndicadorInfoModal from "./AgIndicadorInfoModal";
 
 type Props = {
   open: boolean;
@@ -73,10 +75,16 @@ function parseDecimalInput(value: string): number {
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: 2.5,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: "rgba(248,250,252,0.96)",
+    fontWeight: 700,
+  },
+  "& .MuiInputLabel-root": {
+    fontSize: 12,
+    fontWeight: 800,
+    color: "#64748b",
   },
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(0,0,0,0.18)",
+    borderColor: "rgba(148,163,184,0.55)",
   },
   "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
     borderColor: "rgba(37,99,235,0.45)",
@@ -86,21 +94,161 @@ const fieldSx = {
   },
 } as const;
 
-const valueTextFieldSx = {
-  ...fieldSx,
-  "& .MuiInputBase-input": {
-    py: 0.95,
-    fontSize: 13,
-    textAlign: "right",
-  },
-} as const;
-
 const sectionCardSx = {
   borderRadius: 3,
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "rgba(255,255,255,0.92)",
-  boxShadow: "0 10px 24px rgba(0,0,0,.06)",
+  border: "1px solid rgba(147,197,253,0.85)",
+  background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,251,255,0.96))",
+  boxShadow: "0 14px 34px rgba(15,23,42,.07)",
 } as const;
+
+const headerIconSx = {
+  width: 42,
+  height: 42,
+  borderRadius: "50%",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#16a34a",
+  background: "linear-gradient(135deg, rgba(220,252,231,.95), rgba(255,255,255,.92))",
+  border: "1px solid rgba(34,197,94,.22)",
+  boxShadow: "0 12px 26px rgba(34,197,94,.12)",
+} as const;
+
+type AnnualCardProps = {
+  color: string;
+  bg: string;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+};
+
+function AnnualCard({ color, bg, icon, title, subtitle, children }: AnnualCardProps): React.ReactElement {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        minHeight: 245,
+        p: { xs: 1.65, md: 1.85 },
+        borderRadius: 3,
+        border: `1px solid ${color === "#16a34a" ? "rgba(134,239,172,.9)" : "rgba(147,197,253,.9)"}`,
+        background: `linear-gradient(180deg, ${bg}, rgba(255,255,255,.97))`,
+        boxShadow: "0 12px 28px rgba(15,23,42,.06)",
+      }}
+    >
+      <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1.35 }}>
+        <Box sx={{ color, display: "inline-flex", mt: 0.15 }}>{icon}</Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 950, color, lineHeight: 1.15 }}>{title}</Typography>
+          <Typography sx={{ fontSize: 11.3, color: "#64748b", fontWeight: 700, lineHeight: 1.25 }}>{subtitle}</Typography>
+        </Box>
+      </Stack>
+      {children}
+    </Paper>
+  );
+}
+
+function ValueRow({ year, value }: { year: number | string; value: string }): React.ReactElement {
+  return (
+    <Box
+      sx={{
+        height: 33,
+        px: 1,
+        display: "grid",
+        gridTemplateColumns: "82px 1fr",
+        alignItems: "center",
+        gap: 1,
+        borderRadius: 2,
+        border: "1px solid rgba(191,219,254,.85)",
+        background: "rgba(255,255,255,.82)",
+      }}
+    >
+      <Chip
+        size="small"
+        label={String(year)}
+        variant="outlined"
+        sx={{
+          height: 22,
+          minWidth: 62,
+          borderRadius: 999,
+          color: "#2563eb",
+          borderColor: "rgba(96,165,250,.8)",
+          backgroundColor: "rgba(239,246,255,.9)",
+          fontWeight: 900,
+          "& .MuiChip-label": { px: 1, fontSize: 11 },
+        }}
+      />
+      <Typography sx={{ textAlign: "right", fontSize: 13.5, fontWeight: 950, color: "#0f172a" }}>{value}</Typography>
+    </Box>
+  );
+}
+
+function EditableValueRow({ year, value, onChange }: { year: number | string; value: string; onChange: (value: string) => void }): React.ReactElement {
+  return (
+    <Box
+      sx={{
+        height: 33,
+        px: 1,
+        display: "grid",
+        gridTemplateColumns: "82px 1fr",
+        alignItems: "center",
+        gap: 1,
+        borderRadius: 2,
+        border: "1px solid rgba(134,239,172,.85)",
+        background: "rgba(255,255,255,.82)",
+      }}
+    >
+      <Chip
+        size="small"
+        label={String(year)}
+        variant="outlined"
+        sx={{
+          height: 22,
+          minWidth: 62,
+          borderRadius: 999,
+          color: "#16a34a",
+          borderColor: "rgba(74,222,128,.8)",
+          backgroundColor: "rgba(240,253,244,.92)",
+          fontWeight: 900,
+          "& .MuiChip-label": { px: 1, fontSize: 11 },
+        }}
+      />
+      <TextField
+        value={value}
+        size="small"
+        fullWidth
+        onChange={(event) => onChange(event.target.value)}
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            height: 24,
+            borderRadius: 999,
+            backgroundColor: "rgba(255,255,255,.88)",
+            fontWeight: 900,
+            "& fieldset": { borderColor: "rgba(148,163,184,.75)" },
+          },
+          "& .MuiInputBase-input": {
+            py: 0,
+            px: 1.1,
+            height: 24,
+            textAlign: "right",
+            fontSize: 12.5,
+            fontWeight: 900,
+          },
+        }}
+      />
+    </Box>
+  );
+}
+
+function CardNote({ color, text }: { color: string; text: string }): React.ReactElement {
+  return (
+    <Stack direction="row" spacing={0.7} alignItems="flex-start" sx={{ mt: 1.35 }}>
+      <InfoOutlinedIcon sx={{ color, fontSize: 16, mt: 0.15 }} />
+      <Typography sx={{ color: "#64748b", fontSize: 11.2, fontWeight: 700, lineHeight: 1.45 }}>{text}</Typography>
+    </Stack>
+  );
+}
+
 
 export default function AgIndicadorDetalleModal({
   open,
@@ -109,15 +257,14 @@ export default function AgIndicadorDetalleModal({
   idIndicadorNombre,
   codigoIndicador,
   nombreIndicador,
-  politica,
-  rc,
-  ip,
 }: Props): React.ReactElement {
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [data, setData] = useState<AgIndicadorDetalleResponseDto | null>(null);
   const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
   const [savingEjecutado, setSavingEjecutado] = useState<boolean>(false);
+  const [fichaOpen, setFichaOpen] = useState<boolean>(false);
+  const [infoOpen, setInfoOpen] = useState<boolean>(false);
 
   const loadDetalle = async (currentIdAgPoRecoInpr: number, currentIdIndicadorNombre: number) => {
     if (!currentIdAgPoRecoInpr || !currentIdIndicadorNombre) {
@@ -169,24 +316,7 @@ export default function AgIndicadorDetalleModal({
 
   const codigoIndicadorView = useMemo(() => safeText(data?.codigoIndicador ?? codigoIndicador), [data, codigoIndicador]);
   const nombreIndicadorView = useMemo(() => safeText(data?.nombreIndicador ?? nombreIndicador), [data, nombreIndicador]);
-  const politicaView = useMemo(() => {
-    if (data?.codigoPolitica || data?.descripcionPolitica) {
-      return `${safeText(data?.codigoPolitica)} - ${safeText(data?.descripcionPolitica)}`;
-    }
-    return safeText(politica);
-  }, [data, politica]);
-  const rcView = useMemo(() => {
-    if (data?.codigoRc || data?.descripcionRc) {
-      return `${safeText(data?.codigoRc)} - ${safeText(data?.descripcionRc)}`;
-    }
-    return safeText(rc);
-  }, [data, rc]);
-  const ipView = useMemo(() => {
-    if (data?.codigoIp || data?.descripcionIp) {
-      return `${safeText(data?.codigoIp)} - ${safeText(data?.descripcionIp)}`;
-    }
-    return safeText(ip);
-  }, [data, ip]);
+
 
   async function guardarEjecutado() {
     try {
@@ -211,6 +341,7 @@ export default function AgIndicadorDetalleModal({
   }
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
       <DialogTitle
         sx={{
@@ -218,12 +349,14 @@ export default function AgIndicadorDetalleModal({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "linear-gradient(180deg, rgba(27,111,238,0.10) 0%, rgba(27,111,238,0) 100%)",
+          background: "linear-gradient(90deg, rgba(240,253,244,0.96), rgba(255,255,255,0.98))",
         }}
       >
         <Stack spacing={0.55} sx={{ pr: 2, minWidth: 0 }}>
           <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="nowrap">
-            <PolicyRoundedIcon fontSize="small" sx={{ mt: 0.15, flexShrink: 0 }} />
+            <Box sx={headerIconSx}>
+              <TrendingUpRoundedIcon fontSize="small" />
+            </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.45 }}>
                 <Typography
@@ -239,7 +372,7 @@ export default function AgIndicadorDetalleModal({
                 >
                   Indicador A.G.
                 </Typography>
-                <Chip size="small" variant="outlined" label="Detalle" sx={{ borderRadius: 999, fontWeight: 800 }} />
+                <Chip size="small" variant="outlined" label="AG" sx={{ borderRadius: 999, fontWeight: 900, color: "#16a34a", borderColor: "rgba(34,197,94,.45)", backgroundColor: "rgba(240,253,244,.9)" }} />
               </Stack>
               <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "12px", mt: 0.2 }}>
                 Indicador: <b>{nombreIndicadorView}</b>
@@ -248,123 +381,198 @@ export default function AgIndicadorDetalleModal({
           </Stack>
         </Stack>
 
-        <Button onClick={onClose} sx={{ minWidth: "auto", p: 0.5, color: "text.secondary", borderRadius: 2 }}>
-          <CloseRoundedIcon />
-        </Button>
+        <Stack direction="row" spacing={1.1} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Chip
+            size="small"
+            label="Resumen"
+            color="success"
+            variant="outlined"
+            sx={{
+              height: 30,
+              borderRadius: 2,
+              fontWeight: 950,
+              color: "#15803d",
+              border: "1px solid rgba(34,197,94,.28)",
+              background: "rgba(240,253,244,.95)",
+              boxShadow: "0 8px 18px rgba(34,197,94,.08)",
+              "& .MuiChip-label": { px: 1.25 },
+            }}
+          />
+          <Button onClick={onClose} sx={{ minWidth: "auto", p: 0.5, color: "text.secondary", borderRadius: 2 }}>
+            <CloseRoundedIcon />
+          </Button>
+        </Stack>
       </DialogTitle>
 
       <Divider />
 
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ pt: 2, background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.88))" }}>
         {errorMsg ? <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>{errorMsg}</Alert> : null}
 
-        <Paper elevation={0} sx={{ p: 1.5, borderRadius: 3, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(248,250,255,0.92)", boxShadow: "0 10px 25px rgba(0,0,0,0.05)", mb: 2 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Chip icon={<TagRoundedIcon />} label={`Código: ${codigoIndicadorView}`} sx={{ fontWeight: 900, borderRadius: 999 }} variant="outlined" />
-            </Stack>
-            <Box sx={{ flex: 1 }} />
-            <Chip size="small" label="Resumen" color="success" variant="filled" sx={{ borderRadius: 999, fontWeight: 900 }} />
-          </Stack>
-
-        <Box sx={{ mt: 1 }}>
-        <Typography
-            variant="body2"
-            sx={{
-            color: "text.secondary",
-            whiteSpace: "pre-line",
-            fontSize: "10.5px",
-            lineHeight: 1.45,
-            }}
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2.1, md: 2.45 },
+            mb: 2.25,
+            borderRadius: 3,
+            border: "1px solid rgba(148,163,184,.32)",
+            background: "rgba(255,255,255,.82)",
+            boxShadow: "0 10px 28px rgba(15,23,42,.05)",
+          }}
         >
-            Política: {politicaView}
-            {"\n"}Resultado Concertado: {rcView}
-            {"\n"}Intervención Prioritaria: {ipView}
-        </Typography>
-        </Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "88px 180px 1fr" }, gap: 2, alignItems: "center" }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                color: "#15803d",
+                border: "1px solid rgba(34,197,94,.25)",
+                background: "linear-gradient(135deg, rgba(240,253,244,.92), rgba(255,255,255,.95))",
+              }}
+            >
+              <DescriptionRoundedIcon fontSize="large" />
+            </Box>
+
+            <Stack spacing={0.8}>
+              <Typography sx={{ fontSize: 12, color: "#64748b", fontWeight: 800 }}>Código</Typography>
+              <Typography sx={{ fontSize: 15, color: "#0f172a", fontWeight: 950 }}>{codigoIndicadorView}</Typography>
+            </Stack>
+
+            <Box sx={{ borderLeft: { xs: "none", md: "1px solid rgba(148,163,184,.35)" }, pl: { xs: 0, md: 3 } }}>
+              <Typography sx={{ fontSize: 13, color: "#334155", fontWeight: 950, mb: 0.75 }}>
+                Nivel: <Box component="span" sx={{ color: "#0f172a" }}>AG</Box>
+              </Typography>
+              <Typography sx={{ fontSize: 12.5, color: "#475569", fontWeight: 800, lineHeight: 1.55 }}>
+                AG: {nombreIndicadorView}
+              </Typography>
+            </Box>
+          </Box>
         </Paper>
 
         <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
-            <InfoOutlinedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Información</Typography>
+            <InfoOutlinedIcon fontSize="small" sx={{ color: "#2563eb" }} />
+            <Typography sx={{ fontWeight: 950, color: "#2563eb" }}>Información</Typography>
           </Stack>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.1 }}>
             <TextField label="Fuente de datos" size="small" fullWidth value={safeText(data?.nombreFuenteDatos)} sx={fieldSx} InputProps={{ readOnly: true }} />
             <TextField label="Tendencia" size="small" fullWidth value={safeText(data?.nombreTendencia)} sx={fieldSx} InputProps={{ readOnly: true }} />
+            <TextField label="Método de cálculo" size="small" fullWidth value={safeText(data?.nombreMetodoCalculo)} sx={{ ...fieldSx, gridColumn: { xs: "1", md: "1 / span 2" } }} InputProps={{ readOnly: true }} />
             <TextField label="Unidad de medida" size="small" fullWidth value={safeText(data?.nombreUnidadMedida)} sx={fieldSx} InputProps={{ readOnly: true }} />
             <TextField label="Tipo de indicador" size="small" fullWidth value={safeText(data?.nombreTipoIndicador)} sx={fieldSx} InputProps={{ readOnly: true }} />
           </Box>
         </Paper>
 
-        <Paper elevation={0} sx={{ ...sectionCardSx, p: 2, mb: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
-            <ChecklistRoundedIcon fontSize="small" />
-            <Typography sx={{ fontWeight: 950 }}>Detalle Serie Histórica</Typography>
-          </Stack>
-
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" }, gap: 1.1 }}>
-            <TextField label="Año Proyección" size="small" fullWidth value={data?.lineaBase?.anio != null ? String(data.lineaBase.anio) : "—"} sx={fieldSx} InputProps={{ readOnly: true }} />
-            <TextField label="Tipo de Valor" size="small" fullWidth value={data?.lineaBase?.codigoTipoValor || data?.lineaBase?.nombreTipoValor ? `${safeText(data?.lineaBase?.codigoTipoValor)} - ${safeText(data?.lineaBase?.nombreTipoValor)}` : "—"} sx={fieldSx} InputProps={{ readOnly: true, startAdornment: <InputAdornment position="start"><TagRoundedIcon fontSize="small" /></InputAdornment> }} />
-            <TextField label="" size="small" fullWidth value={formatNumber(data?.lineaBase?.valorLineaBase)} sx={valueTextFieldSx} InputProps={{ readOnly: true, startAdornment: <InputAdornment position="start"><Chip size="small" label="Valor Línea Base" variant="outlined" sx={{ borderRadius: 999, fontWeight: 900, height: 20, minWidth: 68, "& .MuiChip-label": { px: 0.65, fontSize: 9, lineHeight: 1 } }} /></InputAdornment> }} />
-          </Box>
-        </Paper>
-
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
-          <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
-              <CalendarMonthRoundedIcon fontSize="small" />
-              <Typography sx={{ fontWeight: 950 }}>Valores Meta Anual por Indicador</Typography>
-            </Stack>
-
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2.35 }}>
+          <AnnualCard
+            color="#2563eb"
+            bg="rgba(239,246,255,.78)"
+            icon={<BarChartRoundedIcon fontSize="small" />}
+            title="Valores Meta Anual"
+            subtitle="Metas planificadas para cada año."
+          >
             {loading ? (
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}><CircularProgress size={18} /><Typography variant="body2">Cargando valores...</Typography></Stack>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={18} />
+                <Typography variant="body2">Cargando valores...</Typography>
+              </Stack>
             ) : !data?.valoresMetaPorAnio || data.valoresMetaPorAnio.length === 0 ? (
               <Alert severity="info" sx={{ borderRadius: 2 }}>No existen valores META por año para este indicador.</Alert>
             ) : (
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 1.1 }}>
+              <Stack spacing={1}>
                 {(data?.valoresMetaPorAnio ?? []).map((item) => (
-                  <TextField key={item.idAnioProyeccion} label="" value={formatNumber(item.valor)} size="small" fullWidth sx={valueTextFieldSx} InputProps={{ readOnly: true, startAdornment: <InputAdornment position="start"><Chip size="small" label={String(item.anio)} variant="outlined" sx={{ borderRadius: 999, fontWeight: 900, height: 20, minWidth: 56, "& .MuiChip-label": { px: 0.7, fontSize: 10.5 } }} /></InputAdornment> }} />
+                  <ValueRow key={item.idAnioProyeccion} year={item.anio} value={formatNumber(item.valor)} />
                 ))}
-              </Box>
+              </Stack>
             )}
 
-            <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>* Se muestran todos los valores del tipo META por año para el indicador seleccionado.</Typography>
-          </Paper>
+            <CardNote color="#2563eb" text="Se muestran todos los valores del tipo META por año para el indicador seleccionado." />
+          </AnnualCard>
 
-          <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
-              <CalendarMonthRoundedIcon fontSize="small" />
-              <Typography sx={{ fontWeight: 950 }}>Valores Ejecutado Anual por Indicador</Typography>
-            </Stack>
-
+          <AnnualCard
+            color="#16a34a"
+            bg="rgba(240,253,244,.86)"
+            icon={<TrendingUpRoundedIcon fontSize="small" />}
+            title="Valores Ejecutado Anual"
+            subtitle="Ejecución acumulada real vs. meta anual."
+          >
             {loading ? (
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}><CircularProgress size={18} /><Typography variant="body2">Cargando valores ejecutados...</Typography></Stack>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={18} />
+                <Typography variant="body2">Cargando valores ejecutados...</Typography>
+              </Stack>
             ) : !data?.valoresEjecutadoPorAnio || data.valoresEjecutadoPorAnio.length === 0 ? (
               <Alert severity="info" sx={{ borderRadius: 2 }}>No existen años de META para este indicador y por tanto no hay ejecutado anual a registrar.</Alert>
             ) : (
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 1.1 }}>
+              <Stack spacing={1}>
                 {(data?.valoresEjecutadoPorAnio ?? []).map((item) => (
-                  <TextField key={item.idAnioProyeccion} label="" value={ejecutadoForm[item.idAnioProyeccion] ?? "0"} size="small" fullWidth onChange={(e) => setEjecutadoForm((prev) => ({ ...prev, [item.idAnioProyeccion]: e.target.value }))} sx={valueTextFieldSx} InputProps={{ startAdornment: <InputAdornment position="start"><Chip size="small" label={String(item.anio)} variant="outlined" sx={{ borderRadius: 999, fontWeight: 900, height: 20, minWidth: 56, "& .MuiChip-label": { px: 0.7, fontSize: 10.5 } }} /></InputAdornment> }} />
+                  <EditableValueRow
+                    key={item.idAnioProyeccion}
+                    year={item.anio}
+                    value={ejecutadoForm[item.idAnioProyeccion] ?? "0"}
+                    onChange={(value) => setEjecutadoForm((prev) => ({ ...prev, [item.idAnioProyeccion]: value }))}
+                  />
                 ))}
-              </Box>
+              </Stack>
             )}
 
-            <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>* Estos valores corresponden al ejecutado real anual y sí se pueden editar.</Typography>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.25 }}>
-              <Button variant="contained" size="small" onClick={guardarEjecutado} disabled={savingEjecutado} sx={{ borderRadius: 2, fontWeight: 900 }}>
+            <CardNote color="#16a34a" text="Estos valores corresponden al ejecutado real anual y sí se pueden editar." />
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1.5 }}>
+              <Button variant="contained" size="small" onClick={guardarEjecutado} disabled={savingEjecutado} sx={{ borderRadius: 2, fontWeight: 950, boxShadow: "0 10px 18px rgba(37,99,235,.18)" }}>
                 {savingEjecutado ? "Guardando..." : "GUARDAR"}
               </Button>
             </Box>
-          </Paper>
+          </AnnualCard>
         </Box>
       </DialogContent>
 
       <DialogActions sx={{ px: 2.5, pb: 2 }}>
         <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} variant="outlined" sx={{ fontWeight: 900, borderRadius: 2, px: 2.5 }}>CERRAR</Button>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Button
+            variant="outlined"
+            startIcon={<AttachFileRoundedIcon />}
+            onClick={() => setFichaOpen(true)}
+            sx={{ fontWeight: 900, borderRadius: 2.2, px: 3.5, minWidth: 118, height: 42, borderColor: "#1976d2", backgroundColor: "#fff" }}
+          >
+            FICHA
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<InfoRoundedIcon />}
+            onClick={() => setInfoOpen(true)}
+            sx={{ fontWeight: 900, borderRadius: 2.2, px: 3.5, minWidth: 118, height: 42, borderColor: "#1976d2", backgroundColor: "#fff" }}
+          >
+            INFO
+          </Button>
+          <Button onClick={onClose} variant="outlined" sx={{ fontWeight: 900, borderRadius: 2.2, px: 3.5, minWidth: 132, height: 42, color: "#111827", borderColor: "#111827", backgroundColor: "#fff" }}>CERRAR</Button>
+        </Stack>
       </DialogActions>
     </Dialog>
+
+    <AgIndicadorFichaModal
+      open={fichaOpen}
+      onClose={() => setFichaOpen(false)}
+      idAgPoRecoInpr={idAgPoRecoInpr}
+      idIndicadorNombre={idIndicadorNombre}
+      codigoIndicador={codigoIndicadorView}
+      nombreIndicador={nombreIndicadorView}
+      tipoNivel="AG"
+    />
+
+    <AgIndicadorInfoModal
+      open={infoOpen}
+      onClose={() => setInfoOpen(false)}
+      idAgPoRecoInpr={idAgPoRecoInpr}
+      idIndicadorNombre={idIndicadorNombre}
+      codigoIndicador={codigoIndicadorView}
+      nombreIndicador={nombreIndicadorView}
+      tipoNivel="AG"
+    />
+    </>
   );
 }

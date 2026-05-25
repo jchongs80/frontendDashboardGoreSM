@@ -12,6 +12,8 @@ export type DashboardPdrcKpiDto = {
   totalOer: number;
   totalAer: number;
   totalIndicadores: number;
+  totalIndicadoresOer: number;
+  totalIndicadoresAer: number;
   avancePromedio: number;
 };
 
@@ -39,6 +41,9 @@ export type DashboardPdrcDto = {
   idDimension?: number | null;
   idUnidad?: number | null;
   idAnioProyeccion?: number | null;
+  idOer?: number | null;
+  idAer?: number | null;
+  nivelAvance?: string | null;
   kpis: DashboardPdrcKpiDto;
   semaforo: DashboardSemaforoDto;
   jerarquia: DashboardPdrcJerarquiaDto[];
@@ -50,6 +55,9 @@ export type DashboardPdrcFiltros = {
   idDimension?: number;
   idUnidad?: number;
   idAnioProyeccion?: number;
+  idOer?: number;
+  idAer?: number;
+  nivelAvance?: string;
 };
 
 const DashboardPdrcAction = {
@@ -60,6 +68,9 @@ const DashboardPdrcAction = {
     if (filtros?.idDimension != null) qp.append("idDimension", String(filtros.idDimension));
     if (filtros?.idUnidad != null) qp.append("idUnidad", String(filtros.idUnidad));
     if (filtros?.idAnioProyeccion != null) qp.append("idAnioProyeccion", String(filtros.idAnioProyeccion));
+    if (filtros?.idOer != null) qp.append("idOer", String(filtros.idOer));
+    if (filtros?.idAer != null) qp.append("idAer", String(filtros.idAer));
+    if (filtros?.nivelAvance) qp.append("nivelAvance", filtros.nivelAvance);
 
     const url = qp.toString()
       ? `/api/dashboard/pdrc?${qp.toString()}`

@@ -7,6 +7,8 @@ import Home from "../pages/dashboard/Home";
 import DimensionesPage from "../features/catalogos/pages/DimensionesPage";
 import FuenteDatosPage from "../features/catalogos/pages/FuenteDatosPage";
 import InstrumentosPage from "../features/catalogos/pages/InstrumentosPage";
+import PeriodosPage from "../features/catalogos/pages/PeriodosPage";
+import CentroCostosResponsablePoiPage from "../features/catalogos/pages/CentroCostosResponsablePoiPage";
 import TipoIndicadorPage from "../features/catalogos/pages/TipoIndicadorPage";
 import UnidadesMedidaPage from "../features/catalogos/pages/UnidadesMedidaPage";
 import UnidadesOrgPage from "../features/catalogos/pages/UnidadesOrgPage";
@@ -51,50 +53,30 @@ import DashboardComparativoPage from "../features/dashboard/pages/DashboardCompa
 import DashboardPeiPage from "../features/dashboard/pages/DashboardPeiPage";
 import DashboardPeiReportePage from "../features/dashboard/pages/DashboardPeiReportePage";
 import DashboardPoiPage from "../features/dashboard/pages/DashboardPoiPage";
+import DashboardPoiReportePage from "../features/dashboard/pages/DashboardPoiReportePage";
 import DashboardPdrcPage from "../features/dashboard/pages/DashboardPdrcPage";
 import DashboardPrcpPage from "../features/dashboard/pages/DashboardPrcpPage";
 import DashboardPrcpReportePage from "../features/dashboard/pages/DashboardPrcpReportePage";
 import DashboardAgPage from "../features/dashboard/pages/DashboardAgPage";
+import DashboardAgReportePage from "../features/dashboard/pages/DashboardAgReportePage";
 import DashboardPaisajePage from "../features/dashboard/pages/DashboardPaisajePage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Inicio público */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Reporte PEI imprimible: sin DashboardLayout para que el PDF no capture menú/topbar */}
-        <Route
-          path="/dashboard/pei/reporte"
-          element={
-            <RequireAuth>
-              <DashboardPeiReportePage />
-            </RequireAuth>
-          }
-        />
+        {/* Reportes dashboard públicos: sin DashboardLayout para que el PDF/WEB no capture menú/topbar */}
+        <Route path="/dashboard/pei/reporte" element={<DashboardPeiReportePage />} />
+        <Route path="/dashboard/poi/reporte" element={<DashboardPoiReportePage />} />
+        <Route path="/dashboard/prcp/reporte" element={<DashboardPrcpReportePage />} />
+        <Route path="/dashboard/ag/reporte" element={<DashboardAgReportePage />} />
 
-
-        {/* Reporte PRCP imprimible: sin DashboardLayout para que el PDF no capture menú/topbar */}
-        <Route
-          path="/dashboard/prcp/reporte"
-          element={
-            <RequireAuth>
-              <DashboardPrcpReportePage />
-            </RequireAuth>
-          }
-        />
-
-        {/* Protegido */}
-        <Route
-          element={
-            <RequireAuth>
-              <DashboardLayout />
-            </RequireAuth>
-          }
-        >
-          {/* Dashboard */}
+        {/* Dashboard público: no requiere login */}
+        <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardHomePage />} />
           <Route path="/dashboard/comparativo" element={<DashboardComparativoPage />} />
           <Route path="/dashboard/pei" element={<DashboardPeiPage />} />
@@ -103,13 +85,24 @@ export default function App() {
           <Route path="/dashboard/prcp" element={<DashboardPrcpPage />} />
           <Route path="/dashboard/ag" element={<DashboardAgPage />} />
           <Route path="/dashboard/paisaje" element={<DashboardPaisajePage />} />
+        </Route>
 
+        {/* Módulos protegidos: requieren login */}
+        <Route
+          element={
+            <RequireAuth>
+              <DashboardLayout />
+            </RequireAuth>
+          }
+        >
           <Route path="/catalogos/dimensiones" element={<DimensionesPage />} />
           <Route path="/catalogos/fuentes-datos" element={<FuenteDatosPage />} />
           <Route path="/catalogos/instrumentos" element={<InstrumentosPage />} />
+          <Route path="/catalogos/periodos" element={<PeriodosPage />} />
           <Route path="/catalogos/tipos-indicador" element={<TipoIndicadorPage />} />
           <Route path="/catalogos/unidades-medida" element={<UnidadesMedidaPage />} />
           <Route path="/catalogos/unidades-org" element={<UnidadesOrgPage />} />
+          <Route path="/catalogos/cc-responsables-poi" element={<CentroCostosResponsablePoiPage />} />
 
           {/* Planeamiento */}
           <Route path="/planeamiento" element={<Navigate to="/planeamiento/indicadores" replace />} />
@@ -122,23 +115,13 @@ export default function App() {
           <Route path="/planeamiento/acciones" element={<AccionesPage />} />
           <Route path="/planeamiento/centros-costo" element={<UnidadesOrganizacionalesCentrosCostoPage />} />
           <Route path="/planeamiento/poi" element={<UnidadesOrgPage2 />} />
-
-          {/* ✅ Ruta confirmada por ti */}
-          {/* <Route path="/poi/oei-aei/:idOeiAei/ao" element={<PoiOeiAeiAoPage />} /> */}
           <Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />
-          
-          {/* PDRC */}
           <Route path="/planeamiento/pdrc-oer-aer/ue/:idUnidadEjecutora" element={<PdrcOeAePage />} />
           <Route path="/planeamiento/unidades-ejecutoras" element={<UnidadesEjecutorasPage />} />
-          
           <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
-          
           <Route path="/planeamiento/carga-masiva/:tipo" element={<CargaMasivaPage />} />
           <Route path="/planeamiento/pei-oei-aei" element={<PeiOeiAeiPage />} />
-          {/*<Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />*/}
-
           <Route path="/pei/oei-aei" element={<PeiOeiAeiPage />} />
-          
 
           {/* Alineamiento */}
           <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
@@ -167,12 +150,11 @@ export default function App() {
           <Route path="/planeamiento/ag-po-reco-inpr" element={<AgPoRecoInprPage />} />
           <Route path="/planeamiento/prcp-op-pi-mp" element={<PrcpOpPiMpPage />} />
           <Route path="/planeamiento/psj-paisajes" element={<PsjPaisajesPage />} />
-          
           <Route path="/admin/usuarios" element={<UsuariosPage />} />
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

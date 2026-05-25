@@ -12,29 +12,31 @@ import {
   Divider,
   Paper,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import TagRoundedIcon from "@mui/icons-material/TagRounded";
 
 import {
-  PeiOeiAeiVistaAction,
-  type PeiIndicadorFichaArchivoDto,
-} from "../PeiOeiAeiVistaAction";
+  PdrcOerAerVistaAction,
+  type PdrcIndicadorFichaArchivoDto,
+} from "../PdrcOerAerVistaAction";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  idPeiOeiAei: number;
+  idPdrcOerAer: number;
   idIndicadorNombre: number;
   codigoIndicador?: string | null;
   nombreIndicador?: string | null;
-  tipoNivel?: "OEI" | "AEI" | string | null;
+  tipoNivel?: "OER" | "AER" | string | null;
 };
 
 function safeText(value?: string | null): string {
@@ -69,10 +71,33 @@ function validarArchivo(file: File): string {
   return "";
 }
 
-export default function PeiIndicadorFichaModal({
+const fieldSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.96)",
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(0,0,0,0.18)",
+  },
+  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.45)",
+  },
+  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(37,99,235,0.7)",
+  },
+} as const;
+
+const sectionCardSx = {
+  borderRadius: 3,
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.92)",
+  boxShadow: "0 10px 24px rgba(0,0,0,.06)",
+} as const;
+
+export default function PdrcIndicadorFichaModal({
   open,
   onClose,
-  idPeiOeiAei,
+  idPdrcOerAer,
   idIndicadorNombre,
   codigoIndicador,
   nombreIndicador,
@@ -92,14 +117,27 @@ export default function PeiIndicadorFichaModal({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
 
-  const [ficha, setFicha] = useState<PeiIndicadorFichaArchivoDto | null>(null);
+  const [ficha, setFicha] = useState<PdrcIndicadorFichaArchivoDto | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const codigoView = useMemo(() => safeText(codigoIndicador), [codigoIndicador]);
   const nombreView = useMemo(() => safeText(nombreIndicador), [nombreIndicador]);
 
+  const archivoMostrado = selectedFile
+    ? selectedFile.name
+    : ficha?.nombreOriginal ?? "Aún no se ha adjuntado ficha";
+
+  const tamanioMostrado = selectedFile
+    ? formatBytes(selectedFile.size)
+    : ficha
+      ? formatBytes(ficha.tamanioBytes)
+      : "—";
+
+  const labelArchivoMostrado = selectedFile ? "Archivo seleccionado para guardar" : "Archivo actual";
+  const labelTamanioMostrado = selectedFile ? "Tamaño seleccionado" : "Tamaño";
+
   const loadFicha = async () => {
-    if (!idPeiOeiAei || !idIndicadorNombre) {
+    if (!idPdrcOerAer || !idIndicadorNombre) {
       setFicha(null);
       return;
     }
@@ -109,8 +147,8 @@ export default function PeiIndicadorFichaModal({
     setSuccessMsg("");
 
     try {
-      const data = await PeiOeiAeiVistaAction.getIndicadorFichaArchivo(
-        idPeiOeiAei,
+      const data = await PdrcOerAerVistaAction.getIndicadorFichaArchivo(
+        idPdrcOerAer,
         idIndicadorNombre
       );
 
@@ -151,7 +189,7 @@ export default function PeiIndicadorFichaModal({
     setSelectedFile(null);
     cerrarPreview();
     void loadFicha();
-  }, [open, idPeiOeiAei, idIndicadorNombre]);
+  }, [open, idPdrcOerAer, idIndicadorNombre]);
 
   const onSelectFile = (file: File | null) => {
     setErrorMsg("");
@@ -189,8 +227,8 @@ export default function PeiIndicadorFichaModal({
     setSuccessMsg("");
 
     try {
-      await PeiOeiAeiVistaAction.guardarIndicadorFichaArchivo(
-        idPeiOeiAei,
+      await PdrcOerAerVistaAction.guardarIndicadorFichaArchivo(
+        idPdrcOerAer,
         idIndicadorNombre,
         selectedFile
       );
@@ -221,8 +259,8 @@ export default function PeiIndicadorFichaModal({
     setSuccessMsg("");
 
     try {
-      await PeiOeiAeiVistaAction.descargarIndicadorFichaArchivo(
-        idPeiOeiAei,
+      await PdrcOerAerVistaAction.descargarIndicadorFichaArchivo(
+        idPdrcOerAer,
         idIndicadorNombre,
         ficha.nombreOriginal ?? "ficha_indicador"
       );
@@ -244,8 +282,8 @@ export default function PeiIndicadorFichaModal({
     setSuccessMsg("");
 
     try {
-      const result = await PeiOeiAeiVistaAction.obtenerIndicadorFichaArchivoBlob(
-        idPeiOeiAei,
+      const result = await PdrcOerAerVistaAction.obtenerIndicadorFichaArchivoBlob(
+        idPdrcOerAer,
         idIndicadorNombre,
         ficha.nombreOriginal ?? "ficha_indicador"
       );
@@ -295,75 +333,104 @@ export default function PeiIndicadorFichaModal({
         maxWidth={false}
         PaperProps={{
           sx: {
-            width: { xs: "calc(100vw - 24px)", sm: 620, md: 680 },
+            width: { xs: "calc(100vw - 24px)", sm: 620 },
             maxWidth: "calc(100vw - 24px)",
             borderRadius: 4,
             overflow: "hidden",
             background:
               "linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(248,251,255,.96) 100%)",
-            boxShadow: "0 24px 70px rgba(15,23,42,.22)",
+            boxShadow: "0 24px 70px rgba(15,23,42,.24)",
           },
         }}
       >
         <DialogTitle
           sx={{
             px: 3,
-            py: 2,
+            py: 2.1,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderBottom: "1px solid rgba(15,23,42,.08)",
             background:
-              "linear-gradient(90deg, rgba(239,246,255,.95) 0%, rgba(255,255,255,.98) 55%, rgba(255,255,255,.95) 100%)",
+              "linear-gradient(90deg, rgba(240,253,244,.95) 0%, rgba(255,255,255,.98) 52%, rgba(255,255,255,.94) 100%)",
           }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={1.4} alignItems="center" sx={{ minWidth: 0 }}>
             <Box
               sx={{
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                color: "#2563eb",
-                background: "linear-gradient(135deg, rgba(219,234,254,.95), rgba(255,255,255,.92))",
-                border: "1px solid rgba(37,99,235,.22)",
+                color: "#16a34a",
+                background: "linear-gradient(135deg, rgba(220,252,231,.95), rgba(255,255,255,.92))",
+                border: "1px solid rgba(34,197,94,.22)",
+                boxShadow: "0 12px 26px rgba(34,197,94,.12)",
                 flexShrink: 0,
               }}
             >
               <AttachFileRoundedIcon />
             </Box>
+
             <Box sx={{ minWidth: 0 }}>
-              <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-                <Typography sx={{ fontSize: 20, fontWeight: 950, letterSpacing: "-0.03em", color: "#0f172a" }}>
-                  Ficha del Indicador PEI
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography sx={{ fontWeight: 950, fontSize: 20, letterSpacing: "-0.03em", color: "#0f172a" }}>
+                  Ficha del Indicador PDRC
                 </Typography>
                 <Chip
                   size="small"
                   variant="outlined"
                   label={tipoNivel ?? "Detalle"}
-                  sx={{ height: 24, borderRadius: 999, fontWeight: 950, color: "#15803d", background: "rgba(240,253,244,.9)", borderColor: "rgba(34,197,94,.25)" }}
+                  sx={{
+                    height: 24,
+                    borderRadius: 999,
+                    fontWeight: 950,
+                    color: "#15803d",
+                    borderColor: "rgba(34,197,94,.25)",
+                    background: "rgba(220,252,231,.75)",
+                  }}
                 />
               </Stack>
-              <Typography sx={{ mt: 0.25, fontSize: 12.5, color: "#64748b", fontWeight: 650 }} noWrap>
+              <Typography sx={{ color: "#64748b", fontSize: 12.5, mt: 0.25, fontWeight: 600 }} noWrap>
                 Indicador: {nombreView}
               </Typography>
             </Box>
           </Stack>
-          <Button onClick={onClose} sx={{ minWidth: "auto", p: 0.7, color: "#475569", borderRadius: 2 }}>
+
+          <Button
+            onClick={onClose}
+            sx={{
+              minWidth: "auto",
+              p: 0.8,
+              color: "#475569",
+              borderRadius: 2,
+            }}
+          >
             <CloseRoundedIcon />
           </Button>
         </DialogTitle>
+
+        <Divider />
 
         <DialogContent
           sx={{
             px: { xs: 2.2, md: 3 },
             py: 3,
-            background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.86))",
+            background: "linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.88))",
           }}
         >
-          {errorMsg ? <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>{errorMsg}</Alert> : null}
-          {successMsg ? <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{successMsg}</Alert> : null}
+          {errorMsg ? (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+              {errorMsg}
+            </Alert>
+          ) : null}
+
+          {successMsg ? (
+            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+              {successMsg}
+            </Alert>
+          ) : null}
 
           <Paper
             elevation={0}
@@ -434,41 +501,50 @@ export default function PeiIndicadorFichaModal({
             </Box>
           </Paper>
 
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.4,
-              borderRadius: 3,
-              border: "1px solid rgba(191,219,254,.9)",
-              background: "linear-gradient(180deg, rgba(239,246,255,.55), rgba(255,255,255,.95))",
-              boxShadow: "0 14px 34px rgba(15,23,42,.06)",
-            }}
-          >
-            <Stack direction="row" spacing={1.1} alignItems="center" sx={{ mb: 1.5 }}>
-              <AttachFileRoundedIcon sx={{ color: "#2563eb" }} />
-              <Typography sx={{ fontSize: 16, color: "#0f172a", fontWeight: 950 }}>Adjuntar ficha del indicador</Typography>
+          <Paper elevation={0} sx={{ ...sectionCardSx, p: { xs: 2.1, md: 2.5 }, border: "1px solid rgba(191,219,254,.9)", background: "rgba(255,255,255,.92)" }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+              <AttachFileRoundedIcon fontSize="small" />
+              <Typography sx={{ fontWeight: 950 }}>Adjuntar ficha del indicador</Typography>
             </Stack>
 
             {loading ? (
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
                 <CircularProgress size={18} />
-                <Typography sx={{ fontSize: 13, color: "#64748b", fontWeight: 700 }}>Cargando ficha...</Typography>
+                <Typography variant="body2">Cargando ficha...</Typography>
               </Stack>
             ) : (
-              <Stack spacing={1.6}>
-                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 150px" }, gap: 1.4 }}>
-                  <ReadonlyBox label="Archivo actual" value={ficha?.nombreOriginal ?? "Aún no se ha adjuntado ficha"} />
-                  <ReadonlyBox label="Tamaño" value={ficha ? formatBytes(ficha.tamanioBytes) : "—"} />
-                </Box>
+              <Stack spacing={1.4}>
+                <TextField
+                  label={labelArchivoMostrado}
+                  size="small"
+                  fullWidth
+                  value={archivoMostrado}
+                  sx={{
+                    ...fieldSx,
+                    ...(selectedFile
+                      ? {
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2.5,
+                            backgroundColor: "rgba(239,246,255,0.98)",
+                            fontWeight: 800,
+                          },
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "rgba(37,99,235,0.65)",
+                          },
+                        }
+                      : {}),
+                  }}
+                  InputProps={{ readOnly: true }}
+                />
 
-                {selectedFile ? (
-                  <Box sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(37,99,235,.18)", background: "rgba(239,246,255,.8)" }}>
-                    <Typography sx={{ fontSize: 12, color: "#2563eb", fontWeight: 950 }}>Archivo seleccionado para guardar</Typography>
-                    <Typography sx={{ mt: 0.2, fontSize: 13, color: "#0f172a", fontWeight: 750, wordBreak: "break-word" }}>
-                      {selectedFile.name} ({formatBytes(selectedFile.size)})
-                    </Typography>
-                  </Box>
-                ) : null}
+                <TextField
+                  label={labelTamanioMostrado}
+                  size="small"
+                  fullWidth
+                  value={tamanioMostrado}
+                  sx={fieldSx}
+                  InputProps={{ readOnly: true }}
+                />
 
                 <Box>
                   <input
@@ -476,51 +552,101 @@ export default function PeiIndicadorFichaModal({
                     type="file"
                     accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     style={{ display: "none" }}
+                    onClick={(e) => {
+                      // Permite volver a seleccionar el mismo archivo y disparar onChange nuevamente.
+                      (e.currentTarget as HTMLInputElement).value = "";
+                    }}
                     onChange={(e) => onSelectFile(e.target.files?.[0] ?? null)}
                   />
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} alignItems={{ sm: "center" }}>
+
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    alignItems={{ sm: "center" }}
+                  >
                     <Button
                       variant="outlined"
                       startIcon={<CloudUploadRoundedIcon />}
-                      onClick={() => {
-                        if (inputRef.current) inputRef.current.value = "";
-                        inputRef.current?.click();
-                      }}
+                      onClick={() => inputRef.current?.click()}
                       disabled={saving || downloading || previewLoading}
-                      sx={{ height: 40, borderRadius: 2.2, fontWeight: 950 }}
+                      sx={{ borderRadius: 2, fontWeight: 900 }}
                     >
-                      Seleccionar archivo
+                      SELECCIONAR ARCHIVO
                     </Button>
-                    <Typography sx={{ color: "#64748b", fontSize: 12.5, fontWeight: 650, wordBreak: "break-word" }}>
-                      PDF, XLS o XLSX. Máximo 20 MB.
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: selectedFile ? "primary.main" : "text.secondary",
+                        fontWeight: selectedFile ? 900 : 400,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {selectedFile
+                        ? `Archivo listo para guardar: ${selectedFile.name} (${formatBytes(selectedFile.size)})`
+                        : "PDF, XLS o XLSX. Máximo 20 MB."}
                     </Typography>
                   </Stack>
                 </Box>
 
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="flex-end" sx={{ pt: 0.4 }}>
-                  <Button variant="outlined" startIcon={<VisibilityRoundedIcon />} onClick={() => void visualizarFicha()} disabled={loading || saving || downloading || previewLoading || !ficha} sx={{ height: 40, borderRadius: 2.2, fontWeight: 950 }}>
-                    {previewLoading ? "Visualizando..." : "Visualizar"}
+                {selectedFile ? (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    Archivo seleccionado: <b>{selectedFile.name}</b>. Presione <b>GUARDAR</b> para adjuntarlo al indicador.
+                  </Alert>
+                ) : null}
+
+                <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 0.5 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<VisibilityRoundedIcon />}
+                    onClick={() => void visualizarFicha()}
+                    disabled={loading || saving || downloading || previewLoading || !ficha}
+                    sx={{ borderRadius: 2, fontWeight: 900 }}
+                  >
+                    {previewLoading ? "Visualizando..." : "VISUALIZAR"}
                   </Button>
-                  <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => void descargarFicha()} disabled={loading || saving || downloading || previewLoading || !ficha} sx={{ height: 40, borderRadius: 2.2, fontWeight: 950 }}>
-                    {downloading ? "Descargando..." : "Descargar"}
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadRoundedIcon />}
+                    onClick={() => void descargarFicha()}
+                    disabled={loading || saving || downloading || previewLoading || !ficha}
+                    sx={{ borderRadius: 2, fontWeight: 900 }}
+                  >
+                    {downloading ? "Descargando..." : "DESCARGAR"}
                   </Button>
-                  <Button variant="contained" onClick={guardarFicha} disabled={saving || downloading || previewLoading || !selectedFile} sx={{ height: 40, borderRadius: 2.2, fontWeight: 950, boxShadow: "0 12px 22px rgba(37,99,235,.24)" }}>
-                    {saving ? "Guardando..." : "Guardar"}
+
+                  <Button
+                    variant="contained"
+                    onClick={guardarFicha}
+                    disabled={saving || downloading || previewLoading || !selectedFile}
+                    sx={{ borderRadius: 2, fontWeight: 900 }}
+                  >
+                    {saving ? "Guardando..." : "GUARDAR"}
                   </Button>
                 </Stack>
               </Stack>
             )}
           </Paper>
 
-          <Typography sx={{ color: "#64748b", display: "block", mt: 1.3, fontSize: 11.5, fontWeight: 650 }}>
-            * La ficha se guarda por indicador dentro del OEI/AEI seleccionado. Al subir una nueva ficha, reemplaza la anterior.
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", display: "block", mt: 1.2 }}
+          >
+            * La ficha se guarda por indicador dentro del OER/AER seleccionado. Al subir una nueva
+            ficha, reemplaza la anterior.
           </Typography>
         </DialogContent>
 
-        <DialogActions sx={{ px: { xs: 2.2, md: 3 }, py: 2.2, borderTop: "1px solid rgba(15,23,42,.08)", background: "rgba(255,255,255,.9)" }}>
+        <DialogActions sx={{ px: 2.5, pb: 2 }}>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={onClose} variant="outlined" sx={{ minWidth: 130, height: 42, fontWeight: 900, borderRadius: 2.2 }}>
-            Cerrar
+
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{ fontWeight: 900, borderRadius: 2, px: 2.5 }}
+          >
+            CERRAR
           </Button>
         </DialogActions>
       </Dialog>
@@ -530,36 +656,78 @@ export default function PeiIndicadorFichaModal({
         onClose={cerrarPreview}
         fullWidth
         maxWidth="lg"
-        PaperProps={{ sx: { borderRadius: 4, overflow: "hidden", height: { xs: "85vh", md: "90vh" } } }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            overflow: "hidden",
+            height: { xs: "85vh", md: "90vh" },
+          },
+        }}
       >
         <DialogTitle
           sx={{
-            px: 2.5,
-            py: 1.6,
+            py: 1.4,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid rgba(15,23,42,.08)",
-            background: "linear-gradient(90deg, rgba(239,246,255,.95), rgba(255,255,255,.98))",
+            background:
+              "linear-gradient(180deg, rgba(27,111,238,0.10) 0%, rgba(27,111,238,0) 100%)",
           }}
         >
-          <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
-            <VisibilityRoundedIcon fontSize="small" sx={{ color: "#2563eb" }} />
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <VisibilityRoundedIcon fontSize="small" />
+
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 950, lineHeight: 1.2 }}>Visualizar ficha del indicador</Typography>
-              <Typography sx={{ color: "#64748b", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: { xs: 260, sm: 650 } }} title={previewFileName}>
+              <Typography sx={{ fontWeight: 950, lineHeight: 1.2 }}>
+                Visualizar ficha del indicador
+              </Typography>
+
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: 12,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxWidth: { xs: 260, sm: 650 },
+                }}
+                title={previewFileName}
+              >
                 {previewFileName}
               </Typography>
             </Box>
           </Stack>
-          <Button onClick={cerrarPreview} sx={{ minWidth: "auto", p: 0.7, color: "#475569", borderRadius: 2 }}>
+
+          <Button
+            onClick={cerrarPreview}
+            sx={{
+              minWidth: "auto",
+              p: 0.5,
+              color: "text.secondary",
+              borderRadius: 2,
+            }}
+          >
             <CloseRoundedIcon />
           </Button>
         </DialogTitle>
 
+        <Divider />
+
         <DialogContent sx={{ p: 0, height: "100%" }}>
           {previewUrl ? (
-            <Box component="iframe" src={previewUrl} title={previewFileName || "Ficha del indicador"} sx={{ width: "100%", height: "100%", minHeight: { xs: "70vh", md: "78vh" }, border: 0, display: "block" }} />
+            <Box
+              component="iframe"
+              src={previewUrl}
+              title={previewFileName || "Ficha del indicador"}
+              sx={{
+                width: "100%",
+                height: "100%",
+                minHeight: { xs: "70vh", md: "78vh" },
+                border: 0,
+                display: "block",
+              }}
+            />
           ) : (
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 2 }}>
               <CircularProgress size={18} />
@@ -569,16 +737,5 @@ export default function PeiIndicadorFichaModal({
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function ReadonlyBox({ label, value }: { label: string; value: string }) {
-  return (
-    <Box>
-      <Typography sx={{ fontSize: 12, color: "#64748b", fontWeight: 850, mb: 0.55 }}>{label}</Typography>
-      <Box sx={{ minHeight: 42, px: 1.5, py: 1, borderRadius: 2, border: "1px solid rgba(148,163,184,.34)", background: "rgba(255,255,255,.95)", display: "flex", alignItems: "center" }}>
-        <Typography sx={{ fontSize: 13, color: "#0f172a", fontWeight: 750, lineHeight: 1.35, wordBreak: "break-word" }}>{value}</Typography>
-      </Box>
-    </Box>
   );
 }

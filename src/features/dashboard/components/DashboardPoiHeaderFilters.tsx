@@ -19,17 +19,26 @@ type Props = {
   periodos: OptionItem[];
   poiAnios: OptionItem[];
   meses?: OptionItem[];
+  unidadesEjecutoras?: OptionItem[];
   onChange: (value: DashboardPoiHeaderFiltersValue) => void;
 };
 
 export default function DashboardPoiHeaderFilters(props: Props): React.ReactElement {
-  const { value, periodos, poiAnios, meses = [], onChange } = props;
+  const {
+    value,
+    periodos,
+    poiAnios,
+    meses = [],
+    unidadesEjecutoras = [],
+    onChange,
+  } = props;
 
   function handlePeriodoChange(event: SelectChangeEvent<number | string>) {
     const raw = event.target.value;
     onChange({
       ...value,
       idPeriodo: raw === "" ? null : Number(raw),
+      idUnidadEjecutora: null,
     });
   }
 
@@ -38,6 +47,7 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
     onChange({
       ...value,
       idPoiAnio: raw === "" ? null : Number(raw),
+      idUnidadEjecutora: null,
     });
   }
 
@@ -49,6 +59,15 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
     });
   }
 
+  function handleUnidadEjecutoraChange(event: SelectChangeEvent<number | string>) {
+    const raw = event.target.value;
+    onChange({
+      ...value,
+      idUnidadEjecutora: raw === "" ? null : Number(raw),
+    });
+  }
+
+
   return (
     <Paper
       elevation={0}
@@ -57,8 +76,9 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
         borderRadius: 3,
         border: "1px solid",
         borderColor: "divider",
-        boxShadow: "0 10px 24px rgba(0,0,0,.05)",
+        boxShadow: "0 10px 24px rgba(15,23,42,.05)",
         mb: 2.2,
+        background: "linear-gradient(180deg, #ffffff 0%, #fbfdff 100%)",
       }}
     >
       <Stack
@@ -66,7 +86,7 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
         spacing={2}
         alignItems={{ xs: "stretch", md: "center" }}
       >
-        <Box sx={{ minWidth: { xs: "100%", md: 220 } }}>
+        <Box sx={{ minWidth: { xs: "100%", md: 210 } }}>
           <FormControl fullWidth size="small">
             <InputLabel id="dashboard-poi-periodo-label">Período</InputLabel>
             <Select
@@ -85,7 +105,7 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
           </FormControl>
         </Box>
 
-        <Box sx={{ minWidth: { xs: "100%", md: 220 } }}>
+        <Box sx={{ minWidth: { xs: "100%", md: 160 } }}>
           <FormControl fullWidth size="small">
             <InputLabel id="dashboard-poi-anio-label">Año POI</InputLabel>
             <Select
@@ -104,7 +124,7 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
           </FormControl>
         </Box>
 
-        <Box sx={{ minWidth: { xs: "100%", md: 180 } }}>
+        <Box sx={{ minWidth: { xs: "100%", md: 150 } }}>
           <FormControl fullWidth size="small">
             <InputLabel id="dashboard-poi-mes-label">Mes</InputLabel>
             <Select
@@ -115,6 +135,25 @@ export default function DashboardPoiHeaderFilters(props: Props): React.ReactElem
             >
               <MenuItem value="">Todos</MenuItem>
               {meses.map((item) => (
+                <MenuItem key={String(item.value)} value={item.value}>
+                  {item.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box sx={{ minWidth: { xs: "100%", md: 420 }, flex: 1 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="dashboard-poi-ue-label">Unidad Ejecutora por OEI</InputLabel>
+            <Select
+              labelId="dashboard-poi-ue-label"
+              value={value.idUnidadEjecutora ?? ""}
+              label="Unidad Ejecutora por OEI"
+              onChange={handleUnidadEjecutoraChange}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {unidadesEjecutoras.map((item) => (
                 <MenuItem key={String(item.value)} value={item.value}>
                   {item.label}
                 </MenuItem>

@@ -8,6 +8,7 @@ import {
   Collapse,
   Divider,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -23,9 +24,13 @@ import {
 
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 
 import { useNavigate } from "react-router-dom";
 import {
@@ -33,6 +38,7 @@ import {
   type PdrcPeriodoDto,
   type PdrcDimensionDto,
   type PdrcUnidadOrgDto,
+  type PdrcObjetivoDto,
   type PdrcOerAerMasterDto,
   type PdrcOerAerDetailDto,
 } from "../PdrcOerAerVistaAction";
@@ -62,6 +68,29 @@ function safeText(value?: string | null): string {
   return txt.length === 0 ? "—" : txt;
 }
 
+function nivelPalette(tipoNivel?: string | null) {
+  const nivel = (tipoNivel ?? "").toUpperCase();
+  if (nivel === "OER") {
+    return {
+      main: "#7c3aed",
+      soft: "rgba(124,58,237,.10)",
+      soft2: "rgba(124,58,237,.045)",
+      border: "rgba(124,58,237,.28)",
+      label: "OER",
+      detailTitle: "Indicadores del OER",
+    };
+  }
+
+  return {
+    main: "#2563eb",
+    soft: "rgba(37,99,235,.10)",
+    soft2: "rgba(37,99,235,.045)",
+    border: "rgba(37,99,235,.28)",
+    label: "AER",
+    detailTitle: "Indicadores del AER",
+  };
+}
+
 export default function PdrcOerAerPage(): React.ReactElement {
   const navigate = useNavigate();
 
@@ -71,10 +100,12 @@ export default function PdrcOerAerPage(): React.ReactElement {
   const [periodos, setPeriodos] = useState<PdrcPeriodoDto[]>([]);
   const [dimensiones, setDimensiones] = useState<PdrcDimensionDto[]>([]);
   const [unidades, setUnidades] = useState<PdrcUnidadOrgDto[]>([]);
+  const [objetivos, setObjetivos] = useState<PdrcObjetivoDto[]>([]);
 
   const [idPeriodoSel, setIdPeriodoSel] = useState<number>(0);
   const [idDimensionSel, setIdDimensionSel] = useState<number>(0);
   const [idUnidadSel, setIdUnidadSel] = useState<number>(0);
+  const [idObjetivoSel, setIdObjetivoSel] = useState<number>(0);
 
   const [rows, setRows] = useState<PdrcOerAerMasterDto[]>([]);
   const [qSearch, setQSearch] = useState<string>("");
@@ -97,29 +128,36 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
   const periodoSelectedObj = useMemo(
     () => periodos.find((x) => x.idPeriodo === idPeriodoSel) ?? null,
-    [periodos, idPeriodoSel]
+    [periodos, idPeriodoSel],
   );
 
   const dimensionSelectedObj = useMemo(
     () => dimensiones.find((x) => x.idDimension === idDimensionSel) ?? null,
-    [dimensiones, idDimensionSel]
+    [dimensiones, idDimensionSel],
   );
 
   const unidadSelectedObj = useMemo(
     () => unidades.find((x) => x.idUnidad === idUnidadSel) ?? null,
-    [unidades, idUnidadSel]
+    [unidades, idUnidadSel],
+  );
+
+  const objetivoSelectedObj = useMemo(
+    () => objetivos.find((x) => x.idObjetivo === idObjetivoSel) ?? null,
+    [objetivos, idObjetivoSel],
   );
 
   const rowsFiltered = useMemo(() => {
     const q = qSearch.trim().toLowerCase();
-    if (!q) return rows;
 
-    return rows.filter((r) =>
-      `${r.tipoNivel ?? ""} ${r.codigoOer ?? ""} ${r.enunciadoOer ?? ""} ${r.codigoAer ?? ""} ${r.enunciadoAer ?? ""}`
+    return rows.filter((r) => {
+      if (idObjetivoSel && r.idObjetivo !== idObjetivoSel) return false;
+      if (!q) return true;
+
+      return `${r.tipoNivel ?? ""} ${r.codigoOer ?? ""} ${r.enunciadoOer ?? ""} ${r.codigoAer ?? ""} ${r.enunciadoAer ?? ""}`
         .toLowerCase()
-        .includes(q)
-    );
-  }, [rows, qSearch]);
+        .includes(q);
+    });
+  }, [rows, qSearch, idObjetivoSel]);
 
   const oerCount = useMemo(() => {
     const ids = new Set(rows.map((x) => x.idObjetivo));
@@ -127,26 +165,33 @@ export default function PdrcOerAerPage(): React.ReactElement {
   }, [rows]);
 
   const aerCount = useMemo(() => {
-    return rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AER").length;
+    return rows.filter((x) => (x.tipoNivel ?? "").toUpperCase() === "AER")
+      .length;
   }, [rows]);
 
   const totalRows = useMemo(() => rows.length, [rows]);
 
-  const getIndicadoresCount = (row: PdrcOerAerMasterDto): number => row.cantidadIndicadores ?? 0;
+  const getIndicadoresCount = (row: PdrcOerAerMasterDto): number =>
+    row.cantidadIndicadores ?? 0;
 
   const filterByTexto = <
-    T extends { codigo: string | null; descripcion?: string | null; nombre?: string | null }
+    T extends {
+      codigo: string | null;
+      descripcion?: string | null;
+      nombre?: string | null;
+      enunciado?: string | null;
+    },
   >(
     options: readonly T[],
-    inputValue: string
+    inputValue: string,
   ): T[] => {
     const q = inputValue.trim().toLowerCase();
     if (!q) return options.slice() as T[];
 
     return options.filter((o) =>
-      `${o.codigo ?? ""} ${o.descripcion ?? ""} ${o.nombre ?? ""}`
+      `${o.codigo ?? ""} ${o.descripcion ?? ""} ${o.nombre ?? ""} ${o.enunciado ?? ""}`
         .toLowerCase()
-        .includes(q)
+        .includes(q),
     ) as T[];
   };
 
@@ -176,7 +221,11 @@ export default function PdrcOerAerPage(): React.ReactElement {
     }
   }
 
-  async function loadTabla(idPeriodo: number, idDimension: number, idUnidad: number) {
+  async function loadTabla(
+    idPeriodo: number,
+    idDimension: number,
+    idUnidad: number,
+  ) {
     if (!idPeriodo || !idDimension || !idUnidad) {
       setRows([]);
       setOpenRowMap({});
@@ -186,7 +235,11 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
     setLoadingTabla(true);
     try {
-      const data = await PdrcOerAerVistaAction.getMaster(idPeriodo, idDimension, idUnidad);
+      const data = await PdrcOerAerVistaAction.getMaster(
+        idPeriodo,
+        idDimension,
+        idUnidad,
+      );
       setRows(data ?? []);
       setOpenRowMap({});
       setDetailMap({});
@@ -197,6 +250,32 @@ export default function PdrcOerAerPage(): React.ReactElement {
       setDetailMap({});
     } finally {
       setLoadingTabla(false);
+    }
+  }
+
+  async function loadObjetivosFiltro(
+    idPeriodo: number,
+    idDimension: number,
+    idUnidad: number,
+  ) {
+    if (!idPeriodo || !idDimension || !idUnidad) {
+      setObjetivos([]);
+      setIdObjetivoSel(0);
+      return;
+    }
+
+    try {
+      const data = await PdrcOerAerVistaAction.getObjetivosFiltro(
+        idPeriodo,
+        idDimension,
+        idUnidad,
+      );
+      setObjetivos(data ?? []);
+      setIdObjetivoSel(0);
+    } catch (e) {
+      console.error(e);
+      setObjetivos([]);
+      setIdObjetivoSel(0);
     }
   }
 
@@ -223,7 +302,8 @@ export default function PdrcOerAerPage(): React.ReactElement {
         [idKey]: { loading: false, data: data ?? [] },
       }));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "No se pudo cargar el detalle.";
+      const msg =
+        e instanceof Error ? e.message : "No se pudo cargar el detalle.";
       setDetailMap((prev) => ({
         ...prev,
         [idKey]: { loading: false, data: [], error: msg },
@@ -245,7 +325,8 @@ export default function PdrcOerAerPage(): React.ReactElement {
         [idPdrcOerAer]: { loading: false, data: data ?? [] },
       }));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "No se pudo recargar el detalle.";
+      const msg =
+        e instanceof Error ? e.message : "No se pudo recargar el detalle.";
       setDetailMap((prev) => ({
         ...prev,
         [idPdrcOerAer]: { loading: false, data: [], error: msg },
@@ -257,7 +338,10 @@ export default function PdrcOerAerPage(): React.ReactElement {
     await loadTabla(idPeriodoSel, idDimensionSel, idUnidadSel);
   }
 
-  function openIndicadorModal(row: PdrcOerAerMasterDto, indicador: PdrcOerAerDetailDto) {
+  function openIndicadorModal(
+    row: PdrcOerAerMasterDto,
+    indicador: PdrcOerAerDetailDto,
+  ) {
     setIndicadorModal({
       open: true,
       idPdrcOerAer: row.idPdrcOerAer,
@@ -278,6 +362,7 @@ export default function PdrcOerAerPage(): React.ReactElement {
 
   useEffect(() => {
     if (!loading && idPeriodoSel && idDimensionSel && idUnidadSel) {
+      void loadObjetivosFiltro(idPeriodoSel, idDimensionSel, idUnidadSel);
       void loadTabla(idPeriodoSel, idDimensionSel, idUnidadSel);
     }
   }, [loading, idPeriodoSel, idDimensionSel, idUnidadSel]);
@@ -285,55 +370,131 @@ export default function PdrcOerAerPage(): React.ReactElement {
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <CircularProgress size={22} />
-          <Typography>Cargando...</Typography>
-        </Stack>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            borderRadius: 4,
+            border: "1px solid",
+            borderColor: "divider",
+            boxShadow: "0 18px 45px rgba(15,23,42,.08)",
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <CircularProgress size={22} />
+            <Typography sx={{ fontWeight: 700 }}>
+              Cargando información PDRC...
+            </Typography>
+          </Stack>
+        </Paper>
       </Box>
     );
   }
 
-  const sxStickyActionHeader = {
-    position: "sticky" as const,
-    right: 0,
-    zIndex: 3,
-    bgcolor: "background.paper",
-    boxShadow: "-8px 0 12px rgba(0,0,0,.05)",
-  };
-
-  const sxStickyActionCell = {
-    position: "sticky" as const,
-    right: 0,
-    zIndex: 2,
-    bgcolor: "background.paper",
-    boxShadow: "-8px 0 12px rgba(0,0,0,.05)",
-  };
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <IconButton onClick={() => navigate(-1)} aria-label="Volver">
-            <ArrowBackRoundedIcon />
-          </IconButton>
+    <Box
+      sx={{
+        px: { xs: 2, md: 3.5 },
+        py: { xs: 2, md: 3 },
+        background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+      }}
+    >
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        spacing={2}
+        sx={{ mb: 2 }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Tooltip title="Volver" arrow>
+            <IconButton
+              onClick={() => navigate(-1)}
+              aria-label="Volver"
+              sx={{
+                width: 54,
+                height: 54,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                color: "primary.main",
+                boxShadow: "0 10px 28px rgba(15,23,42,.10)",
+                transition: "all .18s ease",
+                "&:hover": {
+                  transform: "translateY(-1px)",
+                  bgcolor: "rgba(37,99,235,.08)",
+                },
+              }}
+            >
+              <ArrowBackRoundedIcon />
+            </IconButton>
+          </Tooltip>
 
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 950,
+                letterSpacing: "-.04em",
+                lineHeight: 1.05,
+              }}
+            >
               PDRC: OER / AER
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Vista por Periodo, Dimensión y Unidad Organizacional
             </Typography>
           </Box>
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={`OER: ${oerCount}`} variant="outlined" />
-          <Chip label={`AER: ${aerCount}`} variant="outlined" />
-          <Chip label={`Registros: ${totalRows}`} variant="outlined" />
+          <Chip
+            label={`OER: ${oerCount}`}
+            variant="outlined"
+            sx={{
+              height: 34,
+              fontWeight: 900,
+              color: "success.dark",
+              borderColor: "rgba(22,163,74,.45)",
+              bgcolor: "rgba(22,163,74,.06)",
+            }}
+          />
+          <Chip
+            label={`AER: ${aerCount}`}
+            variant="outlined"
+            sx={{
+              height: 34,
+              fontWeight: 900,
+              color: "#6d28d9",
+              borderColor: "rgba(124,58,237,.45)",
+              bgcolor: "rgba(124,58,237,.06)",
+            }}
+          />
+          <Chip
+            label={`Registros: ${totalRows}`}
+            variant="outlined"
+            sx={{ height: 34, fontWeight: 900, bgcolor: "background.paper" }}
+          />
 
           <Tooltip title="Refrescar" arrow>
-            <IconButton onMouseDown={(e) => e.currentTarget.blur()} onClick={onRefresh}>
+            <IconButton
+              onMouseDown={(e) => e.currentTarget.blur()}
+              onClick={onRefresh}
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                boxShadow: "0 10px 28px rgba(15,23,42,.08)",
+                "&:hover": {
+                  transform: "translateY(-1px)",
+                  bgcolor: "action.hover",
+                },
+              }}
+            >
               <RefreshRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -341,375 +502,605 @@ export default function PdrcOerAerPage(): React.ReactElement {
       </Stack>
 
       <Paper
+        elevation={0}
         sx={{
-          mt: 2,
-          p: 2,
-          borderRadius: 3,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 4,
           border: "1px solid",
-          borderColor: "divider",
-          boxShadow: "0 10px 30px rgba(0,0,0,.06)",
+          borderColor: "rgba(148,163,184,.35)",
+          boxShadow: "0 18px 45px rgba(15,23,42,.08)",
+          bgcolor: "rgba(255,255,255,.96)",
         }}
       >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ width: "100%", mb: 2 }}>
+        <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              width: 38,
+              height: 38,
+              borderRadius: 2.5,
+              display: "grid",
+              placeItems: "center",
+              bgcolor: "rgba(37,99,235,.10)",
+              color: "primary.main",
+            }}
+          >
+            <FilterAltRoundedIcon fontSize="small" />
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 950, lineHeight: 1.1 }}>
+              Filtros de búsqueda
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Ajuste el contexto para consultar la estructura PDRC y sus
+              indicadores.
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
+          sx={{ width: "100%", mb: 2 }}
+        >
           <Autocomplete
             options={periodos}
             value={periodoSelectedObj}
-            onChange={(_e, newValue) => setIdPeriodoSel(newValue?.idPeriodo ?? 0)}
-            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`}
+            onChange={(_e, newValue) =>
+              setIdPeriodoSel(newValue?.idPeriodo ?? 0)
+            }
+            getOptionLabel={(o) =>
+              `${o.codigo ?? "—"} - ${o.descripcion ?? "—"}`
+            }
             isOptionEqualToValue={(o, v) => o.idPeriodo === v.idPeriodo}
             noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-            renderInput={(params) => <TextField {...params} label="Periodo" size="small" />}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            filterOptions={(options, state) =>
+              filterByTexto(options, state.inputValue)
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Periodo" size="small" />
+            )}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2.5,
+                bgcolor: "#fff",
+              },
+            }}
           />
 
           <Autocomplete
             options={dimensiones}
             value={dimensionSelectedObj}
-            onChange={(_e, newValue) => setIdDimensionSel(newValue?.idDimension ?? 0)}
+            onChange={(_e, newValue) =>
+              setIdDimensionSel(newValue?.idDimension ?? 0)
+            }
             getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
             isOptionEqualToValue={(o, v) => o.idDimension === v.idDimension}
             noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
-            renderInput={(params) => <TextField {...params} label="Dimensión" size="small" />}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            filterOptions={(options, state) =>
+              filterByTexto(options, state.inputValue)
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Dimensión" size="small" />
+            )}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2.5,
+                bgcolor: "#fff",
+              },
+            }}
           />
-        </Stack>
 
-        <Stack direction="row" sx={{ width: "100%" }}>
           <Autocomplete
             options={unidades}
             value={unidadSelectedObj}
             onChange={(_e, newValue) => setIdUnidadSel(newValue?.idUnidad ?? 0)}
-            getOptionLabel={(o) => `${o.codigo ?? "—"} - ${o.nombre ?? "—"}`}
+            getOptionLabel={(o) => `${o.nombre ?? "—"}`}
             isOptionEqualToValue={(o, v) => o.idUnidad === v.idUnidad}
             noOptionsText="Sin resultados"
-            filterOptions={(options, state) => filterByTexto(options, state.inputValue)}
+            filterOptions={(options, state) =>
+              filterByTexto(options, state.inputValue)
+            }
             renderInput={(params) => (
-              <TextField {...params} label="Unidad Organizacional" size="small" />
+              <TextField
+                {...params}
+                label="Unidad Organizacional"
+                size="small"
+              />
             )}
-            sx={{ width: "100%", "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2.5,
+                bgcolor: "#fff",
+              },
+            }}
           />
         </Stack>
 
-        <Divider sx={{ my: 2 }} />
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
+          sx={{ width: "100%" }}
+        >
+          <Autocomplete
+            options={objetivos}
+            value={objetivoSelectedObj}
+            onChange={(_e, newValue) =>
+              setIdObjetivoSel(newValue?.idObjetivo ?? 0)
+            }
+            getOptionLabel={(o) =>
+              o ? `${o.codigo ?? "—"} - ${o.enunciado ?? "—"}` : ""
+            }
+            isOptionEqualToValue={(o, v) => o.idObjetivo === v.idObjetivo}
+            noOptionsText="Sin resultados"
+            filterOptions={(options, state) =>
+              filterByTexto(options, state.inputValue)
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="OER" size="small" />
+            )}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2.5,
+                bgcolor: "#fff",
+              },
+            }}
+          />
 
-        <TextField
-          value={qSearch}
-          onChange={(e) => setQSearch(e.target.value)}
-          placeholder="Buscar por nivel, OER o AER..."
-          size="small"
-          fullWidth
-          sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2.5 } }}
-        />
+          <TextField
+            value={qSearch}
+            onChange={(e) => setQSearch(e.target.value)}
+            placeholder="Buscar por nivel, OER o AER..."
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              flex: 1.4,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2.5,
+                bgcolor: "#fff",
+              },
+            }}
+          />
+        </Stack>
       </Paper>
 
-      <TableContainer
+      <Paper
+        elevation={0}
         sx={{
-          mt: 2,
-          borderRadius: 3,
+          mt: 3,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 4,
           border: "1px solid",
-          borderColor: "divider",
+          borderColor: "rgba(148,163,184,.35)",
+          boxShadow: "0 18px 45px rgba(15,23,42,.08)",
+          bgcolor: "rgba(255,255,255,.98)",
         }}
       >
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 88 }} />
-              <TableCell sx={{ fontWeight: 900, width: 90 }}>Nivel</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código OER</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado OER</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 120 }}>Código AER</TableCell>
-              <TableCell sx={{ fontWeight: 900 }}>Enunciado AER</TableCell>
-              <TableCell sx={{ fontWeight: 900, width: 150, ...sxStickyActionHeader }} align="right">
-                Acción
-              </TableCell>
-            </TableRow>
-          </TableHead>
+        <Stack direction="row" spacing={1.4} alignItems="center" sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 3,
+              display: "grid",
+              placeItems: "center",
+              bgcolor: "rgba(37,99,235,.10)",
+              color: "primary.main",
+            }}
+          >
+            <AccountTreeRoundedIcon />
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 950, lineHeight: 1.1 }}>
+              Estructura OER / AER e Indicadores
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Use los botones de expansión para revisar los indicadores
+              asociados por nivel.
+            </Typography>
+          </Box>
+        </Stack>
 
-          <TableBody>
-            {loadingTabla ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    <CircularProgress size={18} />
-                    <Typography variant="body2">Cargando registros...</Typography>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ) : rowsFiltered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <Alert severity="info" sx={{ borderRadius: 2, width: "100%" }}>
-                    No hay registros para la combinación seleccionada.
-                  </Alert>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rowsFiltered.map((r) => {
-                const open = !!openRowMap[r.idPdrcOerAer];
-                const detail = detailMap[r.idPdrcOerAer];
-                const indicadoresCount = getIndicadoresCount(r);
+        {loadingTabla ? (
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <CircularProgress size={18} />
+              <Typography variant="body2">Cargando registros...</Typography>
+            </Stack>
+          </Paper>
+        ) : rowsFiltered.length === 0 ? (
+          <Alert severity="info" sx={{ borderRadius: 3, width: "100%" }}>
+            No hay registros para la combinación seleccionada.
+          </Alert>
+        ) : (
+          <Stack spacing={1.6}>
+            {rowsFiltered.map((r) => {
+              const open = !!openRowMap[r.idPdrcOerAer];
+              const detail = detailMap[r.idPdrcOerAer];
+              const indicadoresCount = getIndicadoresCount(r);
+              const palette = nivelPalette(r.tipoNivel);
 
-                return (
-                  <React.Fragment key={r.idPdrcOerAer}>
-                    <TableRow hover>
-                      <TableCell sx={{ width: 88, verticalAlign: "middle", py: 1.5 }}>
-                        <Stack
-                          direction="row"
-                          spacing={0.75}
-                          alignItems="center"
-                          justifyContent="center"
-                          sx={{ minHeight: 56 }}
+              return (
+                <Paper
+                  key={r.idPdrcOerAer}
+                  elevation={0}
+                  sx={{
+                    borderRadius: 3.5,
+                    border: "1px solid",
+                    borderColor: open
+                      ? palette.border
+                      : "rgba(148,163,184,.32)",
+                    overflow: "hidden",
+                    bgcolor: "#fff",
+                    boxShadow: open
+                      ? `0 16px 34px ${palette.soft}`
+                      : "0 8px 24px rgba(15,23,42,.045)",
+                    transition: "all .18s ease",
+                    "&:hover": {
+                      borderColor: palette.border,
+                      boxShadow: `0 16px 34px ${palette.soft}`,
+                    },
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    spacing={1.5}
+                    alignItems={{ xs: "stretch", md: "center" }}
+                    sx={{ p: 1.6 }}
+                  >
+                    <Tooltip
+                      title={open ? "Ocultar indicadores" : "Ver indicadores"}
+                      arrow
+                    >
+                      <IconButton
+                        size="small"
+                        onMouseDown={(e) => e.currentTarget.blur()}
+                        onClick={() => void toggleRowDetail(r)}
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2.5,
+                          border: "1px solid",
+                          borderColor: "rgba(148,163,184,.45)",
+                          bgcolor: open ? palette.soft : "#fff",
+                          color: open ? palette.main : "text.primary",
+                          boxShadow: "0 8px 18px rgba(15,23,42,.08)",
+                          alignSelf: { xs: "flex-start", md: "center" },
+                          "&:hover": {
+                            bgcolor: palette.soft,
+                            transform: "translateY(-1px)",
+                          },
+                        }}
+                      >
+                        {open ? (
+                          <KeyboardArrowUpRoundedIcon />
+                        ) : (
+                          <KeyboardArrowDownRoundedIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+
+                    <Chip
+                      label={r.tipoNivel}
+                      sx={{
+                        minWidth: 64,
+                        height: 34,
+                        fontWeight: 950,
+                        borderRadius: 2.2,
+                        color: "#fff",
+                        bgcolor: palette.main,
+                        alignSelf: { xs: "flex-start", md: "center" },
+                      }}
+                    />
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                          xs: "1fr",
+                          md: "120px minmax(0, 1fr)",
+                        },
+                        columnGap: 2.2,
+                        rowGap: 0.4,
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 950, color: "#0f172a" }}>
+                        {r.tipoNivel === "AER"
+                          ? safeText(r.codigoAer)
+                          : safeText(r.codigoOer)}
+                      </Typography>
+
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            color: "#0f172a",
+                            lineHeight: 1.35,
+                            textTransform: "uppercase",
+                          }}
                         >
-                          <Tooltip title={open ? "Ocultar detalle" : "Ver detalle"} arrow>
-                            <IconButton
-                              size="small"
-                              onMouseDown={(e) => e.currentTarget.blur()}
-                              onClick={() => void toggleRowDetail(r)}
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 2,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                bgcolor: open ? "action.hover" : "transparent",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": { transform: "translateY(-1px)" },
-                              }}
-                            >
-                              {open ? (
-                                <KeyboardArrowUpRoundedIcon sx={{ fontSize: 20 }} />
-                              ) : (
-                                <KeyboardArrowDownRoundedIcon sx={{ fontSize: 20 }} />
-                              )}
-                            </IconButton>
-                          </Tooltip>
+                          {r.tipoNivel === "AER"
+                            ? safeText(r.enunciadoAer)
+                            : safeText(r.enunciadoOer)}
+                        </Typography>
 
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            label={`IND:${indicadoresCount}`}
-                            sx={{
-                              height: 20,
-                              borderRadius: 2,
-                              fontWeight: 900,
-                              "& .MuiChip-label": { px: 0.75, fontSize: 11 },
-                            }}
-                          />
-                        </Stack>
-                      </TableCell>
+                        {r.tipoNivel === "AER" && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mt: 0.35 }}
+                          >
+                            Pertenece a:{" "}
+                            <b style={{ color: "#2563eb" }}>
+                              {safeText(r.codigoOer)}
+                            </b>
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
 
-                      <TableCell sx={{ verticalAlign: "middle" }}>
-                        <Chip
+                    <Stack
+                      direction="row"
+                      spacing={0.8}
+                      alignItems="center"
+                      justifyContent="flex-end"
+                      sx={{ minWidth: { xs: "100%", md: 140 } }}
+                    >
+                      <Chip
+                        size="small"
+                        label={`IND: ${indicadoresCount}`}
+                        variant="outlined"
+                        sx={{
+                          fontWeight: 950,
+                          height: 28,
+                          color: palette.main,
+                          bgcolor: palette.soft,
+                          borderColor: palette.border,
+                          "& .MuiChip-label": { px: 1.1 },
+                        }}
+                      />
+
+                      <Tooltip
+                        title={
+                          open ? "Ocultar indicadores" : "Abrir indicadores"
+                        }
+                        arrow
+                      >
+                        <IconButton
                           size="small"
-                          label={r.tipoNivel}
-                          color={r.tipoNivel === "OER" ? "secondary" : "primary"}
-                          variant="outlined"
-                          sx={{ fontWeight: 900 }}
-                        />
-                      </TableCell>
+                          onMouseDown={(e) => e.currentTarget.blur()}
+                          onClick={() => void toggleRowDetail(r)}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 2.5,
+                            border: "1px solid",
+                            borderColor: palette.border,
+                            color: palette.main,
+                            bgcolor: palette.soft,
+                            "&:hover": {
+                              bgcolor: palette.soft,
+                              transform: "translateY(-1px)",
+                            },
+                          }}
+                        >
+                          <QueryStatsRoundedIcon sx={{ fontSize: 20 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </Stack>
 
-                      <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoOer)}
-                      </TableCell>
-
-                      <TableCell
+                  <Collapse in={open} timeout="auto" unmountOnExit>
+                    <Box sx={{ px: { xs: 1.4, md: 2 }, pb: 2 }}>
+                      <Paper
+                        elevation={0}
                         sx={{
-                          whiteSpace: "normal",
-                          wordBreak: "normal",
-                          overflowWrap: "break-word",
-                          verticalAlign: "middle",
+                          p: { xs: 1.4, md: 1.8 },
+                          borderRadius: 3,
+                          border: "1px solid",
+                          borderColor: palette.border,
+                          bgcolor: palette.soft2,
                         }}
-                      >
-                        {safeText(r.enunciadoOer)}
-                      </TableCell>
-
-                      <TableCell sx={{ fontWeight: 900, verticalAlign: "middle" }}>
-                        {safeText(r.codigoAer)}
-                      </TableCell>
-
-                      <TableCell
-                        sx={{
-                          whiteSpace: "normal",
-                          wordBreak: "normal",
-                          overflowWrap: "break-word",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        {safeText(r.enunciadoAer)}
-                      </TableCell>
-
-                      <TableCell
-                        align="right"
-                        sx={{ verticalAlign: "middle", width: 150, ...sxStickyActionCell }}
                       >
                         <Stack
                           direction="row"
-                          spacing={0.75}
-                          justifyContent="flex-end"
                           alignItems="center"
+                          justifyContent="space-between"
+                          spacing={2}
+                          sx={{ mb: 1.2 }}
                         >
-                          <Chip
-                            size="small"
-                            label={`IND:${indicadoresCount}`}
-                            variant="outlined"
-                            sx={{
-                              fontWeight: 900,
-                              height: 20,
-                              "& .MuiChip-label": { px: 0.75, fontSize: 11 },
-                            }}
-                          />
+                          <Stack
+                            direction="row"
+                            spacing={1.2}
+                            alignItems="center"
+                          >
+                            <Box
+                              sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 2.3,
+                                display: "grid",
+                                placeItems: "center",
+                                bgcolor: palette.soft,
+                                color: palette.main,
+                              }}
+                            >
+                              <BarChartRoundedIcon sx={{ fontSize: 20 }} />
+                            </Box>
+                            <Box>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 950, color: palette.main }}
+                              >
+                                {palette.detailTitle}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {r.tipoNivel === "AER"
+                                  ? `AER: ${safeText(r.codigoAer)} — ${safeText(r.enunciadoAer)}`
+                                  : `OER: ${safeText(r.codigoOer)} — ${safeText(r.enunciadoOer)}`}
+                              </Typography>
+                            </Box>
+                          </Stack>
 
-                          <Tooltip title={open ? "Ocultar detalle" : "Ver detalle"} arrow>
+                          <Tooltip title="Recargar detalle" arrow>
                             <IconButton
                               size="small"
                               onMouseDown={(e) => e.currentTarget.blur()}
-                              onClick={() => void toggleRowDetail(r)}
+                              onClick={() =>
+                                void reloadRowDetail(r.idPdrcOerAer)
+                              }
                               sx={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 2,
+                                borderRadius: 2.5,
                                 border: "1px solid",
-                                borderColor: "divider",
-                                bgcolor: "rgba(59,130,246,.10)",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
-                                transition: "all .15s ease",
-                                "&:hover": {
-                                  transform: "translateY(-1px)",
-                                  bgcolor: "rgba(59,130,246,.16)",
-                                },
+                                borderColor: palette.border,
+                                bgcolor: "#fff",
+                                color: palette.main,
                               }}
                             >
-                              <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
+                              <RefreshRoundedIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                         </Stack>
-                      </TableCell>
-                    </TableRow>
 
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ p: 0, borderBottom: 0 }}>
-                        <Collapse in={open} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 2, bgcolor: "background.default" }}>
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              spacing={2}
-                              sx={{ mb: 1 }}
-                            >
-                              <Stack spacing={0.25}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
-                                  Detalle Indicadores
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {r.tipoNivel === "AER"
-                                    ? `AER: ${safeText(r.codigoAer)} — ${safeText(r.enunciadoAer)}`
-                                    : `OER: ${safeText(r.codigoOer)} — ${safeText(r.enunciadoOer)}`}
-                                </Typography>
-                              </Stack>
+                        {detail?.loading ? (
+                          <Stack
+                            direction="row"
+                            spacing={1.5}
+                            alignItems="center"
+                            sx={{ p: 1 }}
+                          >
+                            <CircularProgress size={18} />
+                            <Typography variant="body2">
+                              Cargando detalle...
+                            </Typography>
+                          </Stack>
+                        ) : detail?.error ? (
+                          <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                            {detail.error}
+                          </Alert>
+                        ) : !detail?.data || detail.data.length === 0 ? (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            No hay indicadores registrados para este registro.
+                          </Alert>
+                        ) : (
+                          <TableContainer
+                            component={Paper}
+                            variant="outlined"
+                            sx={{
+                              borderRadius: 2.5,
+                              overflow: "hidden",
+                              borderColor: palette.border,
+                              bgcolor: "#fff",
+                            }}
+                          >
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow sx={{ bgcolor: palette.soft }}>
+                                  <TableCell
+                                    sx={{
+                                      fontWeight: 950,
+                                      width: 190,
+                                      color: palette.main,
+                                    }}
+                                  >
+                                    Código Indicador
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      fontWeight: 950,
+                                      color: palette.main,
+                                    }}
+                                  >
+                                    Nombre Indicador
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    sx={{
+                                      fontWeight: 950,
+                                      width: 120,
+                                      color: palette.main,
+                                    }}
+                                  >
+                                    Acción
+                                  </TableCell>
+                                </TableRow>
+                              </TableHead>
 
-                              <Tooltip title="Recargar detalle" arrow>
-                                <IconButton
-                                  size="small"
-                                  onMouseDown={(e) => e.currentTarget.blur()}
-                                  onClick={() => void reloadRowDetail(r.idPdrcOerAer)}
-                                  sx={{
-                                    borderRadius: 2,
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                  }}
-                                >
-                                  <RefreshRoundedIcon sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-
-                            {detail?.loading ? (
-                              <Stack direction="row" spacing={1.5} alignItems="center">
-                                <CircularProgress size={18} />
-                                <Typography variant="body2">Cargando detalle...</Typography>
-                              </Stack>
-                            ) : detail?.error ? (
-                              <Alert severity="warning" sx={{ borderRadius: 2 }}>
-                                {detail.error}
-                              </Alert>
-                            ) : !detail?.data || detail.data.length === 0 ? (
-                              <Alert severity="info" sx={{ borderRadius: 2 }}>
-                                No hay indicadores registrados para este registro.
-                              </Alert>
-                            ) : (
-                              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell sx={{ fontWeight: 900, width: 180 }}>
-                                        Código Indicador
-                                      </TableCell>
-                                      <TableCell sx={{ fontWeight: 900 }}>
-                                        Nombre Indicador
-                                      </TableCell>
-                                      <TableCell align="right" sx={{ fontWeight: 900, width: 120 }}>
-                                        Acción
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableHead>
-
-                                  <TableBody>
-                                    {detail.data.map((d) => (
-                                      <TableRow key={d.idIndicadorNombre} hover>
-                                        <TableCell sx={{ fontWeight: 900 }}>
-                                          {d.codigoIndicador}
-                                        </TableCell>
-                                        <TableCell
+                              <TableBody>
+                                {detail.data.map((d) => (
+                                  <TableRow key={d.idIndicadorNombre} hover>
+                                    <TableCell sx={{ fontWeight: 950 }}>
+                                      {d.codigoIndicador}
+                                    </TableCell>
+                                    <TableCell
+                                      sx={{
+                                        whiteSpace: "normal",
+                                        wordBreak: "break-word",
+                                        lineHeight: 1.45,
+                                      }}
+                                    >
+                                      {d.nombreIndicador}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Tooltip title="Abrir indicador" arrow>
+                                        <IconButton
+                                          size="small"
+                                          onMouseDown={(e) =>
+                                            e.currentTarget.blur()
+                                          }
+                                          onClick={() =>
+                                            openIndicadorModal(r, d)
+                                          }
                                           sx={{
-                                            whiteSpace: "normal",
-                                            wordBreak: "break-word",
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 2.3,
+                                            border: "1px solid",
+                                            borderColor: palette.border,
+                                            bgcolor: palette.soft,
+                                            color: palette.main,
+                                            "&:hover": {
+                                              bgcolor: palette.soft,
+                                              transform: "translateY(-1px)",
+                                            },
                                           }}
                                         >
-                                          {d.nombreIndicador}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                          <Tooltip title="Ver indicador" arrow>
-                                            <IconButton
-                                              size="small"
-                                              onMouseDown={(e) => e.currentTarget.blur()}
-                                              onClick={() => openIndicadorModal(r, d)}
-                                              sx={{
-                                                width: 30,
-                                                height: 30,
-                                                borderRadius: 2,
-                                                border: "1px solid",
-                                                borderColor: "divider",
-                                                bgcolor: "rgba(59,130,246,.10)",
-                                                "&:hover": {
-                                                  bgcolor: "rgba(59,130,246,.16)",
-                                                },
-                                              }}
-                                            >
-                                              <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
-                                            </IconButton>
-                                          </Tooltip>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            )}
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                                          <QueryStatsRoundedIcon
+                                            sx={{ fontSize: 18 }}
+                                          />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </Paper>
+                    </Box>
+                  </Collapse>
+                </Paper>
+              );
+            })}
+          </Stack>
+        )}
+      </Paper>
 
       <PdrcIndicadorDetalleModal
         open={indicadorModal.open}

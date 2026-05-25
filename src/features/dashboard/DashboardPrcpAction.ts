@@ -82,6 +82,7 @@ export type DashboardPrcpReporteValorAnualDto = {
   idPrcpOpPiMp: number;
   idIndicadorNombre: number;
   anio: number;
+  valorEsperado?: number | null;
   valorObtenidoAnual?: number | null;
   avanceAnual?: number | null;
 };
@@ -104,6 +105,11 @@ export type DashboardPrcpReporteFilaDto = {
   nombreIndicador: string;
   unidadMedida: string;
   sentido: string;
+  valorEsperadoReporte: number;
+  valorObtenidoReporte: number;
+  cumplimientoReporte: number;
+  hitoCumplido: boolean;
+  estadoReporte: string;
   logrosEsperados: DashboardPrcpReporteLogroDto[];
   valoresPorAnio: DashboardPrcpReporteValorAnualDto[];
 };
@@ -115,6 +121,13 @@ export type DashboardPrcpReporteResumenDto = {
   verde: number;
   nd: number;
   total: number;
+};
+
+
+export type DashboardPrcpReporteGraficoDto = {
+  etiqueta: string;
+  valor: number;
+  cantidad: number;
 };
 
 export type DashboardPrcpReporteDto = {
@@ -131,6 +144,15 @@ export type DashboardPrcpReporteDto = {
   aniosEjecutado: number[];
   filas: DashboardPrcpReporteFilaDto[];
   resumen: DashboardPrcpReporteResumenDto[];
+  graficoAvanceAcumulado: DashboardPrcpReporteGraficoDto[];
+  graficoHitosCumplidos: DashboardPrcpReporteGraficoDto[];
+  graficoDistribucionEstado: DashboardPrcpReporteGraficoDto[];
+  avanceAcumulado: number;
+  totalIndicadoresReporte: number;
+  indicadoresCumplidos: number;
+  indicadoresPendientes: number;
+  porcentajeCumplidos: number;
+  porcentajePendientes: number;
   alertasIdentificadas: string;
 };
 
