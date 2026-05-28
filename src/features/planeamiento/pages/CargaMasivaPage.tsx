@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -7,33 +7,54 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
   IconButton,
+  LinearProgress,
   Paper,
+  Radio,
+  RadioGroup,
   Stack,
+  Step,
+  StepLabel,
+  Stepper,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
+import TableRowsRoundedIcon from "@mui/icons-material/TableRowsRounded";
+import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 
 import {
   CargaMasivaAction,
+  type AgCargaMasivaResultadoDto,
   type CargaMasivaResultadoDto,
   type CargaMasivaValidacionDto,
-  type AgCargaMasivaResultadoDto,
   type PdrcCargaMasivaResultadoDto,
+  type TipoPlantillaCarga,
 } from "../CargaMasivaAction";
 
 type RouteParams = {
@@ -43,32 +64,59 @@ type RouteParams = {
 const tiposPermitidos = ["ag", "pdrc", "pei", "poi"] as const;
 type TipoInstrumento = (typeof tiposPermitidos)[number];
 
+type PlantillaDescarga = {
+  label: string;
+  fileName: string;
+  url: string;
+  descripcion: string;
+};
+
+type MetricCardProps = {
+  label: string;
+  value: number | string;
+  tone?: "default" | "success" | "error" | "warning" | "info" | "primary";
+};
+
+const COLOR_VERDE_INSTITUCIONAL = "#0B5D4F";
+const COLOR_VERDE_MEDIO = "#0F766E";
+const COLOR_VERDE_CLARO = "#16A085";
+const COLOR_VERDE_EXITO = "#15803D";
+const COLOR_TEXTO_VERDE = "#064E3B";
+
+const TIPO_PLANTILLA_LABEL: Record<TipoPlantillaCarga, string> = {
+  VALOR: "Indicador Valor / Meta",
+  EJECUTADO: "Indicador Ejecutado",
+};
+
 function normalizeTipo(tipo?: string): TipoInstrumento {
   const t = (tipo ?? "").trim().toLowerCase();
-  return (tiposPermitidos.includes(t as TipoInstrumento) ? t : "pdrc") as TipoInstrumento;
+
+  return (tiposPermitidos.includes(t as TipoInstrumento)
+    ? t
+    : "pdrc") as TipoInstrumento;
 }
 
 function getTitulo(tipo: TipoInstrumento): string {
   switch (tipo) {
     case "ag":
-      return "Planeamiento: Carga Masiva AG";
+      return "Carga Masiva AG";
     case "pdrc":
-      return "Planeamiento: Carga Masiva PDRC";
+      return "Carga Masiva PDRC";
     case "pei":
-      return "Planeamiento: Carga Masiva PEI";
+      return "Carga Masiva PEI";
     case "poi":
-      return "Planeamiento: Carga Masiva POI";
+      return "Carga Masiva POI";
     default:
-      return "Planeamiento: Carga Masiva";
+      return "Carga Masiva";
   }
 }
 
 function getDescripcion(tipo: TipoInstrumento): string {
   switch (tipo) {
     case "pdrc":
-      return "Valida y procesa el archivo Excel para objetivos, acciones, indicadores y valores del PDRC.";
+      return "Valida y procesa objetivos, acciones, indicadores y valores del PDRC.";
     case "ag":
-      return "Valida y procesa el archivo Excel para Acuerdos de Gobernabilidad, tanto Indicador Valor como Indicador Ejecutado.";
+      return "Carga metas y ejecutados de Acuerdos de Gobernabilidad con validación previa.";
     case "pei":
       return "Carga masiva para el PEI.";
     case "poi":
@@ -90,34 +138,25 @@ function isAgResultado(
   return !!resultado && "cabecerasInsertadas" in resultado;
 }
 
-type PlantillaDescarga = {
-  label: string;
-  fileName: string;
-  url: string;
-};
-
 function getPlantillas(tipo: TipoInstrumento): PlantillaDescarga[] {
   switch (tipo) {
     case "pdrc":
       return [
         {
-          label: "Descargar plantilla PDRC",
-          fileName: "pdrc-plantilla.xlsx",
-          url: "/plantillas/pdrc-plantilla.xlsx",
+          label: "Descargar plantilla oficial PDRC",
+          fileName: "Template_Carga_Masiva_PDRC.xlsx",
+          url: "/plantillas/Template_Carga_Masiva_PDRC.xlsx",
+          descripcion: "Incluye las hojas Indicador Valor e Indicador Ejecutado.",
         },
       ];
 
     case "ag":
       return [
         {
-          label: "Plantilla AG - Valores",
-          fileName: "ag-plantilla-valores.xlsx",
-          url: "/plantillas/ag-plantilla-valores.xlsx",
-        },
-        {
-          label: "Plantilla AG - Ejecutado",
-          fileName: "ag-plantilla-ejecutado.xlsx",
-          url: "/plantillas/ag-plantilla-ejecutado.xlsx",
+          label: "Descargar plantilla oficial AG",
+          fileName: "Template_Carga_Masiva_AG.xlsx",
+          url: "/plantillas/Template_Carga_Masiva_AG.xlsx",
+          descripcion: "Incluye las hojas Indicador Valor e Indicador Ejecutado.",
         },
       ];
 
@@ -135,39 +174,146 @@ function descargarArchivo(url: string, fileName: string) {
   document.body.removeChild(link);
 }
 
+function formatBytes(bytes: number): string {
+  if (!bytes) return "0 KB";
+
+  const kb = bytes / 1024;
+
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+
+  return `${(kb / 1024).toFixed(2)} MB`;
+}
+
+function MetricCard({
+  label,
+  value,
+  tone = "default",
+}: MetricCardProps): React.ReactElement {
+  const theme = useTheme();
+
+  const colorMap = {
+    default: theme.palette.text.secondary,
+    success: COLOR_VERDE_EXITO,
+    error: theme.palette.error.main,
+    warning: theme.palette.warning.main,
+    info: COLOR_VERDE_MEDIO,
+    primary: COLOR_VERDE_INSTITUCIONAL,
+  };
+
+  const color = colorMap[tone];
+
+  return (
+    <Box
+      sx={{
+        p: 1.6,
+        minWidth: 150,
+        flex: "1 1 150px",
+        borderRadius: 3,
+        border: "1px solid",
+        borderColor: alpha(color, 0.22),
+        bgcolor: alpha(color, 0.07),
+      }}
+    >
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ fontWeight: 700 }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        variant="h5"
+        sx={{ fontWeight: 900, lineHeight: 1.1, color }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 export default function CargaMasivaPage(): React.ReactElement {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { tipo } = useParams<RouteParams>();
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const tipoActual = useMemo(() => normalizeTipo(tipo), [tipo]);
   const plantillas = useMemo(() => getPlantillas(tipoActual), [tipoActual]);
 
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [validacion, setValidacion] = useState<CargaMasivaValidacionDto | null>(null);
-  const [resultado, setResultado] = useState<CargaMasivaResultadoDto | null>(null);
+  const [tipoPlantilla, setTipoPlantilla] =
+    useState<TipoPlantillaCarga>("VALOR");
+
+  const [validacion, setValidacion] =
+    useState<CargaMasivaValidacionDto | null>(null);
+  const [resultado, setResultado] =
+    useState<CargaMasivaResultadoDto | null>(null);
+
   const [errorGeneral, setErrorGeneral] = useState<string>("");
   const [loadingValidar, setLoadingValidar] = useState<boolean>(false);
   const [loadingProcesar, setLoadingProcesar] = useState<boolean>(false);
+  const [dragActivo, setDragActivo] = useState<boolean>(false);
+  const [confirmarProcesar, setConfirmarProcesar] =
+    useState<boolean>(false);
+  const [validacionKey, setValidacionKey] = useState<string>("");
 
   const soportado = tipoActual === "pdrc" || tipoActual === "ag";
 
-  const archivoLabel = archivo?.name ?? "Ningún archivo seleccionado";
+  const currentKey = `${tipoActual}|${tipoPlantilla}|${archivo?.name ?? ""}|${
+    archivo?.size ?? 0
+  }|${archivo?.lastModified ?? 0}`;
 
-  const onSelectFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
+  const validacionVigente = !!validacion && validacionKey === currentKey;
 
-    setArchivo(file);
+  const puedeProcesar =
+    !!archivo &&
+    validacionVigente &&
+    !!validacion?.puedeProcesar &&
+    !loadingProcesar &&
+    soportado;
+
+  const activeStep = resultado ? 3 : validacionVigente ? 2 : archivo ? 1 : 0;
+
+  const tipoPlantillaColor =
+    tipoPlantilla === "VALOR" ? COLOR_VERDE_MEDIO : COLOR_VERDE_EXITO;
+
+  const limpiarResultados = () => {
     setValidacion(null);
     setResultado(null);
     setErrorGeneral("");
+    setValidacionKey("");
+  };
+
+  const setFileSeguro = (file: File | null) => {
+    limpiarResultados();
+    setArchivo(null);
 
     if (!file) return;
 
     const ext = file.name.split(".").pop()?.toLowerCase();
+
     if (ext !== "xlsx") {
-      setErrorGeneral("Solo se permiten archivos .xlsx");
-      setArchivo(null);
+      setErrorGeneral("Solo se permiten archivos Excel con extensión .xlsx.");
+      return;
     }
+
+    setArchivo(file);
+  };
+
+  const onSelectFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setFileSeguro(file);
+    event.target.value = "";
+  };
+
+  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActivo(false);
+
+    const file = event.dataTransfer.files?.[0] ?? null;
+    setFileSeguro(file);
   };
 
   const onValidar = async () => {
@@ -180,12 +326,20 @@ export default function CargaMasivaPage(): React.ReactElement {
     setValidacion(null);
     setResultado(null);
     setErrorGeneral("");
+    setValidacionKey("");
 
     try {
-      const resp = await CargaMasivaAction.validar(tipoActual, archivo);
+      const resp = await CargaMasivaAction.validar(
+        tipoActual,
+        archivo,
+        tipoPlantilla
+      );
+
       setValidacion(resp);
+      setValidacionKey(currentKey);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "No se pudo validar el archivo.";
+      const msg =
+        e instanceof Error ? e.message : "No se pudo validar el archivo.";
       setErrorGeneral(msg);
     } finally {
       setLoadingValidar(false);
@@ -198,15 +352,29 @@ export default function CargaMasivaPage(): React.ReactElement {
       return;
     }
 
+    if (!puedeProcesar) {
+      setErrorGeneral(
+        "Primero valida el archivo seleccionado. Solo se puede procesar una validación correcta y vigente."
+      );
+      return;
+    }
+
     setLoadingProcesar(true);
     setResultado(null);
     setErrorGeneral("");
+    setConfirmarProcesar(false);
 
     try {
-      const resp = await CargaMasivaAction.procesar(tipoActual, archivo);
+      const resp = await CargaMasivaAction.procesar(
+        tipoActual,
+        archivo,
+        tipoPlantilla
+      );
+
       setResultado(resp);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "No se pudo procesar el archivo.";
+      const msg =
+        e instanceof Error ? e.message : "No se pudo procesar el archivo.";
       setErrorGeneral(msg);
     } finally {
       setLoadingProcesar(false);
@@ -218,155 +386,624 @@ export default function CargaMasivaPage(): React.ReactElement {
     setValidacion(null);
     setResultado(null);
     setErrorGeneral("");
+    setValidacionKey("");
+
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <IconButton onClick={() => navigate(-1)} aria-label="Volver">
-            <ArrowBackRoundedIcon />
-          </IconButton>
+    <Box
+      sx={{
+        p: { xs: 2, md: 3 },
+        minHeight: "100%",
+        bgcolor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.025),
+      }}
+    >
+      <Paper
+  elevation={0}
+  sx={{
+    p: { xs: 2, md: 2.5 },
+    mb: 2,
+    borderRadius: 4,
+    position: "relative",
+    overflow: "hidden",
+    bgcolor: "#FFFFFF",
+    border: "1px solid",
+    borderColor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.16),
+    boxShadow: "0 14px 35px rgba(15, 23, 42, 0.06)",
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 7,
+      bgcolor: COLOR_VERDE_MEDIO,
+    },
+  }}
+>
+  <Box
+    sx={{
+      position: "absolute",
+      right: -80,
+      top: -85,
+      width: 210,
+      height: 210,
+      borderRadius: "50%",
+      bgcolor: alpha(COLOR_VERDE_MEDIO, 0.055),
+    }}
+  />
 
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              {getTitulo(tipoActual)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {getDescripcion(tipoActual)}
-            </Typography>
-          </Box>
+  <Stack
+    direction={{ xs: "column", md: "row" }}
+    spacing={2}
+    justifyContent="space-between"
+    alignItems={{ xs: "stretch", md: "center" }}
+    sx={{ position: "relative" }}
+  >
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <IconButton
+        onClick={() => navigate(-1)}
+        aria-label="Volver"
+        sx={{
+          color: COLOR_VERDE_MEDIO,
+          bgcolor: alpha(COLOR_VERDE_MEDIO, 0.08),
+          border: "1px solid",
+          borderColor: alpha(COLOR_VERDE_MEDIO, 0.16),
+          "&:hover": {
+            bgcolor: alpha(COLOR_VERDE_MEDIO, 0.14),
+          },
+        }}
+      >
+        <ArrowBackRoundedIcon />
+      </IconButton>
+
+      <Box>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          flexWrap="wrap"
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 900,
+              letterSpacing: -0.35,
+              color: COLOR_TEXTO_VERDE,
+            }}
+          >
+            {getTitulo(tipoActual)}
+          </Typography>
+
+          <Chip
+            label={tipoActual.toUpperCase()}
+            size="small"
+            sx={{
+              color: COLOR_VERDE_MEDIO,
+              bgcolor: alpha(COLOR_VERDE_MEDIO, 0.1),
+              border: "1px solid",
+              borderColor: alpha(COLOR_VERDE_MEDIO, 0.18),
+              fontWeight: 900,
+            }}
+          />
         </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={tipoActual.toUpperCase()} color="primary" variant="outlined" />
-          <Tooltip title="Limpiar" arrow>
-            <IconButton onClick={onLimpiar}>
-              <RefreshRoundedIcon />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
+        <Typography
+          variant="body2"
+          sx={{
+            color: alpha("#334155", 0.85),
+            mt: 0.45,
+            maxWidth: 760,
+          }}
+        >
+          {getDescripcion(tipoActual)}
+        </Typography>
+      </Box>
+    </Stack>
+
+    <Tooltip title="Limpiar pantalla" arrow>
+      <IconButton
+        onClick={onLimpiar}
+        sx={{
+          color: COLOR_VERDE_MEDIO,
+          bgcolor: alpha(COLOR_VERDE_MEDIO, 0.07),
+          border: "1px solid",
+          borderColor: alpha(COLOR_VERDE_MEDIO, 0.14),
+          alignSelf: { xs: "flex-start", md: "center" },
+          "&:hover": {
+            bgcolor: alpha(COLOR_VERDE_MEDIO, 0.13),
+          },
+        }}
+      >
+        <RefreshRoundedIcon />
+      </IconButton>
+    </Tooltip>
+  </Stack>
+</Paper>
 
       {!soportado && (
-        <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-          La carga masiva para <strong>{tipoActual.toUpperCase()}</strong> todavía no está habilitada.
-          Por ahora la implementación operativa está en <strong>PDRC</strong> y <strong>AG</strong>.
+        <Alert severity="info" sx={{ mb: 2, borderRadius: 3 }}>
+          La carga masiva para <strong>{tipoActual.toUpperCase()}</strong>{" "}
+          todavía no está habilitada. Por ahora la implementación operativa
+          está en <strong>PDRC</strong> y <strong>AG</strong>.
         </Alert>
       )}
 
       <Paper
+        elevation={0}
         sx={{
-          mt: 2,
-          p: 2.5,
-          borderRadius: 3,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 4,
           border: "1px solid",
-          borderColor: "divider",
-          boxShadow: "0 10px 30px rgba(0,0,0,.06)",
+          borderColor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.16),
+          boxShadow: "0 18px 45px rgba(15, 23, 42, 0.07)",
         }}
       >
-        <Stack spacing={2}>
-          {plantillas.length > 0 && (
-            <>
-              <Stack spacing={1}>
-                <Typography sx={{ fontWeight: 700 }}>
-                  Plantillas Excel
-                </Typography>
+        <Stepper
+          activeStep={activeStep}
+          alternativeLabel
+          sx={{
+            mb: 3,
+            display: { xs: "none", md: "flex" },
+            "& .MuiStepIcon-root.Mui-active": {
+              color: COLOR_VERDE_MEDIO,
+            },
+            "& .MuiStepIcon-root.Mui-completed": {
+              color: COLOR_VERDE_EXITO,
+            },
+          }}
+        >
+          <Step>
+            <StepLabel>Preparar plantilla</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Subir archivo</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Validar</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Procesar</StepLabel>
+          </Step>
+        </Stepper>
 
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} flexWrap="wrap">
+        <Stack spacing={2.2}>
+          {(tipoActual === "ag" || tipoActual === "pdrc") && (
+            <Paper
+              variant="outlined"
+              sx={{
+                p: { xs: 1.8, md: 2 },
+                borderRadius: 3,
+                borderColor: alpha(theme.palette.grey[500], 0.24),
+                bgcolor: alpha(theme.palette.background.paper, 0.98),
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", md: "center" }}
+              >
+                <Stack direction="row" spacing={1.4} alignItems="flex-start">
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2.3,
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: alpha(COLOR_VERDE_MEDIO, 0.08),
+                      color: COLOR_VERDE_MEDIO,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <TuneRoundedIcon fontSize="small" />
+                  </Box>
+
+                  <Box>
+                    <Typography sx={{ fontWeight: 900 }}>
+                      ¿Qué información deseas cargar?
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.3 }}
+                    >
+                      Selecciona si vas a cargar metas programadas o valores
+                      ejecutados.
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <FormControl>
+                  <RadioGroup
+                    row
+                    value={tipoPlantilla}
+                    onChange={(e) => {
+                      setTipoPlantilla(e.target.value as TipoPlantillaCarga);
+                      limpiarResultados();
+                    }}
+                    sx={{
+                      gap: 1,
+                      justifyContent: { xs: "flex-start", md: "flex-end" },
+                    }}
+                  >
+                    <FormControlLabel
+                      value="VALOR"
+                      control={<Radio size="small" />}
+                      label={
+                        <Box>
+                          <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
+                            Indicador Valor
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Metas o valores programados
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{
+                        m: 0,
+                        px: 1.4,
+                        py: 0.8,
+                        borderRadius: 2.5,
+                        border: "1px solid",
+                        borderColor:
+                          tipoPlantilla === "VALOR"
+                            ? alpha(COLOR_VERDE_MEDIO, 0.48)
+                            : alpha(theme.palette.grey[500], 0.22),
+                        bgcolor:
+                          tipoPlantilla === "VALOR"
+                            ? alpha(COLOR_VERDE_MEDIO, 0.06)
+                            : "transparent",
+                      }}
+                    />
+
+                    <FormControlLabel
+                      value="EJECUTADO"
+                      control={<Radio size="small" />}
+                      label={
+                        <Box>
+                          <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
+                            Indicador Ejecutado
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Avances registrados por año
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{
+                        m: 0,
+                        px: 1.4,
+                        py: 0.8,
+                        borderRadius: 2.5,
+                        border: "1px solid",
+                        borderColor:
+                          tipoPlantilla === "EJECUTADO"
+                            ? alpha(COLOR_VERDE_EXITO, 0.48)
+                            : alpha(theme.palette.grey[500], 0.22),
+                        bgcolor:
+                          tipoPlantilla === "EJECUTADO"
+                            ? alpha(COLOR_VERDE_EXITO, 0.06)
+                            : "transparent",
+                      }}
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Stack>
+            </Paper>
+          )}
+
+          {plantillas.length > 0 && (
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                bgcolor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.025),
+                borderColor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.18),
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", md: "center" }}
+              >
+                <Stack direction="row" spacing={1.2} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 2.5,
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: alpha(COLOR_VERDE_MEDIO, 0.1),
+                      color: COLOR_VERDE_MEDIO,
+                    }}
+                  >
+                    <DownloadRoundedIcon />
+                  </Box>
+
+                  <Box>
+                    <Typography sx={{ fontWeight: 900 }}>
+                      1. Descarga la plantilla oficial
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Usa siempre el formato vigente para evitar errores de
+                      estructura.
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
                   {plantillas.map((p) => (
                     <Button
                       key={p.url}
-                      variant="outlined"
+                      variant="contained"
                       startIcon={<DownloadRoundedIcon />}
                       onClick={() => descargarArchivo(p.url, p.fileName)}
-                      sx={{ borderRadius: 2.5 }}
+                      sx={{
+                        borderRadius: 3,
+                        fontWeight: 800,
+                        boxShadow: "none",
+                        bgcolor: COLOR_VERDE_MEDIO,
+                        "&:hover": {
+                          bgcolor: COLOR_VERDE_INSTITUCIONAL,
+                        },
+                      }}
                     >
                       {p.label}
                     </Button>
                   ))}
                 </Stack>
               </Stack>
-
-              <Divider />
-            </>
+            </Paper>
           )}
 
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "stretch", md: "center" }}
-            justifyContent="space-between"
+          <Box
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActivo(true);
+            }}
+            onDragLeave={() => setDragActivo(false)}
+            onDrop={onDrop}
+            sx={{
+              p: { xs: 2, md: 3 },
+              borderRadius: 4,
+              border: "2px dashed",
+              borderColor: dragActivo
+                ? COLOR_VERDE_MEDIO
+                : archivo
+                  ? alpha(COLOR_VERDE_EXITO, 0.55)
+                  : alpha(COLOR_VERDE_MEDIO, 0.28),
+              bgcolor: dragActivo
+                ? alpha(COLOR_VERDE_MEDIO, 0.06)
+                : archivo
+                  ? alpha(COLOR_VERDE_EXITO, 0.055)
+                  : alpha(theme.palette.grey[500], 0.035),
+              transition: "all .18s ease",
+            }}
           >
-            <Stack spacing={0.7}>
-              <Typography sx={{ fontWeight: 700 }}>
-                Archivo Excel
-              </Typography>
-              <Stack direction="row" spacing={1.2} alignItems="center" flexWrap="wrap">
-                <Chip
-                  icon={<DescriptionRoundedIcon />}
-                  label={archivoLabel}
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={2}
+              justifyContent="space-between"
+              alignItems={{ xs: "stretch", md: "center" }}
+            >
+              <Stack direction="row" spacing={1.6} alignItems="center">
+                <Box
+                  sx={{
+                    width: 58,
+                    height: 58,
+                    borderRadius: 3.5,
+                    display: "grid",
+                    placeItems: "center",
+                    bgcolor: archivo
+                      ? alpha(COLOR_VERDE_EXITO, 0.12)
+                      : alpha(COLOR_VERDE_MEDIO, 0.1),
+                    color: archivo ? COLOR_VERDE_EXITO : COLOR_VERDE_MEDIO,
+                  }}
+                >
+                  {archivo ? (
+                    <CheckCircleRoundedIcon fontSize="large" />
+                  ) : (
+                    <CloudUploadRoundedIcon fontSize="large" />
+                  )}
+                </Box>
+
+                <Box>
+                  <Typography sx={{ fontWeight: 900 }}>
+                    {archivo
+                      ? archivo.name
+                      : "2. Arrastra o selecciona tu archivo Excel"}
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary">
+                    {archivo
+                      ? `${formatBytes(archivo.size)} · listo para validar`
+                      : "Solo archivos .xlsx. Primero valida; luego procesa."}
+                  </Typography>
+
+                  {(tipoActual === "ag" || tipoActual === "pdrc") && (
+                    <Chip
+                      size="small"
+                      sx={{
+                        mt: 1,
+                        fontWeight: 800,
+                        bgcolor: alpha(tipoPlantillaColor, 0.12),
+                        color: tipoPlantillaColor,
+                      }}
+                      label={`Se procesará: ${TIPO_PLANTILLA_LABEL[tipoPlantilla]}`}
+                    />
+                  )}
+                </Box>
+              </Stack>
+
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
+                <Button
+                  component="label"
                   variant="outlined"
-                  sx={{ maxWidth: "100%" }}
-                />
+                  startIcon={<UploadFileRoundedIcon />}
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 800,
+                    borderColor: alpha(COLOR_VERDE_MEDIO, 0.45),
+                    color: COLOR_VERDE_MEDIO,
+                    "&:hover": {
+                      borderColor: COLOR_VERDE_MEDIO,
+                      bgcolor: alpha(COLOR_VERDE_MEDIO, 0.06),
+                    },
+                  }}
+                >
+                  Seleccionar archivo
+                  <input
+                    ref={inputRef}
+                    hidden
+                    type="file"
+                    accept=".xlsx"
+                    onChange={onSelectFile}
+                  />
+                </Button>
+
+                <Button
+                  variant="contained"
+                  startIcon={
+                    loadingValidar ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <FactCheckRoundedIcon />
+                    )
+                  }
+                  onClick={onValidar}
+                  disabled={!archivo || loadingValidar || !soportado}
+                  sx={{
+                    borderRadius: 3,
+                    minWidth: 135,
+                    fontWeight: 900,
+                    boxShadow: "none",
+                    bgcolor: COLOR_VERDE_MEDIO,
+                    "&:hover": {
+                      bgcolor: COLOR_VERDE_INSTITUCIONAL,
+                    },
+                    "&.Mui-disabled": {
+                      bgcolor: alpha(theme.palette.grey[500], 0.25),
+                      color: alpha(theme.palette.text.primary, 0.35),
+                    },
+                  }}
+                >
+                  {loadingValidar ? "Validando..." : "Validar"}
+                </Button>
+
+                <Button
+                  variant="contained"
+                  startIcon={
+                    loadingProcesar ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <PlayCircleOutlineRoundedIcon />
+                    )
+                  }
+                  onClick={() => setConfirmarProcesar(true)}
+                  disabled={!puedeProcesar}
+                  sx={{
+                    borderRadius: 3,
+                    minWidth: 135,
+                    fontWeight: 900,
+                    boxShadow: "none",
+                    bgcolor: COLOR_VERDE_EXITO,
+                    "&:hover": {
+                      bgcolor: "#166534",
+                    },
+                    "&.Mui-disabled": {
+                      bgcolor: alpha(theme.palette.grey[500], 0.25),
+                      color: alpha(theme.palette.text.primary, 0.35),
+                    },
+                  }}
+                >
+                  {loadingProcesar ? "Procesando..." : "Procesar"}
+                </Button>
               </Stack>
             </Stack>
+          </Box>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<UploadFileRoundedIcon />}
-                sx={{ borderRadius: 2.5 }}
-              >
-                Seleccionar archivo
-                <input hidden type="file" accept=".xlsx" onChange={onSelectFile} />
-              </Button>
+          {(loadingValidar || loadingProcesar) && (
+            <LinearProgress
+              sx={{
+                borderRadius: 2,
+                bgcolor: alpha(COLOR_VERDE_MEDIO, 0.12),
+                "& .MuiLinearProgress-bar": {
+                  bgcolor: COLOR_VERDE_MEDIO,
+                },
+              }}
+            />
+          )}
 
-              <Button
-                variant="contained"
-                startIcon={loadingValidar ? <CircularProgress size={18} color="inherit" /> : <FactCheckRoundedIcon />}
-                onClick={onValidar}
-                disabled={!archivo || loadingValidar || !soportado}
-                sx={{ borderRadius: 2.5, minWidth: 140 }}
-              >
-                {loadingValidar ? "Validando..." : "Validar"}
-              </Button>
-
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={loadingProcesar ? <CircularProgress size={18} color="inherit" /> : <PlayCircleOutlineRoundedIcon />}
-                onClick={onProcesar}
-                disabled={!archivo || loadingProcesar || !soportado || !validacion?.puedeProcesar}
-                sx={{ borderRadius: 2.5, minWidth: 140 }}
-              >
-                {loadingProcesar ? "Procesando..." : "Procesar"}
-              </Button>
-            </Stack>
-          </Stack>
-
-          <Divider />
-
-          <Alert severity="info" sx={{ borderRadius: 2 }}>
-            Flujo recomendado: primero <strong>Validar</strong>, luego <strong>Procesar</strong>.
+          <Alert
+            severity="success"
+            icon={<InfoOutlinedIcon />}
+            sx={{
+              borderRadius: 3,
+              bgcolor: alpha(COLOR_VERDE_MEDIO, 0.08),
+              color: COLOR_TEXTO_VERDE,
+              "& .MuiAlert-icon": {
+                color: COLOR_VERDE_MEDIO,
+              },
+            }}
+          >
+            Flujo recomendado: <strong>descargar plantilla</strong>, completar
+            datos, <strong>validar</strong> y recién <strong>procesar</strong>.
+            El procesamiento solo se habilita cuando la validación no tiene
+            errores.
           </Alert>
 
           {tipoActual === "ag" && (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Para <strong>AG</strong>, el archivo debe contener <strong>una sola hoja</strong>:
-              puede ser <strong>Indicador Valor</strong> o <strong>Indicador Ejecutado</strong>.
+            <Alert
+              severity="success"
+              icon={<VerifiedRoundedIcon />}
+              sx={{
+                borderRadius: 3,
+                bgcolor: alpha(COLOR_VERDE_EXITO, 0.08),
+                color: COLOR_TEXTO_VERDE,
+                "& .MuiAlert-icon": {
+                  color: COLOR_VERDE_EXITO,
+                },
+              }}
+            >
+              Para <strong>AG</strong>, usa la plantilla oficial con las hojas{" "}
+              <strong>01_AG_INDICADOR_VALOR</strong> y{" "}
+              <strong>02_AG_INDICADOR_EJECUTADO</strong>. El selector superior
+              define cuál de ellas procesará el backend.
             </Alert>
           )}
 
           {tipoActual === "pdrc" && (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Para <strong>PDRC</strong>, utiliza la plantilla oficial de carga masiva antes de validar y procesar.
+            <Alert
+              severity="success"
+              icon={<VerifiedRoundedIcon />}
+              sx={{
+                borderRadius: 3,
+                bgcolor: alpha(COLOR_VERDE_EXITO, 0.08),
+                color: COLOR_TEXTO_VERDE,
+                "& .MuiAlert-icon": {
+                  color: COLOR_VERDE_EXITO,
+                },
+              }}
+            >
+              Para <strong>PDRC</strong>, usa la plantilla oficial con las hojas{" "}
+              <strong>01_PDRC_INDICADOR_VALOR</strong> y{" "}
+              <strong>02_PDRC_INDICADOR_EJECUTADO</strong>. El selector superior
+              define cuál de ellas procesará el backend.
             </Alert>
           )}
 
           {errorGeneral && (
-            <Alert severity="error" sx={{ borderRadius: 2 }}>
+            <Alert
+              severity="error"
+              icon={<ErrorOutlineRoundedIcon />}
+              sx={{ borderRadius: 3 }}
+            >
               {errorGeneral}
             </Alert>
           )}
@@ -375,62 +1012,145 @@ export default function CargaMasivaPage(): React.ReactElement {
 
       {validacion && (
         <Paper
+          elevation={0}
           sx={{
             mt: 2,
-            p: 2.5,
-            borderRadius: 3,
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 4,
             border: "1px solid",
-            borderColor: "divider",
-            boxShadow: "0 10px 30px rgba(0,0,0,.05)",
+            borderColor: validacion.puedeProcesar
+              ? alpha(COLOR_VERDE_EXITO, 0.35)
+              : alpha(theme.palette.warning.main, 0.35),
+            boxShadow: "0 18px 45px rgba(15, 23, 42, 0.06)",
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
-            Resultado de Validación
-          </Typography>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: "stretch", md: "center" }}
+            sx={{ mb: 2 }}
+          >
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <AssignmentTurnedInRoundedIcon
+                  sx={{
+                    color: validacion.puedeProcesar
+                      ? COLOR_VERDE_EXITO
+                      : theme.palette.warning.main,
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                  Resultado de Validación
+                </Typography>
+              </Stack>
 
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
-            <Chip label={`Total filas: ${validacion.totalFilas}`} variant="outlined" />
-            <Chip label={`Válidas: ${validacion.filasValidas}`} color="success" variant="outlined" />
-            <Chip label={`Con error: ${validacion.filasConError}`} color="error" variant="outlined" />
+              <Typography variant="body2" color="text.secondary">
+                {validacion.puedeProcesar
+                  ? "El archivo está listo para procesamiento."
+                  : "Corrige los errores antes de procesar."}
+              </Typography>
+            </Box>
+
             <Chip
-              label={validacion.puedeProcesar ? "Puede procesar" : "No puede procesar"}
-              color={validacion.puedeProcesar ? "success" : "warning"}
+              label={
+                validacion.puedeProcesar
+                  ? "Validación correcta"
+                  : "Validación con observaciones"
+              }
+              sx={{
+                fontWeight: 900,
+                color: validacion.puedeProcesar
+                  ? COLOR_TEXTO_VERDE
+                  : theme.palette.warning.dark,
+                bgcolor: validacion.puedeProcesar
+                  ? alpha(COLOR_VERDE_EXITO, 0.12)
+                  : alpha(theme.palette.warning.main, 0.16),
+              }}
             />
-            {!!validacion.tipoPlantilla && (
-              <Chip
-                label={`Plantilla: ${validacion.tipoPlantilla}`}
-                color="primary"
-                variant="outlined"
-              />
-            )}
           </Stack>
 
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1.2}
+            sx={{ mb: 2, flexWrap: "wrap" }}
+          >
+            <MetricCard
+              label="Total filas"
+              value={validacion.totalFilas}
+              tone="primary"
+            />
+            <MetricCard
+              label="Filas válidas"
+              value={validacion.filasValidas}
+              tone="success"
+            />
+            <MetricCard
+              label="Filas con error"
+              value={validacion.filasConError}
+              tone={validacion.filasConError > 0 ? "error" : "default"}
+            />
+            <MetricCard
+              label="Puede procesar"
+              value={validacion.puedeProcesar ? "Sí" : "No"}
+              tone={validacion.puedeProcesar ? "success" : "warning"}
+            />
+          </Stack>
+
+          {!!validacion.tipoPlantilla && (
+            <Chip
+              label={`Plantilla detectada: ${validacion.tipoPlantilla}`}
+              variant="outlined"
+              sx={{
+                mb: 2,
+                fontWeight: 800,
+                borderColor: alpha(COLOR_VERDE_MEDIO, 0.5),
+                color: COLOR_VERDE_MEDIO,
+              }}
+            />
+          )}
+
           {validacion.errores?.length > 0 ? (
-            <Box sx={{ overflowX: "auto" }}>
-              <Table size="small">
+            <TableContainer
+              component={Paper}
+              variant="outlined"
+              sx={{ borderRadius: 3, maxHeight: 430 }}
+            >
+              <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Fila</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Campo</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Mensaje</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Valor</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>Fila</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>Campo</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>Mensaje</TableCell>
+                    <TableCell sx={{ fontWeight: 900 }}>Valor</TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
                   {validacion.errores.map((e, idx) => (
-                    <TableRow key={`${e.numeroFila}-${e.campo}-${idx}`}>
+                    <TableRow key={`${e.numeroFila}-${e.campo}-${idx}`} hover>
                       <TableCell>{e.numeroFila}</TableCell>
-                      <TableCell>{e.campo}</TableCell>
+                      <TableCell>
+                        <Chip label={e.campo} size="small" variant="outlined" />
+                      </TableCell>
                       <TableCell>{e.mensaje}</TableCell>
                       <TableCell>{e.valor ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </Box>
+            </TableContainer>
           ) : (
-            <Alert severity="success" sx={{ borderRadius: 2 }}>
-              El archivo no presenta errores de validación.
+            <Alert
+              severity="success"
+              sx={{
+                borderRadius: 3,
+                bgcolor: alpha(COLOR_VERDE_EXITO, 0.08),
+                color: COLOR_TEXTO_VERDE,
+              }}
+            >
+              El archivo no presenta errores de validación. Puedes procesarlo
+              con seguridad.
             </Alert>
           )}
         </Paper>
@@ -438,132 +1158,188 @@ export default function CargaMasivaPage(): React.ReactElement {
 
       {resultado && (
         <Paper
+          elevation={0}
           sx={{
             mt: 2,
-            p: 2.5,
-            borderRadius: 3,
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 4,
             border: "1px solid",
-            borderColor: "divider",
-            boxShadow: "0 10px 30px rgba(0,0,0,.05)",
+            borderColor: resultado.success
+              ? alpha(COLOR_VERDE_EXITO, 0.35)
+              : alpha(theme.palette.error.main, 0.35),
+            boxShadow: "0 18px 45px rgba(15, 23, 42, 0.06)",
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>
-            Resultado del Procesamiento
-          </Typography>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1.5}
+            justifyContent="space-between"
+            alignItems={{ xs: "stretch", md: "center" }}
+            sx={{ mb: 2 }}
+          >
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TableRowsRoundedIcon
+                  sx={{
+                    color: resultado.success
+                      ? COLOR_VERDE_EXITO
+                      : theme.palette.error.main,
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                  Resultado del Procesamiento
+                </Typography>
+              </Stack>
 
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
-            <Chip label={`Leídas: ${resultado.totalFilasLeidas}`} variant="outlined" />
-            <Chip label={`Válidas: ${resultado.totalFilasValidas}`} color="success" variant="outlined" />
-            <Chip label={`Con error: ${resultado.totalFilasConError}`} color="error" variant="outlined" />
-            {!!("tipoPlantilla" in resultado) && (
-              <Chip label={`Plantilla: ${resultado.tipoPlantilla}`} color="primary" variant="outlined" />
+              <Typography variant="body2" color="text.secondary">
+                {resultado.mensaje}
+              </Typography>
+            </Box>
+
+            <Chip
+              label={resultado.success ? "Procesado" : "No procesado"}
+              sx={{
+                fontWeight: 900,
+                color: resultado.success
+                  ? COLOR_TEXTO_VERDE
+                  : theme.palette.error.dark,
+                bgcolor: resultado.success
+                  ? alpha(COLOR_VERDE_EXITO, 0.12)
+                  : alpha(theme.palette.error.main, 0.12),
+              }}
+            />
+          </Stack>
+
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1.2}
+            sx={{ mb: 2, flexWrap: "wrap" }}
+          >
+            <MetricCard
+              label="Filas leídas"
+              value={resultado.totalFilasLeidas}
+              tone="primary"
+            />
+            <MetricCard
+              label="Filas válidas"
+              value={resultado.totalFilasValidas}
+              tone="success"
+            />
+            <MetricCard
+              label="Filas con error"
+              value={resultado.totalFilasConError}
+              tone={resultado.totalFilasConError > 0 ? "error" : "default"}
+            />
+            {"tipoPlantilla" in resultado && (
+              <MetricCard
+                label="Plantilla"
+                value={resultado.tipoPlantilla}
+                tone="info"
+              />
             )}
           </Stack>
 
           {isPdrcResultado(resultado) && (
-            <>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
-                <Chip label={`Valores insertados: ${resultado.valoresInsertados}`} color="success" />
-                <Chip label={`Valores omitidos: ${resultado.valoresOmitidos}`} color="warning" variant="outlined" />
-              </Stack>
-
-              <Box sx={{ overflowX: "auto" }}>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Periodos insertados</TableCell>
-                      <TableCell>{resultado.periodosInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>OER insertados</TableCell>
-                      <TableCell>{resultado.oerInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>AER insertados</TableCell>
-                      <TableCell>{resultado.aerInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Entidades estratégicas insertadas</TableCell>
-                      <TableCell>{resultado.entidadesEstrategicasInsertadas}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Relaciones OER/AER insertadas</TableCell>
-                      <TableCell>{resultado.oerAerInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Indicadores insertados</TableCell>
-                      <TableCell>{resultado.indicadoresInsertados}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-            </>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1.2}
+              sx={{ mb: 2, flexWrap: "wrap" }}
+            >
+              <MetricCard
+                label="Valores insertados"
+                value={resultado.valoresInsertados ?? 0}
+                tone="success"
+              />
+              <MetricCard
+                label="Valores actualizados"
+                value={resultado.valoresActualizados ?? 0}
+                tone="info"
+              />
+              <MetricCard
+                label="Valores omitidos"
+                value={resultado.valoresOmitidos ?? 0}
+                tone="warning"
+              />
+              <MetricCard
+                label="OER insertados"
+                value={resultado.oerInsertados ?? 0}
+                tone="primary"
+              />
+              <MetricCard
+                label="AER insertados"
+                value={resultado.aerInsertados ?? 0}
+                tone="primary"
+              />
+              <MetricCard
+                label="Indicadores insertados"
+                value={resultado.indicadoresInsertados ?? 0}
+                tone="info"
+              />
+            </Stack>
           )}
 
           {isAgResultado(resultado) && (
-            <>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 2, flexWrap: "wrap" }}>
-                <Chip label={`Cabeceras insertadas: ${resultado.cabecerasInsertadas}`} color="success" variant="outlined" />
-                <Chip label={`Cabeceras reutilizadas: ${resultado.cabecerasReutilizadas}`} color="primary" variant="outlined" />
-                <Chip label={`Valores insertados: ${resultado.valoresInsertados}`} color="success" />
-                <Chip label={`Valores actualizados: ${resultado.valoresActualizados}`} color="info" variant="outlined" />
-                <Chip label={`Valores omitidos: ${resultado.valoresOmitidos}`} color="warning" variant="outlined" />
-                <Chip label={`Ejecutados insertados: ${resultado.ejecutadosInsertados}`} color="success" />
-                <Chip label={`Ejecutados actualizados: ${resultado.ejecutadosActualizados}`} color="info" variant="outlined" />
-                <Chip label={`Ejecutados omitidos: ${resultado.ejecutadosOmitidos}`} color="warning" variant="outlined" />
-              </Stack>
-
-              <Box sx={{ overflowX: "auto" }}>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Cabeceras insertadas</TableCell>
-                      <TableCell>{resultado.cabecerasInsertadas}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Cabeceras reutilizadas</TableCell>
-                      <TableCell>{resultado.cabecerasReutilizadas}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Valores insertados</TableCell>
-                      <TableCell>{resultado.valoresInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Valores actualizados</TableCell>
-                      <TableCell>{resultado.valoresActualizados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Ejecutados insertados</TableCell>
-                      <TableCell>{resultado.ejecutadosInsertados}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Ejecutados actualizados</TableCell>
-                      <TableCell>{resultado.ejecutadosActualizados}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-            </>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1.2}
+              sx={{ mb: 2, flexWrap: "wrap" }}
+            >
+              <MetricCard
+                label="Cabeceras insertadas"
+                value={resultado.cabecerasInsertadas}
+                tone="success"
+              />
+              <MetricCard
+                label="Cabeceras reutilizadas"
+                value={resultado.cabecerasReutilizadas}
+                tone="primary"
+              />
+              <MetricCard
+                label="Valores insertados"
+                value={resultado.valoresInsertados}
+                tone="success"
+              />
+              <MetricCard
+                label="Valores actualizados"
+                value={resultado.valoresActualizados}
+                tone="info"
+              />
+              <MetricCard
+                label="Ejecutados insertados"
+                value={resultado.ejecutadosInsertados}
+                tone="success"
+              />
+              <MetricCard
+                label="Ejecutados actualizados"
+                value={resultado.ejecutadosActualizados}
+                tone="info"
+              />
+            </Stack>
           )}
 
           {!!resultado.errores?.length && (
             <Box sx={{ mt: 2 }}>
-              <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }}>
+              <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 3 }}>
                 El procesamiento devolvió observaciones.
               </Alert>
 
-              <Box sx={{ overflowX: "auto" }}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{ borderRadius: 3, maxHeight: 360 }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Fila</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Campo</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Mensaje</TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>Fila</TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>Campo</TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>Mensaje</TableCell>
                     </TableRow>
                   </TableHead>
+
                   <TableBody>
                     {resultado.errores.map((e, idx) => (
-                      <TableRow key={`${e.numeroFila}-${e.campo}-${idx}`}>
+                      <TableRow key={`${e.numeroFila}-${e.campo}-${idx}`} hover>
                         <TableCell>{e.numeroFila}</TableCell>
                         <TableCell>{e.campo}</TableCell>
                         <TableCell>{e.mensaje}</TableCell>
@@ -571,11 +1347,86 @@ export default function CargaMasivaPage(): React.ReactElement {
                     ))}
                   </TableBody>
                 </Table>
-              </Box>
+              </TableContainer>
             </Box>
           )}
         </Paper>
       )}
+
+      <Dialog
+        open={confirmarProcesar}
+        onClose={() => setConfirmarProcesar(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          Confirmar procesamiento
+        </DialogTitle>
+
+        <DialogContent>
+          <Alert severity="warning" sx={{ borderRadius: 3, mb: 2 }}>
+            Esta acción insertará o actualizará registros en la base de datos
+            según las reglas de carga masiva.
+          </Alert>
+
+          <Stack spacing={1}>
+            <Typography variant="body2">
+              <strong>Archivo:</strong> {archivo?.name}
+            </Typography>
+
+            <Typography variant="body2">
+              <strong>Instrumento:</strong> {tipoActual.toUpperCase()}
+            </Typography>
+
+            {(tipoActual === "ag" || tipoActual === "pdrc") && (
+              <Typography variant="body2">
+                <strong>Tipo de carga:</strong>{" "}
+                {TIPO_PLANTILLA_LABEL[tipoPlantilla]}
+              </Typography>
+            )}
+
+            <Typography variant="body2">
+              <strong>Filas válidas:</strong> {validacion?.filasValidas ?? 0}
+            </Typography>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setConfirmarProcesar(false)}
+            sx={{
+              borderRadius: 2.5,
+              color: COLOR_VERDE_MEDIO,
+            }}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            onClick={onProcesar}
+            variant="contained"
+            startIcon={
+              loadingProcesar ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <PlayCircleOutlineRoundedIcon />
+              )
+            }
+            disabled={loadingProcesar}
+            sx={{
+              borderRadius: 2.5,
+              fontWeight: 900,
+              boxShadow: "none",
+              bgcolor: COLOR_VERDE_EXITO,
+              "&:hover": {
+                bgcolor: "#166534",
+              },
+            }}
+          >
+            Sí, procesar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
