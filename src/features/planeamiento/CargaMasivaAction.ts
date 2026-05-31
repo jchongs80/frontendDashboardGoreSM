@@ -1,6 +1,6 @@
 import { api } from "../../shared/api";
 
-export type CargaMasivaTipo = "ag" | "pdrc" | "pei" | "poi";
+export type CargaMasivaTipo = "ag" | "pdrc" | "prcp" | "pei" | "poi";
 export type TipoPlantillaCarga = "VALOR" | "EJECUTADO";
 
 export type CargaMasivaErrorDto = {
@@ -42,6 +42,31 @@ export type PdrcCargaMasivaResultadoDto = {
   errores: CargaMasivaErrorDto[];
 };
 
+
+export type PrcpCargaMasivaResultadoDto = {
+  nombreArchivo: string;
+  totalFilasLeidas: number;
+  totalFilasValidas: number;
+  totalFilasConError: number;
+
+  periodosInsertados: number;
+  aniosInsertados: number;
+  unidadesInsertadas: number;
+  objetivosPrioritariosInsertados: number;
+  problemasIdentificadosInsertados: number;
+  medidasPoliticaInsertadas: number;
+  relacionesPrcpInsertadas: number;
+  indicadoresInsertados: number;
+
+  valoresInsertados: number;
+  valoresActualizados: number;
+  valoresOmitidos: number;
+
+  success: boolean;
+  mensaje: string;
+  errores: CargaMasivaErrorDto[];
+};
+
 export type AgCargaMasivaResultadoDto = {
   nombreArchivo: string;
   tipoPlantilla: string;
@@ -56,10 +81,6 @@ export type AgCargaMasivaResultadoDto = {
   valoresActualizados: number;
   valoresOmitidos: number;
 
-  ejecutadosInsertados: number;
-  ejecutadosActualizados: number;
-  ejecutadosOmitidos: number;
-
   success: boolean;
   mensaje: string;
   errores: CargaMasivaErrorDto[];
@@ -67,12 +88,13 @@ export type AgCargaMasivaResultadoDto = {
 
 export type CargaMasivaResultadoDto =
   | PdrcCargaMasivaResultadoDto
+  | PrcpCargaMasivaResultadoDto
   | AgCargaMasivaResultadoDto;
 
 function normalizeTipo(tipo: string | undefined): CargaMasivaTipo {
   const t = (tipo ?? "").trim().toLowerCase();
 
-  if (t === "pdrc" || t === "pei" || t === "poi" || t === "ag") {
+  if (t === "pdrc" || t === "prcp" || t === "pei" || t === "poi" || t === "ag") {
     return t;
   }
 
@@ -93,6 +115,12 @@ function getEndpoints(tipo: string | undefined) {
       return {
         validar: "/api/AgCargaMasiva/validar",
         procesar: "/api/AgCargaMasiva/procesar",
+      };
+
+    case "prcp":
+      return {
+        validar: "/api/PrcpCargaMasiva/validar",
+        procesar: "/api/PrcpCargaMasiva/procesar",
       };
 
     case "pei":
@@ -121,8 +149,13 @@ function buildFormData(
 
   const instrumento = normalizeTipo(tipo);
 
-  if (instrumento === "ag" || instrumento === "pdrc") {
-    formData.append("tipoPlantilla", tipoPlantilla);
+  if (instrumento === "ag" || instrumento === "pdrc" || instrumento === "prcp") {
+    formData.append(
+      "tipoPlantilla",
+      instrumento === "ag" || instrumento === "pdrc" || instrumento === "prcp"
+        ? "VALOR"
+        : tipoPlantilla
+    );
   }
 
   return formData;
