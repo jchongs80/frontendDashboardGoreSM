@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -28,25 +34,22 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
-import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
-import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
-import TableRowsRoundedIcon from "@mui/icons-material/TableRowsRounded";
+import RuleRoundedIcon from "@mui/icons-material/RuleRounded";
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 
 import {
   CargaMasivaAction,
-  type AgCargaMasivaResultadoDto,
+  type CargaMasivaErrorDto,
   type CargaMasivaResultadoDto,
   type CargaMasivaValidacionDto,
-  type PdrcCargaMasivaResultadoDto,
-  type PrcpCargaMasivaResultadoDto,
   type TipoPlantillaCarga,
 } from "../CargaMasivaAction";
 
@@ -54,77 +57,69 @@ type RouteParams = {
   tipo?: string;
 };
 
-const tiposPermitidos = ["ag", "pdrc", "prcp", "pei", "poi"] as const;
-type TipoInstrumento = (typeof tiposPermitidos)[number];
+const TIPOS_PERMITIDOS = ["ag", "pdrc", "prcp", "pei", "poi"] as const;
+type TipoInstrumento = (typeof TIPOS_PERMITIDOS)[number];
 
-type PlantillaDescarga = {
-  label: string;
-  fileName: string;
-  url: string;
-  descripcion: string;
-};
+type MetricTone = "default" | "success" | "error" | "info" | "warning";
 
 type MetricCardProps = {
   label: string;
-  value: number | string;
-  tone?: "default" | "success" | "error" | "warning" | "info" | "primary";
+  value: string | number;
+  tone?: MetricTone;
 };
 
-const COLOR_VERDE_INSTITUCIONAL = "#0B5D4F";
-const COLOR_VERDE_MEDIO = "#0F766E";
-const COLOR_VERDE_SUAVE = "#EAF6F2";
-const COLOR_VERDE_EXITO = "#15803D";
-const COLOR_TEXTO = "#1F2937";
-const COLOR_TEXTO_SUAVE = "#64748B";
+const TIPO_PLANTILLA: TipoPlantillaCarga = "VALOR";
 
-const TIPO_PLANTILLA_LABEL: Record<TipoPlantillaCarga, string> = {
-  VALOR: "Indicador Valor / Meta",
-  EJECUTADO: "Indicador Ejecutado",
-};
+const COLOR_PRIMARY = "#0F766E";
+const COLOR_PRIMARY_DARK = "#0B5D4F";
+const COLOR_SUCCESS = "#15803D";
+const COLOR_TEXT = "#111827";
+const COLOR_MUTED = "#64748B";
+const COLOR_SOFT = "#F7FBF9";
+const COLOR_LINE = "rgba(15, 118, 110, 0.16)";
 
-function normalizeTipo(tipo?: string): TipoInstrumento {
-  const t = (tipo ?? "").trim().toLowerCase();
-
-  return (
-    tiposPermitidos.includes(t as TipoInstrumento) ? t : "pdrc"
-  ) as TipoInstrumento;
+function normalizeTipo(tipo?: string): TipoInstrumento | null {
+  const value = (tipo ?? "").trim().toLowerCase();
+  return TIPOS_PERMITIDOS.includes(value as TipoInstrumento)
+    ? (value as TipoInstrumento)
+    : null;
 }
 
-function getTitulo(tipo: TipoInstrumento): string {
+function isTipoHabilitado(
+  tipo: TipoInstrumento | null,
+): tipo is Exclude<TipoInstrumento, "poi"> {
+  return tipo === "ag" || tipo === "pdrc" || tipo === "prcp" || tipo === "pei";
+}
+
+function getTipoDisplay(
+  tipo: TipoInstrumento | null,
+  tipoUrl?: string,
+): string {
+  return (tipo ?? tipoUrl ?? "pdrc").toUpperCase();
+}
+
+function getTitulo(tipo: TipoInstrumento | null): string {
+  return `Carga masiva ${getTipoDisplay(tipo)}`;
+}
+
+function getDescripcion(tipo: TipoInstrumento | null): string {
   switch (tipo) {
     case "ag":
-      return "Carga Masiva AG";
+      return "Carga los valores programados de Acuerdos de Gobernabilidad desde Excel.";
     case "pdrc":
-      return "Carga Masiva PDRC";
+      return "Carga los valores programados del Plan de Desarrollo Regional Concertado.";
     case "prcp":
-      return "Carga Masiva PRCP";
+      return "Carga los valores programados del Plan Regional de Competitividad y Productividad.";
     case "pei":
-      return "Carga Masiva PEI";
+      return "Carga los valores programados del Plan Estratégico Institucional.";
     case "poi":
-      return "Carga Masiva POI";
+      return "La opción POI está preparada en el menú, pero su proceso operativo aún debe habilitarse.";
     default:
-      return "Carga Masiva";
+      return "Selecciona un instrumento válido para iniciar la carga masiva.";
   }
 }
 
-function getDescripcion(tipo: TipoInstrumento): string {
-  switch (tipo) {
-    case "pdrc":
-      return "Sube la plantilla oficial para validar y cargar valores programados del PDRC.";
-    case "ag":
-      return "Sube la plantilla oficial para validar y cargar valores programados de Acuerdos de Gobernabilidad.";
-    case "prcp":
-      return "Sube la plantilla oficial para validar y cargar valores programados del PRCP.";
-    case "pei":
-      return "Carga masiva para el PEI.";
-    case "poi":
-      return "Carga masiva para el POI.";
-    default:
-      return "Sube un archivo Excel para validarlo y procesarlo.";
-  }
-}
-
-function getHojaEsperada(tipo: TipoInstrumento): string {
+function getHojaPrincipal(tipo: TipoInstrumento | null): string {
   switch (tipo) {
     case "ag":
       return "01_AG_INDICADOR_VALOR";
@@ -132,67 +127,29 @@ function getHojaEsperada(tipo: TipoInstrumento): string {
       return "01_PDRC_INDICADOR_VALOR";
     case "prcp":
       return "01_PRCP_INDICADOR_VALOR";
+    case "pei":
+      return "01_PEI_INDICADOR_VALOR";
+    case "poi":
+      return "01_POI_INDICADOR_VALOR";
     default:
-      return "Hoja de carga masiva";
+      return "01_INDICADOR_VALOR";
   }
 }
 
-function isPdrcResultado(
-  resultado: CargaMasivaResultadoDto | null,
-): resultado is PdrcCargaMasivaResultadoDto {
-  return !!resultado && "periodosInsertados" in resultado;
+function getPlantilla(tipo: TipoInstrumento | null): {
+  label: string;
+  fileName: string;
+  url: string;
+} {
+  const upper = getTipoDisplay(tipo);
+  return {
+    label: `Descargar plantilla ${upper}`,
+    fileName: `Template_Carga_Masiva_${upper}.xlsx`,
+    url: `/plantillas/Template_Carga_Masiva_${upper}.xlsx`,
+  };
 }
 
-function isPrcpResultado(
-  resultado: CargaMasivaResultadoDto | null,
-): resultado is PrcpCargaMasivaResultadoDto {
-  return !!resultado && "relacionesPrcpInsertadas" in resultado;
-}
-
-function isAgResultado(
-  resultado: CargaMasivaResultadoDto | null,
-): resultado is AgCargaMasivaResultadoDto {
-  return !!resultado && "cabecerasInsertadas" in resultado;
-}
-
-function getPlantillas(tipo: TipoInstrumento): PlantillaDescarga[] {
-  switch (tipo) {
-    case "pdrc":
-      return [
-        {
-          label: "Plantilla PDRC",
-          fileName: "Template_Carga_Masiva_PDRC.xlsx",
-          url: "/plantillas/Template_Carga_Masiva_PDRC.xlsx",
-          descripcion: "Usa la hoja 01_PDRC_INDICADOR_VALOR.",
-        },
-      ];
-
-    case "ag":
-      return [
-        {
-          label: "Plantilla AG",
-          fileName: "Template_Carga_Masiva_AG.xlsx",
-          url: "/plantillas/Template_Carga_Masiva_AG.xlsx",
-          descripcion: "Usa la hoja 01_AG_INDICADOR_VALOR.",
-        },
-      ];
-
-    case "prcp":
-      return [
-        {
-          label: "Plantilla PRCP",
-          fileName: "Template_Carga_Masiva_PRCP.xlsx",
-          url: "/plantillas/Template_Carga_Masiva_PRCP.xlsx",
-          descripcion: "Usa la hoja 01_PRCP_INDICADOR_VALOR.",
-        },
-      ];
-
-    default:
-      return [];
-  }
-}
-
-function descargarArchivo(url: string, fileName: string) {
+function downloadFile(url: string, fileName: string): void {
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
@@ -203,12 +160,24 @@ function descargarArchivo(url: string, fileName: string) {
 
 function formatBytes(bytes: number): string {
   if (!bytes) return "0 KB";
-
   const kb = bytes / 1024;
+  return kb < 1024 ? `${kb.toFixed(1)} KB` : `${(kb / 1024).toFixed(2)} MB`;
+}
 
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
-  return `${(kb / 1024).toFixed(2)} MB`;
+function getNumber(obj: unknown, key: string, fallback = 0): number {
+  const value = asRecord(obj)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function getString(obj: unknown, key: string, fallback = ""): string {
+  const value = asRecord(obj)[key];
+  return typeof value === "string" && value.trim() !== "" ? value : fallback;
 }
 
 function MetricCard({
@@ -217,40 +186,46 @@ function MetricCard({
   tone = "default",
 }: MetricCardProps): React.ReactElement {
   const theme = useTheme();
-
-  const colorMap = {
+  const colors: Record<MetricTone, string> = {
     default: theme.palette.text.secondary,
-    success: COLOR_VERDE_EXITO,
+    success: COLOR_SUCCESS,
     error: theme.palette.error.main,
+    info: COLOR_PRIMARY,
     warning: theme.palette.warning.dark,
-    info: COLOR_VERDE_MEDIO,
-    primary: COLOR_VERDE_INSTITUCIONAL,
   };
 
-  const color = colorMap[tone];
+  const color = colors[tone];
+  const isLongText = typeof value === "string" && value.length > 22;
 
   return (
     <Box
       sx={{
         p: 1.4,
-        minWidth: 140,
-        flex: "1 1 140px",
         borderRadius: 2.5,
         border: "1px solid",
         borderColor: alpha(color, 0.18),
         bgcolor: alpha(color, 0.055),
+        minWidth: 0,
+        overflow: "hidden",
       }}
     >
       <Typography
         variant="caption"
-        sx={{ color: COLOR_TEXTO_SUAVE, fontWeight: 700 }}
+        sx={{ display: "block", color: COLOR_MUTED, fontWeight: 800 }}
       >
         {label}
       </Typography>
-
       <Typography
-        variant="h6"
-        sx={{ fontWeight: 850, color, lineHeight: 1.15 }}
+        variant={isLongText ? "body2" : "h5"}
+        sx={{
+          mt: 0.25,
+          color,
+          fontWeight: 900,
+          lineHeight: 1.18,
+          whiteSpace: "normal",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
       >
         {value}
       </Typography>
@@ -258,44 +233,204 @@ function MetricCard({
   );
 }
 
-function SectionTitle({
+function StepLabel({
   number,
   title,
-  description,
+  helper,
 }: {
   number: number;
   title: string;
-  description: string;
+  helper?: string;
 }): React.ReactElement {
   return (
-    <Stack direction="row" spacing={1.5} alignItems="flex-start">
+    <Stack direction="row" spacing={1.2} alignItems="flex-start">
       <Box
         sx={{
-          width: 30,
-          height: 30,
+          width: 28,
+          height: 28,
           borderRadius: "50%",
           display: "grid",
           placeItems: "center",
-          bgcolor: COLOR_VERDE_SUAVE,
-          color: COLOR_VERDE_MEDIO,
-          fontWeight: 850,
           flexShrink: 0,
-          mt: 0.15,
+          bgcolor: alpha(COLOR_PRIMARY, 0.1),
+          color: COLOR_PRIMARY,
+          fontWeight: 900,
         }}
       >
         {number}
       </Box>
-
-      <Box>
-        <Typography sx={{ fontWeight: 850, color: COLOR_TEXTO }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 900, color: COLOR_TEXT }}>
           {title}
         </Typography>
-        <Typography variant="body2" sx={{ color: COLOR_TEXTO_SUAVE, mt: 0.2 }}>
-          {description}
-        </Typography>
+        {helper && (
+          <Typography variant="body2" sx={{ mt: 0.2, color: COLOR_MUTED }}>
+            {helper}
+          </Typography>
+        )}
       </Box>
     </Stack>
   );
+}
+
+function ErrorTable({
+  errores,
+}: {
+  errores?: CargaMasivaErrorDto[];
+}): React.ReactElement | null {
+  if (!errores || errores.length === 0) return null;
+
+  return (
+    <TableContainer
+      component={Paper}
+      variant="outlined"
+      sx={{ borderRadius: 2.5, maxHeight: 360 }}
+    >
+      <Table size="small" stickyHeader>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 900, width: 85 }}>Fila</TableCell>
+            <TableCell sx={{ fontWeight: 900, width: 190 }}>Campo</TableCell>
+            <TableCell sx={{ fontWeight: 900 }}>Mensaje</TableCell>
+            <TableCell sx={{ fontWeight: 900, width: 180 }}>Valor</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {errores.map((error, index) => (
+            <TableRow key={`${error.numeroFila}-${error.campo}-${index}`} hover>
+              <TableCell>{error.numeroFila}</TableCell>
+              <TableCell>
+                <Chip
+                  label={error.campo || "—"}
+                  size="small"
+                  variant="outlined"
+                />
+              </TableCell>
+              <TableCell
+                sx={{ whiteSpace: "normal", overflowWrap: "anywhere" }}
+              >
+                {error.mensaje}
+              </TableCell>
+              <TableCell
+                sx={{ whiteSpace: "normal", overflowWrap: "anywhere" }}
+              >
+                {error.valor ?? "—"}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+function getExtraMetrics(
+  tipo: TipoInstrumento | null,
+  resultado: CargaMasivaResultadoDto,
+): Array<{ label: string; value: string | number; tone?: MetricTone }> {
+  const common = [
+    {
+      label: "Valores insertados",
+      value: getNumber(resultado, "valoresInsertados"),
+      tone: "success" as MetricTone,
+    },
+    {
+      label: "Valores actualizados",
+      value: getNumber(resultado, "valoresActualizados"),
+      tone: "info" as MetricTone,
+    },
+    {
+      label: "Valores omitidos",
+      value: getNumber(resultado, "valoresOmitidos"),
+      tone: "default" as MetricTone,
+    },
+  ];
+
+  switch (tipo) {
+    case "ag":
+      return [
+        ...common,
+        {
+          label: "Cabeceras nuevas",
+          value: getNumber(resultado, "cabecerasInsertadas"),
+        },
+        {
+          label: "Cabeceras reutilizadas",
+          value: getNumber(resultado, "cabecerasReutilizadas"),
+        },
+      ];
+    case "pdrc":
+      return [
+        ...common,
+        {
+          label: "Periodos",
+          value: getNumber(resultado, "periodosInsertados"),
+        },
+        { label: "OER", value: getNumber(resultado, "oerInsertados") },
+        { label: "AER", value: getNumber(resultado, "aerInsertados") },
+        {
+          label: "Relaciones OER/AER",
+          value: getNumber(resultado, "oerAerInsertados"),
+        },
+        {
+          label: "Indicadores",
+          value: getNumber(resultado, "indicadoresInsertados"),
+        },
+      ];
+    case "prcp":
+      return [
+        ...common,
+        {
+          label: "Relaciones PRCP",
+          value: getNumber(resultado, "relacionesPrcpInsertadas"),
+        },
+        {
+          label: "Objetivos prioritarios",
+          value: getNumber(resultado, "objetivosPrioritariosInsertados"),
+        },
+        {
+          label: "Problemas",
+          value: getNumber(resultado, "problemasIdentificadosInsertados"),
+        },
+        {
+          label: "Medidas",
+          value: getNumber(resultado, "medidasPoliticaInsertadas"),
+        },
+        {
+          label: "Indicadores",
+          value: getNumber(resultado, "indicadoresInsertados"),
+        },
+      ];
+    case "pei":
+      return [
+        ...common,
+        { label: "OEI", value: getNumber(resultado, "oeiInsertados") },
+        { label: "AEI", value: getNumber(resultado, "aeiInsertados") },
+        {
+          label: "Entidades PEI",
+          value: getNumber(resultado, "entidadesEstrategicasInsertadas"),
+        },
+        {
+          label: "Relaciones OEI/AEI",
+          value: getNumber(resultado, "oeiAeiInsertados"),
+        },
+        {
+          label: "Indicadores",
+          value: getNumber(resultado, "indicadoresInsertados"),
+        },
+        { label: "Fuentes", value: getNumber(resultado, "fuentesInsertadas") },
+        {
+          label: "Periodicidades",
+          value: getNumber(resultado, "periodicidadesInsertadas"),
+        },
+        {
+          label: "Métodos cálculo",
+          value: getNumber(resultado, "metodosCalculoInsertados"),
+        },
+      ];
+    default:
+      return common;
+  }
 }
 
 export default function CargaMasivaPage(): React.ReactElement {
@@ -305,76 +440,79 @@ export default function CargaMasivaPage(): React.ReactElement {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const tipoActual = useMemo(() => normalizeTipo(tipo), [tipo]);
-  const plantillas = useMemo(() => getPlantillas(tipoActual), [tipoActual]);
+  const tipoDisplay = getTipoDisplay(tipoActual, tipo);
+  const plantilla = useMemo(() => getPlantilla(tipoActual), [tipoActual]);
+  const habilitado = isTipoHabilitado(tipoActual);
 
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [tipoPlantilla, setTipoPlantilla] =
-    useState<TipoPlantillaCarga>("VALOR");
-
   const [validacion, setValidacion] = useState<CargaMasivaValidacionDto | null>(
     null,
   );
   const [resultado, setResultado] = useState<CargaMasivaResultadoDto | null>(
     null,
   );
-
   const [errorGeneral, setErrorGeneral] = useState<string>("");
-  const [loadingValidar, setLoadingValidar] = useState<boolean>(false);
-  const [loadingProcesar, setLoadingProcesar] = useState<boolean>(false);
-  const [dragActivo, setDragActivo] = useState<boolean>(false);
-  const [confirmarProcesar, setConfirmarProcesar] = useState<boolean>(false);
+  const [loadingValidar, setLoadingValidar] = useState(false);
+  const [loadingProcesar, setLoadingProcesar] = useState(false);
+  const [dragActivo, setDragActivo] = useState(false);
+  const [confirmarProcesar, setConfirmarProcesar] = useState(false);
   const [validacionKey, setValidacionKey] = useState<string>("");
 
+  const limpiarPantalla = useCallback(() => {
+    setArchivo(null);
+    setValidacion(null);
+    setResultado(null);
+    setErrorGeneral("");
+    setLoadingValidar(false);
+    setLoadingProcesar(false);
+    setDragActivo(false);
+    setConfirmarProcesar(false);
+    setValidacionKey("");
+    if (inputRef.current) inputRef.current.value = "";
+  }, []);
+
   useEffect(() => {
-    if (tipoPlantilla !== "VALOR") {
-      setTipoPlantilla("VALOR");
-      limpiarResultados();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoActual, tipoPlantilla]);
+    limpiarPantalla();
+  }, [tipoActual, limpiarPantalla]);
 
-  const soportado =
-    tipoActual === "pdrc" || tipoActual === "ag" || tipoActual === "prcp";
+  const currentKey = `${tipoActual ?? ""}|${TIPO_PLANTILLA}|${archivo?.name ?? ""}|${archivo?.size ?? 0}|${archivo?.lastModified ?? 0}`;
+  const validacionVigente = Boolean(validacion) && validacionKey === currentKey;
 
-  const currentKey = `${tipoActual}|${tipoPlantilla}|${archivo?.name ?? ""}|${
-    archivo?.size ?? 0
-  }|${archivo?.lastModified ?? 0}`;
+  const puedeProcesar = Boolean(
+    archivo &&
+      habilitado &&
+      validacionVigente &&
+      validacion?.puedeProcesar &&
+      !loadingProcesar,
+  );
 
-  const validacionVigente = !!validacion && validacionKey === currentKey;
-
-  const puedeProcesar =
-    !!archivo &&
-    validacionVigente &&
-    !!validacion?.puedeProcesar &&
-    !loadingProcesar &&
-    soportado;
-
-  const limpiarResultados = () => {
+  const limpiarResultados = useCallback(() => {
     setValidacion(null);
     setResultado(null);
     setErrorGeneral("");
     setValidacionKey("");
-  };
+  }, []);
 
-  const setFileSeguro = (file: File | null) => {
-    limpiarResultados();
-    setArchivo(null);
+  const setArchivoSeguro = useCallback(
+    (file: File | null) => {
+      limpiarResultados();
+      setArchivo(null);
 
-    if (!file) return;
+      if (!file) return;
 
-    const ext = file.name.split(".").pop()?.toLowerCase();
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      if (extension !== "xlsx") {
+        setErrorGeneral("Solo se permiten archivos Excel con extensión .xlsx.");
+        return;
+      }
 
-    if (ext !== "xlsx") {
-      setErrorGeneral("Solo se permiten archivos Excel con extensión .xlsx.");
-      return;
-    }
-
-    setArchivo(file);
-  };
+      setArchivo(file);
+    },
+    [limpiarResultados],
+  );
 
   const onSelectFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    setFileSeguro(file);
+    setArchivoSeguro(event.target.files?.[0] ?? null);
     event.target.value = "";
   };
 
@@ -382,14 +520,19 @@ export default function CargaMasivaPage(): React.ReactElement {
     event.preventDefault();
     event.stopPropagation();
     setDragActivo(false);
-
-    const file = event.dataTransfer.files?.[0] ?? null;
-    setFileSeguro(file);
+    setArchivoSeguro(event.dataTransfer.files?.[0] ?? null);
   };
 
   const onValidar = async () => {
     if (!archivo) {
       setErrorGeneral("Selecciona un archivo Excel antes de validar.");
+      return;
+    }
+
+    if (!habilitado) {
+      setErrorGeneral(
+        `La carga masiva para ${tipoDisplay} aún no está habilitada.`,
+      );
       return;
     }
 
@@ -400,18 +543,19 @@ export default function CargaMasivaPage(): React.ReactElement {
     setValidacionKey("");
 
     try {
-      const resp = await CargaMasivaAction.validar(
-        tipoActual,
+      const response = await CargaMasivaAction.validar(
+        tipoActual ?? undefined,
         archivo,
-        "VALOR",
+        TIPO_PLANTILLA,
       );
-
-      setValidacion(resp);
+      setValidacion(response);
       setValidacionKey(currentKey);
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "No se pudo validar el archivo.";
-      setErrorGeneral(msg);
+    } catch (error: unknown) {
+      setErrorGeneral(
+        error instanceof Error
+          ? error.message
+          : "No se pudo validar el archivo.",
+      );
     } finally {
       setLoadingValidar(false);
     }
@@ -436,50 +580,34 @@ export default function CargaMasivaPage(): React.ReactElement {
     setConfirmarProcesar(false);
 
     try {
-      const resp = await CargaMasivaAction.procesar(
-        tipoActual,
+      const response = await CargaMasivaAction.procesar(
+        tipoActual ?? undefined,
         archivo,
-        "VALOR",
+        TIPO_PLANTILLA,
       );
-
-      setResultado(resp);
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "No se pudo procesar el archivo.";
-      setErrorGeneral(msg);
+      setResultado(response);
+    } catch (error: unknown) {
+      setErrorGeneral(
+        error instanceof Error
+          ? error.message
+          : "No se pudo procesar el archivo.",
+      );
     } finally {
       setLoadingProcesar(false);
     }
   };
 
-  const onLimpiar = () => {
-    setArchivo(null);
-    setValidacion(null);
-    setResultado(null);
-    setErrorGeneral("");
-    setValidacionKey("");
-    setTipoPlantilla("VALOR");
-
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 3 },
-        minHeight: "100%",
-        bgcolor: "#F8FAFC",
-      }}
-    >
-      <Stack spacing={2.2}>
+    <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: "#F8FAFC", minHeight: "100%" }}>
+      <Stack spacing={2}>
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 2, md: 2.4 },
+            p: { xs: 2, md: 2.5 },
             borderRadius: 3.5,
-            bgcolor: "#FFFFFF",
             border: "1px solid",
-            borderColor: alpha(COLOR_VERDE_INSTITUCIONAL, 0.12),
+            borderColor: alpha(COLOR_PRIMARY, 0.13),
+            bgcolor: "#FFFFFF",
           }}
         >
           <Stack
@@ -488,22 +616,26 @@ export default function CargaMasivaPage(): React.ReactElement {
             justifyContent="space-between"
             alignItems={{ xs: "stretch", md: "center" }}
           >
-            <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ minWidth: 0 }}
+            >
               <Tooltip title="Volver" arrow>
                 <IconButton
                   onClick={() => navigate(-1)}
-                  aria-label="Volver"
                   sx={{
-                    color: COLOR_VERDE_MEDIO,
-                    bgcolor: alpha(COLOR_VERDE_MEDIO, 0.07),
-                    "&:hover": { bgcolor: alpha(COLOR_VERDE_MEDIO, 0.12) },
+                    color: COLOR_PRIMARY,
+                    bgcolor: alpha(COLOR_PRIMARY, 0.08),
+                    "&:hover": { bgcolor: alpha(COLOR_PRIMARY, 0.14) },
                   }}
                 >
                   <ArrowBackRoundedIcon />
                 </IconButton>
               </Tooltip>
 
-              <Box>
+              <Box sx={{ minWidth: 0 }}>
                 <Stack
                   direction="row"
                   spacing={1}
@@ -513,29 +645,27 @@ export default function CargaMasivaPage(): React.ReactElement {
                   <Typography
                     variant="h5"
                     sx={{
-                      fontWeight: 850,
-                      color: COLOR_TEXTO,
+                      fontWeight: 900,
+                      color: COLOR_TEXT,
                       letterSpacing: -0.2,
                     }}
                   >
                     {getTitulo(tipoActual)}
                   </Typography>
-
                   <Chip
-                    label={tipoActual.toUpperCase()}
+                    label={tipoDisplay}
                     size="small"
                     sx={{
                       height: 24,
-                      color: COLOR_VERDE_MEDIO,
-                      bgcolor: alpha(COLOR_VERDE_MEDIO, 0.09),
-                      fontWeight: 800,
+                      color: COLOR_PRIMARY,
+                      bgcolor: alpha(COLOR_PRIMARY, 0.09),
+                      fontWeight: 850,
                     }}
                   />
                 </Stack>
-
                 <Typography
                   variant="body2"
-                  sx={{ color: COLOR_TEXTO_SUAVE, mt: 0.35 }}
+                  sx={{ mt: 0.35, color: COLOR_MUTED, maxWidth: 850 }}
                 >
                   {getDescripcion(tipoActual)}
                 </Typography>
@@ -545,30 +675,26 @@ export default function CargaMasivaPage(): React.ReactElement {
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
+              justifyContent={{ xs: "flex-start", md: "flex-end" }}
               flexWrap="wrap"
             >
               <Chip
-                size="small"
                 icon={<CheckCircleRoundedIcon />}
-                label={TIPO_PLANTILLA_LABEL.VALOR}
+                label="Solo Indicador Valor / Meta"
+                size="small"
                 sx={{
-                  color: COLOR_VERDE_MEDIO,
-                  bgcolor: COLOR_VERDE_SUAVE,
-                  fontWeight: 800,
-                  "& .MuiChip-icon": { color: COLOR_VERDE_MEDIO },
+                  color: COLOR_PRIMARY,
+                  bgcolor: alpha(COLOR_PRIMARY, 0.09),
+                  fontWeight: 850,
+                  "& .MuiChip-icon": { color: COLOR_PRIMARY },
                 }}
               />
-
               <Tooltip title="Limpiar pantalla" arrow>
                 <IconButton
-                  onClick={onLimpiar}
+                  onClick={limpiarPantalla}
                   sx={{
-                    color: COLOR_TEXTO_SUAVE,
+                    color: COLOR_MUTED,
                     bgcolor: alpha(theme.palette.grey[500], 0.08),
-                    "&:hover": {
-                      bgcolor: alpha(theme.palette.grey[500], 0.14),
-                    },
                   }}
                 >
                   <RefreshRoundedIcon />
@@ -578,279 +704,383 @@ export default function CargaMasivaPage(): React.ReactElement {
           </Stack>
         </Paper>
 
-        {!soportado && (
+        {!habilitado && (
           <Alert severity="info" sx={{ borderRadius: 3 }}>
-            La carga masiva para <strong>{tipoActual.toUpperCase()}</strong>{" "}
-            todavía no está habilitada. Por ahora se encuentra disponible para{" "}
-            <strong>AG</strong>, <strong>PDRC</strong> y <strong>PRCP</strong>.
+            La carga masiva para <strong>{tipoDisplay}</strong> todavía no está
+            habilitada. Actualmente están operativos <strong>AG</strong>,{" "}
+            <strong>PDRC</strong>, <strong>PRCP</strong> y <strong>PEI</strong>.
           </Alert>
         )}
 
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 2, md: 2.6 },
+            p: { xs: 2, md: 2.5 },
             borderRadius: 3.5,
-            bgcolor: "#FFFFFF",
             border: "1px solid",
             borderColor: alpha(theme.palette.grey[500], 0.16),
+            bgcolor: "#FFFFFF",
           }}
         >
-          <Stack spacing={2.4}>
-            <Alert
-              severity="info"
-              icon={<InfoOutlinedIcon />}
+          <Stack spacing={1.8}>
+            <Box
               sx={{
-                borderRadius: 2.8,
-                bgcolor: alpha(COLOR_VERDE_MEDIO, 0.055),
-                color: COLOR_TEXTO,
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "42px 1fr auto" },
+                gap: { xs: 1.2, md: 1.6 },
+                alignItems: "center",
+                p: { xs: 1.6, md: 1.9 },
+                borderRadius: 3,
                 border: "1px solid",
-                borderColor: alpha(COLOR_VERDE_MEDIO, 0.12),
-                "& .MuiAlert-icon": { color: COLOR_VERDE_MEDIO },
+                borderColor: alpha(COLOR_PRIMARY, 0.13),
+                bgcolor: alpha(COLOR_PRIMARY, 0.025),
               }}
             >
-              Flujo simple: descarga la plantilla, sube tu Excel, valida y
-              procesa. El botón <strong>Procesar</strong> se habilita solo
-              cuando la validación es correcta.
-            </Alert>
+              <Box
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: alpha(COLOR_PRIMARY, 0.1),
+                  color: COLOR_PRIMARY,
+                  fontWeight: 950,
+                }}
+              >
+                1
+              </Box>
+
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 950, color: COLOR_TEXT }}>
+                  Descarga la plantilla oficial
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 0.2, color: COLOR_MUTED }}
+                >
+                  Usa la hoja <strong>{getHojaPrincipal(tipoActual)}</strong> y
+                  no cambies los encabezados.
+                </Typography>
+              </Box>
+
+              <Button
+                variant="outlined"
+                startIcon={<DownloadRoundedIcon />}
+                onClick={() => downloadFile(plantilla.url, plantilla.fileName)}
+                disabled={!habilitado}
+                sx={{
+                  justifySelf: { xs: "stretch", md: "end" },
+                  borderRadius: 2.3,
+                  fontWeight: 850,
+                  color: COLOR_PRIMARY,
+                  borderColor: alpha(COLOR_PRIMARY, 0.35),
+                  whiteSpace: "nowrap",
+                  "&:hover": {
+                    borderColor: COLOR_PRIMARY,
+                    bgcolor: alpha(COLOR_PRIMARY, 0.05),
+                  },
+                }}
+              >
+                {plantilla.label}
+              </Button>
+            </Box>
+
+            <Box
+              sx={{
+                pl: { xs: 2.1, md: 2.1 },
+                display: { xs: "none", sm: "block" },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 2,
+                  height: 14,
+                  bgcolor: alpha(COLOR_PRIMARY, 0.16),
+                  borderRadius: 1,
+                }}
+              />
+            </Box>
+
+            <Box
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActivo(true);
+              }}
+              onDragLeave={() => setDragActivo(false)}
+              onDrop={onDrop}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", md: "42px 1fr auto" },
+                gap: { xs: 1.2, md: 1.6 },
+                alignItems: "center",
+                p: { xs: 1.6, md: 1.9 },
+                borderRadius: 3,
+                border: "1.5px dashed",
+                borderColor: dragActivo
+                  ? COLOR_PRIMARY
+                  : archivo
+                    ? alpha(COLOR_SUCCESS, 0.48)
+                    : COLOR_LINE,
+                bgcolor: dragActivo
+                  ? alpha(COLOR_PRIMARY, 0.055)
+                  : archivo
+                    ? alpha(COLOR_SUCCESS, 0.045)
+                    : COLOR_SOFT,
+                transition: "all .18s ease",
+              }}
+            >
+              <Box
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: archivo
+                    ? alpha(COLOR_SUCCESS, 0.12)
+                    : alpha(COLOR_PRIMARY, 0.1),
+                  color: archivo ? COLOR_SUCCESS : COLOR_PRIMARY,
+                  fontWeight: 950,
+                }}
+              >
+                2
+              </Box>
+
+              <Stack
+                direction="row"
+                spacing={1.4}
+                alignItems="center"
+                sx={{ minWidth: 0 }}
+              >
+                <Box
+                  sx={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 2.6,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    color: archivo ? COLOR_SUCCESS : COLOR_PRIMARY,
+                    bgcolor: archivo
+                      ? alpha(COLOR_SUCCESS, 0.11)
+                      : alpha(COLOR_PRIMARY, 0.08),
+                  }}
+                >
+                  {archivo ? (
+                    <CheckCircleRoundedIcon />
+                  ) : (
+                    <CloudUploadRoundedIcon />
+                  )}
+                </Box>
+
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontWeight: 950, color: COLOR_TEXT }}>
+                    Sube el archivo Excel
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 0.15, color: COLOR_MUTED }}
+                  >
+                    {archivo
+                      ? "Archivo seleccionado y listo para validar."
+                      : "Arrastra el archivo aquí o selecciónalo desde tu equipo."}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 0.65,
+                      color: archivo ? COLOR_TEXT : COLOR_MUTED,
+                      fontWeight: archivo ? 850 : 600,
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {archivo
+                      ? `${archivo.name} · ${formatBytes(archivo.size)}`
+                      : "Formato permitido: .xlsx"}
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<UploadFileRoundedIcon />}
+                sx={{
+                  justifySelf: { xs: "stretch", md: "end" },
+                  borderRadius: 2.3,
+                  fontWeight: 850,
+                  color: COLOR_PRIMARY,
+                  borderColor: alpha(COLOR_PRIMARY, 0.35),
+                  whiteSpace: "nowrap",
+                  "&:hover": {
+                    borderColor: COLOR_PRIMARY,
+                    bgcolor: alpha(COLOR_PRIMARY, 0.05),
+                  },
+                }}
+              >
+                Seleccionar archivo
+                <input
+                  ref={inputRef}
+                  hidden
+                  type="file"
+                  accept=".xlsx"
+                  onChange={onSelectFile}
+                />
+              </Button>
+            </Box>
+
+            <Box
+              sx={{
+                pl: { xs: 2.1, md: 2.1 },
+                display: { xs: "none", sm: "block" },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 2,
+                  height: 14,
+                  bgcolor: alpha(COLOR_PRIMARY, 0.16),
+                  borderRadius: 1,
+                }}
+              />
+            </Box>
 
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", lg: "0.9fr 1.1fr" },
-                gap: 2,
+                gridTemplateColumns: { xs: "1fr", md: "42px 1fr auto" },
+                gap: { xs: 1.2, md: 1.6 },
+                alignItems: "center",
+                p: { xs: 1.6, md: 1.9 },
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor:
+                  validacionVigente && validacion?.puedeProcesar
+                    ? alpha(COLOR_SUCCESS, 0.28)
+                    : alpha(COLOR_PRIMARY, 0.12),
+                bgcolor:
+                  validacionVigente && validacion?.puedeProcesar
+                    ? alpha(COLOR_SUCCESS, 0.035)
+                    : "#FFFFFF",
               }}
             >
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  borderColor: alpha(theme.palette.grey[500], 0.15),
-                  bgcolor: alpha(COLOR_VERDE_MEDIO, 0.018),
-                }}
-              >
-                <Stack spacing={1.6}>
-                  <SectionTitle
-                    number={1}
-                    title="Descarga la plantilla"
-                    description={`Completa la hoja ${getHojaEsperada(tipoActual)} y conserva la estructura original.`}
-                  />
-
-                  {plantillas.length > 0 ? (
-                    plantillas.map((p) => (
-                      <Button
-                        key={p.url}
-                        variant="outlined"
-                        startIcon={<DownloadRoundedIcon />}
-                        onClick={() => descargarArchivo(p.url, p.fileName)}
-                        sx={{
-                          alignSelf: "flex-start",
-                          borderRadius: 2.5,
-                          fontWeight: 800,
-                          borderColor: alpha(COLOR_VERDE_MEDIO, 0.35),
-                          color: COLOR_VERDE_MEDIO,
-                          bgcolor: "#FFFFFF",
-                          "&:hover": {
-                            borderColor: COLOR_VERDE_MEDIO,
-                            bgcolor: alpha(COLOR_VERDE_MEDIO, 0.055),
-                          },
-                        }}
-                      >
-                        {p.label}
-                      </Button>
-                    ))
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      sx={{ color: COLOR_TEXTO_SUAVE }}
-                    >
-                      No hay plantilla configurada para este instrumento.
-                    </Typography>
-                  )}
-
-                  <Divider />
-
-                  <Stack spacing={0.7}>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: COLOR_TEXTO_SUAVE }}
-                    >
-                      Tipo de carga permitido
-                    </Typography>
-                    <Chip
-                      label="Solo Indicador Valor / Meta"
-                      size="small"
-                      sx={{
-                        alignSelf: "flex-start",
-                        color: COLOR_VERDE_MEDIO,
-                        bgcolor: COLOR_VERDE_SUAVE,
-                        fontWeight: 800,
-                      }}
-                    />
-                  </Stack>
-                </Stack>
-              </Paper>
-
               <Box
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragActivo(true);
-                }}
-                onDragLeave={() => setDragActivo(false)}
-                onDrop={onDrop}
                 sx={{
-                  p: { xs: 2, md: 2.5 },
-                  borderRadius: 3,
-                  border: "1.5px dashed",
-                  borderColor: dragActivo
-                    ? COLOR_VERDE_MEDIO
-                    : archivo
-                      ? alpha(COLOR_VERDE_EXITO, 0.45)
-                      : alpha(COLOR_VERDE_MEDIO, 0.24),
-                  bgcolor: dragActivo
-                    ? alpha(COLOR_VERDE_MEDIO, 0.055)
-                    : archivo
-                      ? alpha(COLOR_VERDE_EXITO, 0.05)
-                      : "#FFFFFF",
-                  transition: "all .18s ease",
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: alpha(COLOR_PRIMARY, 0.1),
+                  color: COLOR_PRIMARY,
+                  fontWeight: 950,
                 }}
               >
-                <Stack spacing={2} height="100%" justifyContent="space-between">
-                  <Stack direction="row" spacing={1.6} alignItems="center">
-                    <Box
-                      sx={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 3,
-                        display: "grid",
-                        placeItems: "center",
-                        bgcolor: archivo
-                          ? alpha(COLOR_VERDE_EXITO, 0.11)
-                          : COLOR_VERDE_SUAVE,
-                        color: archivo ? COLOR_VERDE_EXITO : COLOR_VERDE_MEDIO,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {archivo ? (
-                        <CheckCircleRoundedIcon />
-                      ) : (
-                        <CloudUploadRoundedIcon />
-                      )}
-                    </Box>
-
-                    <Box>
-                      <Typography sx={{ fontWeight: 850, color: COLOR_TEXTO }}>
-                        {archivo ? archivo.name : "Sube el archivo Excel"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: COLOR_TEXTO_SUAVE, mt: 0.25 }}
-                      >
-                        {archivo
-                          ? `${formatBytes(archivo.size)} · archivo listo para validar`
-                          : "Arrastra el archivo aquí o selecciónalo desde tu equipo. Solo .xlsx."}
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={1.2}
-                    justifyContent="flex-end"
-                  >
-                    <Button
-                      component="label"
-                      variant="outlined"
-                      startIcon={<UploadFileRoundedIcon />}
-                      sx={{
-                        borderRadius: 2.5,
-                        fontWeight: 800,
-                        borderColor: alpha(COLOR_VERDE_MEDIO, 0.35),
-                        color: COLOR_VERDE_MEDIO,
-                        "&:hover": {
-                          borderColor: COLOR_VERDE_MEDIO,
-                          bgcolor: alpha(COLOR_VERDE_MEDIO, 0.055),
-                        },
-                      }}
-                    >
-                      Seleccionar
-                      <input
-                        ref={inputRef}
-                        hidden
-                        type="file"
-                        accept=".xlsx"
-                        onChange={onSelectFile}
-                      />
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={
-                        loadingValidar ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <FactCheckRoundedIcon />
-                        )
-                      }
-                      onClick={onValidar}
-                      disabled={!archivo || loadingValidar || !soportado}
-                      sx={{
-                        borderRadius: 2.5,
-                        minWidth: 122,
-                        fontWeight: 850,
-                        boxShadow: "none",
-                        bgcolor: COLOR_VERDE_MEDIO,
-                        "&:hover": { bgcolor: COLOR_VERDE_INSTITUCIONAL },
-                        "&.Mui-disabled": {
-                          bgcolor: alpha(theme.palette.grey[500], 0.2),
-                          color: alpha(theme.palette.text.primary, 0.35),
-                        },
-                      }}
-                    >
-                      {loadingValidar ? "Validando..." : "Validar"}
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={
-                        loadingProcesar ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <PlayCircleOutlineRoundedIcon />
-                        )
-                      }
-                      onClick={() => setConfirmarProcesar(true)}
-                      disabled={!puedeProcesar}
-                      sx={{
-                        borderRadius: 2.5,
-                        minWidth: 122,
-                        fontWeight: 850,
-                        boxShadow: "none",
-                        bgcolor: COLOR_VERDE_EXITO,
-                        "&:hover": { bgcolor: "#166534" },
-                        "&.Mui-disabled": {
-                          bgcolor: alpha(theme.palette.grey[500], 0.2),
-                          color: alpha(theme.palette.text.primary, 0.35),
-                        },
-                      }}
-                    >
-                      {loadingProcesar ? "Procesando..." : "Procesar"}
-                    </Button>
-                  </Stack>
-                </Stack>
+                3
               </Box>
+
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 950, color: COLOR_TEXT }}>
+                  Valida y procesa la carga
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 0.2, color: COLOR_MUTED }}
+                >
+                  Primero valida el Excel. Si no hay errores, se habilita el
+                  procesamiento.
+                </Typography>
+                {validacionVigente && validacion?.puedeProcesar && (
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 0.6, color: COLOR_SUCCESS, fontWeight: 850 }}
+                  >
+                    Validación correcta. Ya puedes procesar la carga.
+                  </Typography>
+                )}
+              </Box>
+
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                justifyContent="flex-end"
+              >
+                <Button
+                  variant="contained"
+                  startIcon={
+                    loadingValidar ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <FactCheckRoundedIcon />
+                    )
+                  }
+                  onClick={onValidar}
+                  disabled={!archivo || loadingValidar || !habilitado}
+                  sx={{
+                    borderRadius: 2.3,
+                    fontWeight: 900,
+                    boxShadow: "none",
+                    bgcolor: COLOR_PRIMARY,
+                    whiteSpace: "nowrap",
+                    "&:hover": { bgcolor: COLOR_PRIMARY_DARK },
+                  }}
+                >
+                  {loadingValidar ? "Validando..." : "Validar archivo"}
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    loadingProcesar ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <PlayCircleOutlineRoundedIcon />
+                    )
+                  }
+                  onClick={() => setConfirmarProcesar(true)}
+                  disabled={!puedeProcesar}
+                  sx={{
+                    borderRadius: 2.3,
+                    fontWeight: 900,
+                    boxShadow: "none",
+                    bgcolor: COLOR_SUCCESS,
+                    whiteSpace: "nowrap",
+                    "&:hover": { bgcolor: "#166534" },
+                  }}
+                >
+                  {loadingProcesar ? "Procesando..." : "Procesar carga"}
+                </Button>
+              </Stack>
             </Box>
 
             {(loadingValidar || loadingProcesar) && (
               <LinearProgress
                 sx={{
                   borderRadius: 2,
-                  bgcolor: alpha(COLOR_VERDE_MEDIO, 0.12),
-                  "& .MuiLinearProgress-bar": { bgcolor: COLOR_VERDE_MEDIO },
+                  bgcolor: alpha(COLOR_PRIMARY, 0.1),
+                  "& .MuiLinearProgress-bar": { bgcolor: COLOR_PRIMARY },
                 }}
               />
             )}
+
+            <Alert
+              severity="success"
+              icon={<RuleRoundedIcon />}
+              sx={{
+                borderRadius: 2.8,
+                bgcolor: alpha(COLOR_SUCCESS, 0.065),
+                color: "#064E3B",
+                border: "1px solid",
+                borderColor: alpha(COLOR_SUCCESS, 0.12),
+                "& .MuiAlert-icon": { color: COLOR_SUCCESS },
+              }}
+            >
+              Regla de carga: si el registro existe, solo se actualiza el{" "}
+              <strong>valor</strong>. Los maestros existentes se reutilizan y no
+              se modifican.
+            </Alert>
 
             {errorGeneral && (
               <Alert
@@ -870,150 +1100,85 @@ export default function CargaMasivaPage(): React.ReactElement {
             sx={{
               p: { xs: 2, md: 2.5 },
               borderRadius: 3.5,
-              bgcolor: "#FFFFFF",
               border: "1px solid",
               borderColor: validacion.puedeProcesar
-                ? alpha(COLOR_VERDE_EXITO, 0.25)
-                : alpha(theme.palette.warning.main, 0.28),
+                ? alpha(COLOR_SUCCESS, 0.28)
+                : alpha(theme.palette.warning.main, 0.35),
+              bgcolor: "#FFFFFF",
             }}
           >
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={1.5}
-              justifyContent="space-between"
-              alignItems={{ xs: "stretch", md: "center" }}
-              sx={{ mb: 2 }}
-            >
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <AssignmentTurnedInRoundedIcon
-                    sx={{
-                      color: validacion.puedeProcesar
-                        ? COLOR_VERDE_EXITO
-                        : theme.palette.warning.main,
-                    }}
-                  />
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 850, color: COLOR_TEXTO }}
-                  >
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.3}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", sm: "center" }}
+              >
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 900 }}>
                     Resultado de validación
                   </Typography>
-                </Stack>
+                  <Typography variant="body2" sx={{ color: COLOR_MUTED }}>
+                    {validacion.puedeProcesar
+                      ? "El archivo está listo para procesar."
+                      : "Corrige los errores antes de procesar."}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={
+                    validacion.puedeProcesar
+                      ? "Validación correcta"
+                      : "Con observaciones"
+                  }
+                  sx={{
+                    fontWeight: 900,
+                    color: validacion.puedeProcesar
+                      ? "#064E3B"
+                      : theme.palette.warning.dark,
+                    bgcolor: validacion.puedeProcesar
+                      ? alpha(COLOR_SUCCESS, 0.12)
+                      : alpha(theme.palette.warning.main, 0.16),
+                  }}
+                />
+              </Stack>
 
-                <Typography variant="body2" sx={{ color: COLOR_TEXTO_SUAVE }}>
-                  {validacion.puedeProcesar
-                    ? "El archivo está correcto y puede procesarse."
-                    : "Revisa los errores indicados antes de procesar."}
-                </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(3, 1fr)",
+                    lg: "repeat(4, 1fr)",
+                  },
+                  gap: 1.2,
+                }}
+              >
+                <MetricCard
+                  label="Filas leídas"
+                  value={validacion.totalFilas}
+                  tone="info"
+                />
+                <MetricCard
+                  label="Filas válidas"
+                  value={validacion.filasValidas}
+                  tone="success"
+                />
+                <MetricCard
+                  label="Filas con error"
+                  value={validacion.filasConError}
+                  tone={validacion.filasConError > 0 ? "error" : "default"}
+                />
+                {validacion.tipoPlantilla && (
+                  <MetricCard
+                    label="Plantilla"
+                    value={validacion.tipoPlantilla}
+                    tone="info"
+                  />
+                )}
               </Box>
 
-              <Chip
-                label={
-                  validacion.puedeProcesar
-                    ? "Listo para procesar"
-                    : "Con observaciones"
-                }
-                sx={{
-                  alignSelf: { xs: "flex-start", md: "center" },
-                  fontWeight: 850,
-                  color: validacion.puedeProcesar
-                    ? COLOR_VERDE_EXITO
-                    : theme.palette.warning.dark,
-                  bgcolor: validacion.puedeProcesar
-                    ? alpha(COLOR_VERDE_EXITO, 0.1)
-                    : alpha(theme.palette.warning.main, 0.14),
-                }}
-              />
+              <ErrorTable errores={validacion.errores} />
             </Stack>
-
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={1.2}
-              sx={{ mb: 2, flexWrap: "wrap" }}
-            >
-              <MetricCard
-                label="Total filas"
-                value={validacion.totalFilas}
-                tone="primary"
-              />
-              <MetricCard
-                label="Filas válidas"
-                value={validacion.filasValidas}
-                tone="success"
-              />
-              <MetricCard
-                label="Filas con error"
-                value={validacion.filasConError}
-                tone={validacion.filasConError > 0 ? "error" : "default"}
-              />
-              <MetricCard
-                label="Puede procesar"
-                value={validacion.puedeProcesar ? "Sí" : "No"}
-                tone={validacion.puedeProcesar ? "success" : "warning"}
-              />
-            </Stack>
-
-            {!!validacion.tipoPlantilla && (
-              <Chip
-                label={`Plantilla detectada: ${validacion.tipoPlantilla}`}
-                variant="outlined"
-                size="small"
-                sx={{
-                  mb: 2,
-                  fontWeight: 800,
-                  borderColor: alpha(COLOR_VERDE_MEDIO, 0.35),
-                  color: COLOR_VERDE_MEDIO,
-                }}
-              />
-            )}
-
-            {validacion.errores?.length > 0 ? (
-              <TableContainer
-                component={Paper}
-                variant="outlined"
-                sx={{ borderRadius: 3, maxHeight: 430 }}
-              >
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 850 }}>Fila</TableCell>
-                      <TableCell sx={{ fontWeight: 850 }}>Campo</TableCell>
-                      <TableCell sx={{ fontWeight: 850 }}>Mensaje</TableCell>
-                      <TableCell sx={{ fontWeight: 850 }}>Valor</TableCell>
-                    </TableRow>
-                  </TableHead>
-
-                  <TableBody>
-                    {validacion.errores.map((e, idx) => (
-                      <TableRow key={`${e.numeroFila}-${e.campo}-${idx}`} hover>
-                        <TableCell>{e.numeroFila}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={e.campo}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>{e.mensaje}</TableCell>
-                        <TableCell>{e.valor ?? "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Alert
-                severity="success"
-                sx={{
-                  borderRadius: 3,
-                  bgcolor: alpha(COLOR_VERDE_EXITO, 0.08),
-                  color: COLOR_TEXTO,
-                }}
-              >
-                No se encontraron errores. Puedes procesar el archivo.
-              </Alert>
-            )}
           </Paper>
         )}
 
@@ -1023,219 +1188,112 @@ export default function CargaMasivaPage(): React.ReactElement {
             sx={{
               p: { xs: 2, md: 2.5 },
               borderRadius: 3.5,
-              bgcolor: "#FFFFFF",
               border: "1px solid",
               borderColor: resultado.success
-                ? alpha(COLOR_VERDE_EXITO, 0.25)
-                : alpha(theme.palette.error.main, 0.28),
+                ? alpha(COLOR_SUCCESS, 0.28)
+                : alpha(theme.palette.error.main, 0.35),
+              bgcolor: "#FFFFFF",
+              overflow: "hidden",
             }}
           >
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={1.5}
-              justifyContent="space-between"
-              alignItems={{ xs: "stretch", md: "center" }}
-              sx={{ mb: 2 }}
-            >
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <TableRowsRoundedIcon
-                    sx={{
-                      color: resultado.success
-                        ? COLOR_VERDE_EXITO
-                        : theme.palette.error.main,
-                    }}
-                  />
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 850, color: COLOR_TEXTO }}
-                  >
-                    Resultado del procesamiento
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.3}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", sm: "center" }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                    Resultado de procesamiento
                   </Typography>
-                </Stack>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: COLOR_MUTED, overflowWrap: "anywhere" }}
+                  >
+                    {resultado.mensaje}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={resultado.success ? "Procesado" : "No procesado"}
+                  sx={{
+                    fontWeight: 900,
+                    color: resultado.success
+                      ? "#064E3B"
+                      : theme.palette.error.dark,
+                    bgcolor: resultado.success
+                      ? alpha(COLOR_SUCCESS, 0.12)
+                      : alpha(theme.palette.error.main, 0.12),
+                  }}
+                />
+              </Stack>
 
-                <Typography variant="body2" sx={{ color: COLOR_TEXTO_SUAVE }}>
-                  {resultado.mensaje}
-                </Typography>
-              </Box>
-
-              <Chip
-                label={resultado.success ? "Procesado" : "No procesado"}
+              <Box
                 sx={{
-                  alignSelf: { xs: "flex-start", md: "center" },
-                  fontWeight: 850,
-                  color: resultado.success
-                    ? COLOR_VERDE_EXITO
-                    : theme.palette.error.dark,
-                  bgcolor: resultado.success
-                    ? alpha(COLOR_VERDE_EXITO, 0.1)
-                    : alpha(theme.palette.error.main, 0.12),
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    lg: "repeat(4, minmax(0, 1fr))",
+                  },
+                  gap: 1.2,
                 }}
-              />
-            </Stack>
-
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={1.2}
-              sx={{ mb: 2, flexWrap: "wrap" }}
-            >
-              <MetricCard
-                label="Filas leídas"
-                value={resultado.totalFilasLeidas}
-                tone="primary"
-              />
-              <MetricCard
-                label="Filas válidas"
-                value={resultado.totalFilasValidas}
-                tone="success"
-              />
-              <MetricCard
-                label="Filas con error"
-                value={resultado.totalFilasConError}
-                tone={resultado.totalFilasConError > 0 ? "error" : "default"}
-              />
-              {"tipoPlantilla" in resultado && (
-                <MetricCard
-                  label="Plantilla"
-                  value={resultado.tipoPlantilla}
-                  tone="info"
-                />
-              )}
-            </Stack>
-
-            {isPdrcResultado(resultado) && (
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={1.2}
-                sx={{ mb: 2, flexWrap: "wrap" }}
               >
                 <MetricCard
-                  label="Valores insertados"
-                  value={resultado.valoresInsertados ?? 0}
+                  label="Filas leídas"
+                  value={getNumber(resultado, "totalFilasLeidas")}
+                  tone="info"
+                />
+                <MetricCard
+                  label="Filas válidas"
+                  value={getNumber(resultado, "totalFilasValidas")}
                   tone="success"
                 />
                 <MetricCard
-                  label="Valores actualizados"
-                  value={resultado.valoresActualizados ?? 0}
+                  label="Filas con error"
+                  value={getNumber(resultado, "totalFilasConError")}
+                  tone={
+                    getNumber(resultado, "totalFilasConError") > 0
+                      ? "error"
+                      : "default"
+                  }
+                />
+                <MetricCard
+                  label="Archivo"
+                  value={getString(
+                    resultado,
+                    "nombreArchivo",
+                    archivo?.name ?? "—",
+                  )}
                   tone="info"
                 />
-                <MetricCard
-                  label="OER insertados"
-                  value={resultado.oerInsertados ?? 0}
-                  tone="primary"
-                />
-                <MetricCard
-                  label="AER insertados"
-                  value={resultado.aerInsertados ?? 0}
-                  tone="primary"
-                />
-                <MetricCard
-                  label="Indicadores insertados"
-                  value={resultado.indicadoresInsertados ?? 0}
-                  tone="info"
-                />
-              </Stack>
-            )}
-
-            {isAgResultado(resultado) && (
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={1.2}
-                sx={{ mb: 2, flexWrap: "wrap" }}
-              >
-                <MetricCard
-                  label="Cabeceras insertadas"
-                  value={resultado.cabecerasInsertadas}
-                  tone="success"
-                />
-                <MetricCard
-                  label="Cabeceras reutilizadas"
-                  value={resultado.cabecerasReutilizadas}
-                  tone="primary"
-                />
-                <MetricCard
-                  label="Valores insertados"
-                  value={resultado.valoresInsertados}
-                  tone="success"
-                />
-                <MetricCard
-                  label="Valores actualizados"
-                  value={resultado.valoresActualizados}
-                  tone="info"
-                />
-              </Stack>
-            )}
-
-            {isPrcpResultado(resultado) && (
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={1.2}
-                sx={{ mb: 2, flexWrap: "wrap" }}
-              >
-                <MetricCard
-                  label="Relaciones PRCP"
-                  value={resultado.relacionesPrcpInsertadas ?? 0}
-                  tone="primary"
-                />
-                <MetricCard
-                  label="Objetivos insertados"
-                  value={resultado.objetivosPrioritariosInsertados ?? 0}
-                  tone="success"
-                />
-                <MetricCard
-                  label="Problemas insertados"
-                  value={resultado.problemasIdentificadosInsertados ?? 0}
-                  tone="info"
-                />
-                <MetricCard
-                  label="Medidas insertadas"
-                  value={resultado.medidasPoliticaInsertadas ?? 0}
-                  tone="info"
-                />
-                <MetricCard
-                  label="Indicadores insertados"
-                  value={resultado.indicadoresInsertados ?? 0}
-                  tone="info"
-                />
-              </Stack>
-            )}
-
-            {!!resultado.errores?.length && (
-              <Box sx={{ mt: 2 }}>
-                <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 3 }}>
-                  El procesamiento devolvió observaciones.
-                </Alert>
-
-                <TableContainer
-                  component={Paper}
-                  variant="outlined"
-                  sx={{ borderRadius: 3, maxHeight: 360 }}
-                >
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 850 }}>Fila</TableCell>
-                        <TableCell sx={{ fontWeight: 850 }}>Campo</TableCell>
-                        <TableCell sx={{ fontWeight: 850 }}>Mensaje</TableCell>
-                      </TableRow>
-                    </TableHead>
-
-                    <TableBody>
-                      {resultado.errores.map((e, idx) => (
-                        <TableRow
-                          key={`${e.numeroFila}-${e.campo}-${idx}`}
-                          hover
-                        >
-                          <TableCell>{e.numeroFila}</TableCell>
-                          <TableCell>{e.campo}</TableCell>
-                          <TableCell>{e.mensaje}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
               </Box>
-            )}
+
+              <Divider />
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    lg: "repeat(4, minmax(0, 1fr))",
+                  },
+                  gap: 1.2,
+                }}
+              >
+                {getExtraMetrics(tipoActual, resultado).map((metric) => (
+                  <MetricCard
+                    key={metric.label}
+                    label={metric.label}
+                    value={metric.value}
+                    tone={metric.tone ?? "default"}
+                  />
+                ))}
+              </Box>
+
+              <ErrorTable errores={resultado.errores} />
+            </Stack>
           </Paper>
         )}
       </Stack>
@@ -1243,67 +1301,64 @@ export default function CargaMasivaPage(): React.ReactElement {
       <Dialog
         open={confirmarProcesar}
         onClose={() => setConfirmarProcesar(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontWeight: 850, color: COLOR_TEXTO }}>
+        <DialogTitle sx={{ fontWeight: 900 }}>
           Confirmar procesamiento
         </DialogTitle>
-
         <DialogContent>
-          <Alert severity="warning" sx={{ borderRadius: 3, mb: 2 }}>
-            Esta acción insertará o actualizará registros en la base de datos
-            según las reglas de carga masiva.
-          </Alert>
-
-          <Stack spacing={1}>
-            <Typography variant="body2">
-              <strong>Archivo:</strong> {archivo?.name}
+          <Stack spacing={1.2}>
+            <Typography variant="body2" sx={{ color: COLOR_MUTED }}>
+              Se procesará el archivo para <strong>{tipoDisplay}</strong>. Si
+              existen valores, se actualizará únicamente el campo valor.
             </Typography>
-
-            <Typography variant="body2">
-              <strong>Instrumento:</strong> {tipoActual.toUpperCase()}
-            </Typography>
-
-            <Typography variant="body2">
-              <strong>Tipo de carga:</strong> {TIPO_PLANTILLA_LABEL.VALOR}
-            </Typography>
-
-            <Typography variant="body2">
-              <strong>Filas válidas:</strong> {validacion?.filasValidas ?? 0}
-            </Typography>
+            {archivo && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{
+                  p: 1.2,
+                  borderRadius: 2,
+                  bgcolor: alpha(COLOR_PRIMARY, 0.06),
+                  minWidth: 0,
+                }}
+              >
+                <InsertDriveFileRoundedIcon sx={{ color: COLOR_PRIMARY }} />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 800,
+                    overflowWrap: "anywhere",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {archivo.name}
+                </Typography>
+              </Stack>
+            )}
           </Stack>
         </DialogContent>
-
         <DialogActions sx={{ p: 2 }}>
           <Button
             onClick={() => setConfirmarProcesar(false)}
-            sx={{ borderRadius: 2.5, color: COLOR_VERDE_MEDIO }}
+            sx={{ borderRadius: 2, fontWeight: 800 }}
           >
             Cancelar
           </Button>
-
           <Button
             onClick={onProcesar}
             variant="contained"
-            startIcon={
-              loadingProcesar ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <PlayCircleOutlineRoundedIcon />
-              )
-            }
-            disabled={loadingProcesar}
             sx={{
-              borderRadius: 2.5,
-              fontWeight: 850,
+              borderRadius: 2,
+              fontWeight: 900,
               boxShadow: "none",
-              bgcolor: COLOR_VERDE_EXITO,
+              bgcolor: COLOR_SUCCESS,
               "&:hover": { bgcolor: "#166534" },
             }}
           >
-            Sí, procesar
+            Procesar
           </Button>
         </DialogActions>
       </Dialog>

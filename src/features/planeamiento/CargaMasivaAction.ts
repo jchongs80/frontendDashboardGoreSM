@@ -86,10 +86,41 @@ export type AgCargaMasivaResultadoDto = {
   errores: CargaMasivaErrorDto[];
 };
 
+
+export type PeiCargaMasivaResultadoDto = {
+  nombreArchivo: string;
+  tipoPlantilla?: string;
+  totalFilasLeidas: number;
+  totalFilasValidas: number;
+  totalFilasConError: number;
+
+  periodosInsertados: number;
+  aniosInsertados: number;
+  dimensionesInsertadas: number;
+  unidadesInsertadas: number;
+  objetivosInsertados: number;
+  accionesInsertadas: number;
+  entidadesEstrategicasInsertadas: number;
+  oeiAeiInsertados: number;
+  indicadoresInsertados: number;
+  fuentesInsertadas: number;
+  periodicidadesInsertadas: number;
+  metodosCalculoInsertados: number;
+
+  valoresInsertados: number;
+  valoresActualizados: number;
+  valoresOmitidos: number;
+
+  success: boolean;
+  mensaje: string;
+  errores: CargaMasivaErrorDto[];
+};
+
 export type CargaMasivaResultadoDto =
   | PdrcCargaMasivaResultadoDto
   | PrcpCargaMasivaResultadoDto
-  | AgCargaMasivaResultadoDto;
+  | AgCargaMasivaResultadoDto
+  | PeiCargaMasivaResultadoDto;
 
 function normalizeTipo(tipo: string | undefined): CargaMasivaTipo {
   const t = (tipo ?? "").trim().toLowerCase();
@@ -124,6 +155,11 @@ function getEndpoints(tipo: string | undefined) {
       };
 
     case "pei":
+      return {
+        validar: "/api/PeiCargaMasiva/validar",
+        procesar: "/api/PeiCargaMasiva/procesar",
+      };
+
     case "poi":
       return {
         validar: "",
@@ -148,15 +184,12 @@ function buildFormData(
   formData.append("archivo", archivo);
 
   const instrumento = normalizeTipo(tipo);
+  const instrumentosSoloValor: CargaMasivaTipo[] = ["ag", "pdrc", "prcp", "pei"];
 
-  if (instrumento === "ag" || instrumento === "pdrc" || instrumento === "prcp") {
-    formData.append(
-      "tipoPlantilla",
-      instrumento === "ag" || instrumento === "pdrc" || instrumento === "prcp"
-        ? "VALOR"
-        : tipoPlantilla
-    );
-  }
+  formData.append(
+    "tipoPlantilla",
+    instrumentosSoloValor.includes(instrumento) ? "VALOR" : tipoPlantilla
+  );
 
   return formData;
 }
