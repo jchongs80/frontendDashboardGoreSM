@@ -29,6 +29,17 @@ export type DashboardPrcpKpiDto = {
   avancePromedio: number;
 };
 
+export type DashboardPrcpIndicadorResumenDto = {
+  idPrcpOpPiMp: number;
+  idIndicadorNombre: number;
+  codigoIndicador: string;
+  nombreIndicador: string;
+  meta: number;
+  ejecutado: number;
+  avance: number;
+  semaforo: string;
+};
+
 export type DashboardPrcpJerarquiaDto = {
   idPrcpOpPiMp: number;
   idIndicadorNombre: number;
@@ -42,6 +53,7 @@ export type DashboardPrcpJerarquiaDto = {
   cantidadIndicadores: number;
   avancePromedio: number;
   semaforo: string;
+  indicadores?: DashboardPrcpIndicadorResumenDto[];
 };
 
 export type DashboardPrcpTendenciaDto = {

@@ -110,40 +110,55 @@ function getSemaforoFromAvance(avance: number | null | undefined): "ROJO" | "AMA
   return "VERDE";
 }
 
-function getSemaforoChipSx(semaforo?: string | null) {
-  const value = (semaforo ?? "").toUpperCase();
-
-  if (value === "ROJO") {
-    return {
-      bgcolor: "rgba(239,68,68,0.12)",
-      color: "rgb(153,27,27)",
-      borderColor: "rgba(239,68,68,0.45)",
-      fontWeight: 900,
-    };
-  }
-
-  if (value === "AMARILLO") {
-    return {
-      bgcolor: "rgba(245,158,11,0.15)",
-      color: "rgb(146,64,14)",
-      borderColor: "rgba(245,158,11,0.55)",
-      fontWeight: 900,
-    };
-  }
-
-  return {
-    bgcolor: "rgba(34,197,94,0.13)",
-    color: "rgb(21,128,61)",
-    borderColor: "rgba(34,197,94,0.50)",
-    fontWeight: 900,
-  };
-}
-
 function getProgressColor(avance: number | null | undefined): string {
   const semaforo = getSemaforoFromAvance(avance);
   if (semaforo === "ROJO") return "#ef4444";
   if (semaforo === "AMARILLO") return "#f59e0b";
   return "#22c55e";
+}
+
+function getAvanceTheme(avance: number | null | undefined) {
+  const semaforo = getSemaforoFromAvance(avance);
+
+  if (semaforo === "ROJO") {
+    return {
+      accent: "#ef4444",
+      text: "#991b1b",
+      border: "rgba(239,68,68,.55)",
+      borderSoft: "rgba(239,68,68,.30)",
+      bg: "linear-gradient(135deg, rgba(254,242,242,.96) 0%, rgba(255,255,255,.98) 55%, rgba(255,247,247,.88) 100%)",
+      chipBg: "rgba(254,226,226,.86)",
+      chipBorder: "rgba(239,68,68,.45)",
+      iconBg: "rgba(254,226,226,.88)",
+      shadow: "0 18px 42px rgba(239,68,68,.10)",
+    };
+  }
+
+  if (semaforo === "AMARILLO") {
+    return {
+      accent: "#f59e0b",
+      text: "#92400e",
+      border: "rgba(245,158,11,.58)",
+      borderSoft: "rgba(245,158,11,.32)",
+      bg: "linear-gradient(135deg, rgba(255,251,235,.96) 0%, rgba(255,255,255,.98) 55%, rgba(255,247,237,.88) 100%)",
+      chipBg: "rgba(254,243,199,.88)",
+      chipBorder: "rgba(245,158,11,.52)",
+      iconBg: "rgba(254,243,199,.88)",
+      shadow: "0 18px 42px rgba(245,158,11,.11)",
+    };
+  }
+
+  return {
+    accent: "#22c55e",
+    text: "#15803d",
+    border: "rgba(34,197,94,.55)",
+    borderSoft: "rgba(34,197,94,.30)",
+    bg: "linear-gradient(135deg, rgba(240,253,244,.96) 0%, rgba(255,255,255,.98) 55%, rgba(236,253,245,.88) 100%)",
+    chipBg: "rgba(220,252,231,.88)",
+    chipBorder: "rgba(34,197,94,.48)",
+    iconBg: "rgba(220,252,231,.88)",
+    shadow: "0 18px 42px rgba(34,197,94,.11)",
+  };
 }
 
 type MiniCardProps = {
@@ -310,20 +325,31 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
         semestreI: 0,
         avance: null as number | null,
         semaforo: "ROJO" as "ROJO" | "AMARILLO" | "VERDE",
+        esConsolidado: false,
       };
     }
 
     const anioSolicitado = Number(anioResumen ?? 0);
-    const anioActual = new Date().getFullYear();
+    const tieneAnioSeleccionado = Number.isFinite(anioSolicitado) && anioSolicitado > 0;
 
-    const item =
-      (Number.isFinite(anioSolicitado) && anioSolicitado > 0
-        ? chartData.find((x) => Number(x.anio) === anioSolicitado)
-        : undefined) ??
-      chartData.find((x) => Number(x.anio) === anioActual) ??
-      chartData.find((x) => Number(x.ejecutado) !== 0 || Number(x.semestreI) !== 0) ??
-      chartData[0];
+    if (!tieneAnioSeleccionado) {
+      const meta = chartData.reduce((total, item) => total + Number(item.meta ?? 0), 0);
+      const ejecutado = chartData.reduce((total, item) => total + Number(item.ejecutado ?? 0), 0);
+      const semestreI = chartData.reduce((total, item) => total + Number(item.semestreI ?? 0), 0);
+      const avance = getAvance(meta, ejecutado);
 
+      return {
+        anio: "Consolidado",
+        meta,
+        ejecutado,
+        semestreI,
+        avance,
+        semaforo: getSemaforoFromAvance(avance),
+        esConsolidado: true,
+      };
+    }
+
+    const item = chartData.find((x) => Number(x.anio) === anioSolicitado) ?? chartData[0];
     const avance = getAvance(item.meta, item.ejecutado);
 
     return {
@@ -333,11 +359,13 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
       semestreI: item.semestreI,
       avance,
       semaforo: getSemaforoFromAvance(avance),
+      esConsolidado: false,
     };
   }, [chartData, anioResumen]);
 
   const progressValue = Math.max(0, Math.min(Number(ultimo.avance ?? 0), 100));
   const progressColor = getProgressColor(ultimo.avance);
+  const avanceTheme = getAvanceTheme(ultimo.avance);
   const instrumentoKey = (instrumento ?? "").trim().toUpperCase();
   const esPrcp = instrumentoKey === "PRCP";
   const esAg = instrumentoKey === "AG";
@@ -445,10 +473,9 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               sx={{
                 p: 1.8,
                 borderRadius: 3.2,
-                borderColor: "rgba(59,130,246,.32)",
-                background:
-                  "linear-gradient(135deg, rgba(239,246,255,.98) 0%, rgba(255,255,255,.98) 52%, rgba(245,243,255,.78) 100%)",
-                boxShadow: "0 18px 42px rgba(37,99,235,.10)",
+                borderColor: avanceTheme.border,
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
                 position: "relative",
                 overflow: "hidden",
                 "&:before": {
@@ -458,7 +485,7 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
                   left: 0,
                   right: 0,
                   height: 4,
-                  background: "linear-gradient(90deg, #2563eb, #7c3aed, #16a34a)",
+                  background: avanceTheme.accent,
                 },
               }}
             >
@@ -470,9 +497,9 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
                     borderRadius: "50%",
                     display: "grid",
                     placeItems: "center",
-                    color: "rgb(37,99,235)",
-                    bgcolor: "rgba(37,99,235,.10)",
-                    border: "1px solid rgba(37,99,235,.25)",
+                    color: avanceTheme.text,
+                    bgcolor: avanceTheme.iconBg,
+                    border: `1px solid ${avanceTheme.borderSoft}`,
                     flex: "0 0 auto",
                   }}
                 >
@@ -495,13 +522,13 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
                       size="small"
                       label={`Código: ${data.codigoIndicador}`}
                       variant="outlined"
-                      sx={{ borderRadius: 999, fontWeight: 900, bgcolor: "rgba(255,255,255,.80)" }}
-                    />
-                    <Chip
-                      size="small"
-                      label={ultimo.semaforo}
-                      variant="outlined"
-                      sx={{ borderRadius: 999, ...getSemaforoChipSx(ultimo.semaforo) }}
+                      sx={{
+                        borderRadius: 999,
+                        fontWeight: 950,
+                        bgcolor: avanceTheme.chipBg,
+                        color: avanceTheme.text,
+                        borderColor: avanceTheme.chipBorder,
+                      }}
                     />
                   </Stack>
 
@@ -560,21 +587,21 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               }}
             >
               <MiniCard
-                title={`Meta ${ultimo.anio}`}
+                title={ultimo.esConsolidado ? "Meta consolidada" : `Meta ${ultimo.anio}`}
                 value={formatNumber(ultimo.meta)}
                 icon={<FlagRoundedIcon fontSize="small" />}
                 borderColor="rgba(37,99,235,0.30)"
               />
 
               <MiniCard
-                title={`Ejecutado ${ultimo.anio}`}
+                title={ultimo.esConsolidado ? "Ejecutado consolidado" : `Ejecutado ${ultimo.anio}`}
                 value={formatNumber(ultimo.ejecutado)}
                 icon={<CheckCircleRoundedIcon fontSize="small" />}
                 borderColor="rgba(34,197,94,0.35)"
               />
 
               <MiniCard
-                title={`Semestre I ${ultimo.anio}`}
+                title={ultimo.esConsolidado ? "Semestre I consolidado" : `Semestre I ${ultimo.anio}`}
                 value={formatNumber(ultimo.semestreI)}
                 icon={<CalendarMonthRoundedIcon fontSize="small" />}
                 borderColor="rgba(249,115,22,0.38)"
@@ -588,10 +615,29 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               />
             </Box>
 
-            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
+            <Paper variant="outlined" sx={{
+                p: 1.7,
+                borderRadius: 3,
+                borderColor: avanceTheme.borderSoft,
+                bgcolor: "rgba(255,255,255,.96)",
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: avanceTheme.accent,
+                  opacity: 0.85,
+                },
+              }}>
               <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ mb: 0.8 }}>
                 <Typography sx={{ fontWeight: 900, fontSize: 13.2 }}>
-                  Progreso anual del indicador
+                  {ultimo.esConsolidado ? "Progreso consolidado del indicador" : "Progreso anual del indicador"}
                 </Typography>
                 <Typography sx={{ fontWeight: 900, fontSize: 13.2 }}>
                   {ultimo.avance == null ? "—" : formatPercent(ultimo.avance)}
@@ -613,7 +659,26 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               />
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
+            <Paper variant="outlined" sx={{
+                p: 1.7,
+                borderRadius: 3,
+                borderColor: avanceTheme.borderSoft,
+                bgcolor: "rgba(255,255,255,.96)",
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: avanceTheme.accent,
+                  opacity: 0.85,
+                },
+              }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <InfoOutlinedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -665,7 +730,27 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               </Box>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
+            {!esPrcp ? (
+            <Paper variant="outlined" sx={{
+                p: 1.7,
+                borderRadius: 3,
+                borderColor: avanceTheme.borderSoft,
+                bgcolor: "rgba(255,255,255,.96)",
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: avanceTheme.accent,
+                  opacity: 0.85,
+                },
+              }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <CategoryRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -704,7 +789,29 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               </Stack>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
+            ) : null}
+
+            {!esPrcp ? (
+            <Paper variant="outlined" sx={{
+                p: 1.7,
+                borderRadius: 3,
+                borderColor: avanceTheme.borderSoft,
+                bgcolor: "rgba(255,255,255,.96)",
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: avanceTheme.accent,
+                  opacity: 0.85,
+                },
+              }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <AttachFileRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>
@@ -727,7 +834,28 @@ export default function DashboardIndicadorDrawer(props: Props): React.ReactEleme
               )}
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1.7, borderRadius: 3, borderColor: "rgba(148,163,184,.28)", bgcolor: "rgba(255,255,255,.96)", boxShadow: "0 12px 30px rgba(15,23,42,.055)" }}>
+            ) : null}
+
+            <Paper variant="outlined" sx={{
+                p: 1.7,
+                borderRadius: 3,
+                borderColor: avanceTheme.borderSoft,
+                bgcolor: "rgba(255,255,255,.96)",
+                background: avanceTheme.bg,
+                boxShadow: avanceTheme.shadow,
+                position: "relative",
+                overflow: "hidden",
+                "&:before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: avanceTheme.accent,
+                  opacity: 0.85,
+                },
+              }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <TimelineRoundedIcon fontSize="small" />
                 <Typography sx={{ fontWeight: 900 }}>

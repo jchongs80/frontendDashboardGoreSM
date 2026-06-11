@@ -1683,16 +1683,16 @@ export default function DashboardPoiPage(): React.ReactElement {
           <TerritorialLineChart
             rows={tendenciaTerritorialProvincia}
             title={tablaTerritorialActiva === "ejecucion"
-              ? "Tendencia territorial de ejecución física final POR PROVINCIA"
-              : "Tendencia territorial de programación física final POR PROVINCIA"}
+              ? "Ejecución física final (%) a nivel local: Provincial"
+              : "Ejecución física final (%) a nivel local: Provincial"}
             subtitle="Línea del porcentaje final agrupado por provincia, usando la ubicación registrada en la Actividad Operativa."
           />
 
           <TerritorialLineChart
             rows={tendenciaTerritorialDistrito}
             title={tablaTerritorialActiva === "ejecucion"
-              ? "Tendencia territorial de ejecución física final POR DISTRITO"
-              : "Tendencia territorial de programación física final POR DISTRITO"}
+              ? "Ejecución física final (%) a nivel local: Distrital"
+              : "Ejecución física final (%) a nivel local: Distrital"}
             subtitle="Línea del porcentaje final agrupado por distrito, usando la ubicación registrada en la Actividad Operativa."
           />
 

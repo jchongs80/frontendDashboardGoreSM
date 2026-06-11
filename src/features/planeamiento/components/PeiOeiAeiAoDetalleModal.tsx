@@ -369,7 +369,7 @@ export default function PeiOeiAeiAoDetalleModal({
             <Paper elevation={0} sx={{ ...sectionCardSx, p: 2 }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <Inventory2RoundedIcon fontSize="small" sx={{ color: "#38aa1b" }} />
-                <Typography sx={{ fontWeight: 950, color: "#38aa1b" }}>Contexto</Typography>
+                <Typography sx={{ fontWeight: 950, color: "#38aa1b" }}>Cadena Presupuestal</Typography>
                 <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   (catálogos POI)
                 </Typography>
@@ -377,7 +377,7 @@ export default function PeiOeiAeiAoDetalleModal({
 
               <Box sx={twoCol}>
                 <TextField
-                  label="Categoría (POI)"
+                  label="Categoría Prepuestal"
                   value={categoria}
                   size="small"
                   fullWidth

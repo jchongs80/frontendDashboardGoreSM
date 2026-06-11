@@ -17,6 +17,18 @@ export type DashboardPdrcKpiDto = {
   avancePromedio: number;
 };
 
+
+export type DashboardPdrcIndicadorResumenDto = {
+  idPdrcOerAer: number;
+  idIndicadorNombre: number;
+  codigoIndicador: string;
+  nombreIndicador: string;
+  meta: number;
+  ejecutado: number;
+  avance: number;
+  semaforo: string;
+};
+
 export type DashboardPdrcJerarquiaDto = {
   idPdrcOerAer: number;
   idIndicadorNombre: number;
@@ -28,6 +40,7 @@ export type DashboardPdrcJerarquiaDto = {
   cantidadIndicadores: number;
   avancePromedio: number;
   semaforo: string;
+  indicadores?: DashboardPdrcIndicadorResumenDto[];
 };
 
 export type DashboardSerieTemporalDto = {

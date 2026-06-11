@@ -32,6 +32,17 @@ export type DashboardSemaforoDto = {
   azul: number;
 };
 
+export type DashboardPeiIndicadorResumenDto = {
+  idPeiOeiAei: number;
+  idIndicadorNombre: number;
+  codigoIndicador: string;
+  nombreIndicador: string;
+  meta: number;
+  ejecutado: number;
+  avance: number;
+  semaforo: string;
+};
+
 export type DashboardPeiJerarquiaDto = {
   idPeiOeiAei: number;
   idIndicadorNombre: number;
@@ -43,6 +54,7 @@ export type DashboardPeiJerarquiaDto = {
   cantidadIndicadores: number;
   avancePromedio: number;
   semaforo: string;
+  indicadores?: DashboardPeiIndicadorResumenDto[];
 };
 
 export type DashboardPeiTendenciaDto = {

@@ -5,6 +5,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Collapse,
   IconButton,
   LinearProgress,
   Paper,
@@ -24,6 +25,7 @@ import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import DonutLargeRoundedIcon from "@mui/icons-material/DonutLargeRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 
 import {
   ResponsiveContainer,
@@ -38,6 +40,7 @@ import {
 
 import DashboardPdrcAction, {
   type DashboardPdrcDto,
+  type DashboardPdrcIndicadorResumenDto,
   type DashboardPdrcJerarquiaDto,
 } from "../DashboardPdrcAction";
 import DashboardIndicadorDrawer from "../components/drawers/DashboardIndicadorDrawer";
@@ -55,50 +58,69 @@ function formatPercent(value: number | null | undefined): string {
   return `${n.toFixed(2)}%`;
 }
 
-function getSemaforoChipSx(semaforo?: string | null) {
-  const value = (semaforo ?? "").toUpperCase();
+function getAvanceTheme(avance?: number | null) {
+  const value = Number(avance ?? 0);
 
-  if (value === "ROJO") {
+  if (value < 75) {
     return {
-      bgcolor: "rgba(239,68,68,0.12)",
-      color: "rgb(153,27,27)",
-      borderColor: "rgba(239,68,68,0.45)",
-      fontWeight: 900,
+      accent: DASHBOARD_COLORS.danger,
+      text: "rgb(153,27,27)",
+      border: "rgba(239,68,68,0.58)",
+      borderSoft: "rgba(239,68,68,0.32)",
+      bg: "linear-gradient(135deg, rgba(254,242,242,.92) 0%, rgba(255,255,255,.97) 68%, rgba(255,247,247,.88) 100%)",
+      chipBg: "rgba(254,226,226,.86)",
+      chipBorder: "rgba(239,68,68,.45)",
+      shadow: "0 12px 28px rgba(239,68,68,.08)",
     };
   }
 
-  if (value === "AMARILLO") {
+  if (value < 95) {
     return {
-      bgcolor: "rgba(245,158,11,0.15)",
-      color: "rgb(146,64,14)",
-      borderColor: "rgba(245,158,11,0.55)",
-      fontWeight: 900,
-    };
-  }
-
-  if (value === "AZUL") {
-    return {
-      bgcolor: "rgba(59,130,246,0.12)",
-      color: "rgb(29,78,216)",
-      borderColor: "rgba(59,130,246,0.42)",
-      fontWeight: 900,
+      accent: DASHBOARD_COLORS.warning,
+      text: "rgb(146,64,14)",
+      border: "rgba(245,158,11,0.60)",
+      borderSoft: "rgba(245,158,11,0.34)",
+      bg: "linear-gradient(135deg, rgba(255,251,235,.93) 0%, rgba(255,255,255,.97) 68%, rgba(255,247,237,.88) 100%)",
+      chipBg: "rgba(254,243,199,.88)",
+      chipBorder: "rgba(245,158,11,.52)",
+      shadow: "0 12px 28px rgba(245,158,11,.09)",
     };
   }
 
   return {
-    bgcolor: "rgba(34,197,94,0.13)",
-    color: "rgb(21,128,61)",
-    borderColor: "rgba(34,197,94,0.50)",
-    fontWeight: 900,
+    accent: DASHBOARD_COLORS.success,
+    text: "rgb(21,128,61)",
+    border: "rgba(34,197,94,0.58)",
+    borderSoft: "rgba(34,197,94,0.32)",
+    bg: "linear-gradient(135deg, rgba(240,253,244,.93) 0%, rgba(255,255,255,.97) 68%, rgba(236,253,245,.88) 100%)",
+    chipBg: "rgba(220,252,231,.88)",
+    chipBorder: "rgba(34,197,94,.48)",
+    shadow: "0 12px 28px rgba(34,197,94,.08)",
   };
 }
 
-function getProgressColor(semaforo?: string | null): string {
-  const value = (semaforo ?? "").toUpperCase();
-  if (value === "ROJO") return "#ef4444";
-  if (value === "AMARILLO") return "#f59e0b";
-  if (value === "AZUL") return "#2563eb";
-  return "#22c55e";
+function getAvanceChipSx(avance?: number | null) {
+  const theme = getAvanceTheme(avance);
+
+  return {
+    bgcolor: theme.chipBg,
+    color: theme.text,
+    borderColor: theme.chipBorder,
+    fontWeight: 900,
+    "& .MuiChip-icon": {
+      color: theme.text,
+      fontSize: 16,
+      ml: 0.7,
+    },
+  };
+}
+
+function formatNumber(value: number | null | undefined): string {
+  const n = Number(value ?? 0);
+  return new Intl.NumberFormat("es-PE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
 type KpiCardProps = {
@@ -140,25 +162,7 @@ function getNivelLabel(item: DashboardPdrcJerarquiaDto): string {
 }
 
 function getAvanceBarColor(avance?: number | null): string {
-  const value = Number(avance ?? 0);
-
-  if (value < 75) return DASHBOARD_COLORS.danger;
-  if (value < 95) return DASHBOARD_COLORS.warning;
-  return DASHBOARD_COLORS.success;
-}
-
-function getAvanceChipSx() {
-  return {
-    bgcolor: "rgba(255,255,255,0.92)",
-    color: "text.secondary",
-    borderColor: "rgba(148,163,184,0.55)",
-    fontWeight: 800,
-    "& .MuiChip-icon": {
-      color: "text.secondary",
-      fontSize: 16,
-      ml: 0.7,
-    },
-  };
+  return getAvanceTheme(avance).accent;
 }
 
 function clampProgress(value?: number | null): number {
@@ -309,6 +313,8 @@ export default function DashboardPdrcPage(): React.ReactElement {
     idRegistro: 0,
     idIndicadorNombre: 0,
   });
+
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   async function loadCombos() {
     setLoadingCombos(true);
@@ -527,14 +533,25 @@ export default function DashboardPdrcPage(): React.ReactElement {
     });
   }
 
-  function openIndicadorDrawer(item: DashboardPdrcJerarquiaDto) {
+  function toggleIndicadoresCard(itemKey: string) {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [itemKey]: !prev[itemKey],
+    }));
+  }
+
+  function openIndicadorDrawer(
+    item: DashboardPdrcJerarquiaDto,
+    indicador: DashboardPdrcIndicadorResumenDto
+  ) {
     setDrawerState({
       open: true,
       instrumento: "PDRC",
       idRegistro: item.idPdrcOerAer,
-      idIndicadorNombre: item.idIndicadorNombre,
+      idIndicadorNombre: indicador.idIndicadorNombre,
     });
   }
+
 
   return (
     <Box
@@ -782,9 +799,14 @@ export default function DashboardPdrcPage(): React.ReactElement {
               ) : null}
 
               {jerarquiaData.map((item) => {
+                const itemKey = String(item.idPdrcOerAer);
+                const indicadores = item.indicadores ?? [];
+                const expanded = Boolean(expandedItems[itemKey]);
                 const avance = Number(item.avancePromedio ?? 0);
                 const avanceLimitado = clampProgress(avance);
                 const nivelLabel = item.codigoAer || item.enunciadoAer ? "AER" : "OER";
+                const avanceTheme = getAvanceTheme(item.avancePromedio);
+                const barColor = getAvanceBarColor(item.avancePromedio);
 
                 return (
                   <Paper
@@ -794,12 +816,20 @@ export default function DashboardPdrcPage(): React.ReactElement {
                       p: 1.45,
                       borderRadius: 3,
                       border: "1.5px solid",
-                      borderColor: getNivelBorderColor(item),
-                      background:
-                        nivelLabel === "OER"
-                          ? "linear-gradient(135deg, rgba(20,184,166,.08), rgba(255,255,255,.96))"
-                          : "linear-gradient(135deg, rgba(37,99,235,.08), rgba(255,255,255,.96))",
-                      boxShadow: "0 12px 26px rgba(15,23,42,.045)",
+                      borderColor: avanceTheme.border,
+                      background: avanceTheme.bg,
+                      boxShadow: avanceTheme.shadow,
+                      position: "relative",
+                      overflow: "hidden",
+                      "&:before": {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 4,
+                        bgcolor: avanceTheme.accent,
+                      },
                     }}
                   >
                     <Stack direction={{ xs: "column", md: "row" }} spacing={1.4} justifyContent="space-between" alignItems={{ xs: "stretch", md: "flex-start" }}>
@@ -823,9 +853,20 @@ export default function DashboardPdrcPage(): React.ReactElement {
                         ) : null}
 
                         <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 1.05 }} flexWrap="wrap" useFlexGap>
-                          <Chip size="small" icon={<FormatListBulletedRoundedIcon />} label={`Indicadores: ${item.cantidadIndicadores}`} variant="outlined" sx={{ borderRadius: 999, ...getAvanceChipSx() }} />
-                          <Chip size="small" icon={<SpeedRoundedIcon />} label={`Avance: ${formatPercent(item.avancePromedio)}`} variant="outlined" sx={{ borderRadius: 999, ...getAvanceChipSx() }} />
-                          <Chip size="small" label={item.semaforo} variant="outlined" sx={{ borderRadius: 999, ...getSemaforoChipSx(item.semaforo) }} />
+                          <Chip
+                            size="small"
+                            icon={<FormatListBulletedRoundedIcon />}
+                            label={`Indicadores: ${indicadores.length || item.cantidadIndicadores}`}
+                            variant="outlined"
+                            sx={{ borderRadius: 999, ...getAvanceChipSx(item.avancePromedio) }}
+                          />
+                          <Chip
+                            size="small"
+                            icon={<SpeedRoundedIcon />}
+                            label={`Avance: ${formatPercent(item.avancePromedio)}`}
+                            variant="outlined"
+                            sx={{ borderRadius: 999, ...getAvanceChipSx(item.avancePromedio) }}
+                          />
                         </Stack>
 
                         <Box sx={{ mt: 1.15 }}>
@@ -838,7 +879,7 @@ export default function DashboardPdrcPage(): React.ReactElement {
                               bgcolor: "rgba(148,163,184,.18)",
                               "& .MuiLinearProgress-bar": {
                                 borderRadius: 999,
-                                bgcolor: getAvanceBarColor(item.avancePromedio),
+                                bgcolor: barColor,
                               },
                             }}
                           />
@@ -848,25 +889,192 @@ export default function DashboardPdrcPage(): React.ReactElement {
                         </Box>
                       </Box>
 
-                      <Tooltip title="Abrir resumen analítico del indicador">
+                      <Tooltip title={expanded ? "Ocultar indicadores asociados" : "Ver indicadores asociados"}>
                         <IconButton
                           size="small"
-                          onClick={() => openIndicadorDrawer(item)}
+                          onClick={() => toggleIndicadoresCard(itemKey)}
                           sx={{
                             width: 38,
                             height: 38,
                             borderRadius: "14px",
-                            border: "1px solid rgba(37,99,235,.28)",
-                            bgcolor: "rgba(37,99,235,.09)",
-                            color: "rgb(37,99,235)",
-                            boxShadow: "0 10px 20px rgba(37,99,235,.10)",
+                            border: `1px solid ${avanceTheme.borderSoft}`,
+                            bgcolor: avanceTheme.chipBg,
+                            color: avanceTheme.text,
+                            boxShadow: "0 10px 20px rgba(15,23,42,.08)",
                             alignSelf: { xs: "flex-end", md: "flex-start" },
+                            transition: "all .18s ease",
+                            "&:hover": {
+                              bgcolor: avanceTheme.chipBg,
+                              transform: "translateY(-1px)",
+                            },
                           }}
                         >
-                          <QueryStatsRoundedIcon sx={{ fontSize: 20 }} />
+                          <KeyboardArrowUpRoundedIcon
+                            sx={{
+                              fontSize: 22,
+                              transform: expanded ? "rotate(0deg)" : "rotate(180deg)",
+                              transition: "transform .18s ease",
+                            }}
+                          />
                         </IconButton>
                       </Tooltip>
                     </Stack>
+
+                    <Collapse in={expanded} timeout="auto" unmountOnExit>
+                      <Box
+                        sx={{
+                          mt: 1.4,
+                          pt: 1.2,
+                          borderTop: `1px solid ${avanceTheme.borderSoft}`,
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                          <FormatListBulletedRoundedIcon sx={{ fontSize: 17, color: avanceTheme.text }} />
+                          <Typography sx={{ fontSize: 13, fontWeight: 950, color: "rgb(51,65,85)" }}>
+                            Indicadores asociados
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={`${indicadores.length} registro(s)`}
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              borderRadius: 999,
+                              ...getAvanceChipSx(item.avancePromedio),
+                              "& .MuiChip-label": { px: 0.75, fontSize: 10.5 },
+                            }}
+                          />
+                        </Stack>
+
+                        {indicadores.length === 0 ? (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            No se encontraron indicadores asociados para este nivel OER / AER.
+                          </Alert>
+                        ) : null}
+
+                        <Stack spacing={0.85}>
+                          {indicadores.map((indicador) => {
+                            const indicadorTheme = getAvanceTheme(indicador.avance);
+                            const indicadorBarColor = getAvanceBarColor(indicador.avance);
+
+                            return (
+                              <Paper
+                                key={`${item.idPdrcOerAer}-${indicador.idIndicadorNombre}`}
+                                variant="outlined"
+                                sx={{
+                                  p: { xs: 1.15, md: 1.25 },
+                                  borderRadius: 2.6,
+                                  borderColor: "rgba(148,163,184,.28)",
+                                  bgcolor: "rgba(255,255,255,.78)",
+                                  boxShadow: "0 8px 18px rgba(15,23,42,.04)",
+                                }}
+                              >
+                                <Stack
+                                  direction={{ xs: "column", md: "row" }}
+                                  spacing={1}
+                                  alignItems={{ xs: "stretch", md: "center" }}
+                                  justifyContent="space-between"
+                                >
+                                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                                      <Chip
+                                        size="small"
+                                        label={indicador.codigoIndicador || `ID-${indicador.idIndicadorNombre}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 20,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.8, fontSize: 10.5 },
+                                        }}
+                                      />
+                                      <Typography sx={{ fontSize: 13.1, fontWeight: 950, color: "rgb(15,23,42)" }}>
+                                        {indicador.nombreIndicador}
+                                      </Typography>
+                                    </Stack>
+
+                                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mt: 0.75 }}>
+                                      <Chip
+                                        size="small"
+                                        label={`Meta: ${formatNumber(indicador.meta)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                      <Chip
+                                        size="small"
+                                        label={`Ejecutado: ${formatNumber(indicador.ejecutado)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                      <Chip
+                                        size="small"
+                                        icon={<SpeedRoundedIcon />}
+                                        label={`Avance: ${formatPercent(indicador.avance)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                    </Stack>
+
+                                    <Box sx={{ mt: 0.85, maxWidth: { xs: "100%", md: 520 } }}>
+                                      <LinearProgress
+                                        variant="determinate"
+                                        value={clampProgress(indicador.avance)}
+                                        sx={{
+                                          height: 6,
+                                          borderRadius: 999,
+                                          bgcolor: "rgba(148,163,184,0.18)",
+                                          "& .MuiLinearProgress-bar": {
+                                            borderRadius: 999,
+                                            bgcolor: indicadorBarColor,
+                                          },
+                                        }}
+                                      />
+                                    </Box>
+                                  </Box>
+
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<QueryStatsRoundedIcon />}
+                                    onClick={() => openIndicadorDrawer(item, indicador)}
+                                    sx={{
+                                      alignSelf: { xs: "flex-start", md: "center" },
+                                      borderRadius: 2.3,
+                                      fontWeight: 950,
+                                      whiteSpace: "nowrap",
+                                      color: indicadorTheme.text,
+                                      borderColor: indicadorTheme.borderSoft,
+                                      bgcolor: "rgba(255,255,255,.76)",
+                                      "&:hover": {
+                                        borderColor: indicadorTheme.border,
+                                        bgcolor: indicadorTheme.chipBg,
+                                      },
+                                    }}
+                                  >
+                                    Ver resumen
+                                  </Button>
+                                </Stack>
+                              </Paper>
+                            );
+                          })}
+                        </Stack>
+                      </Box>
+                    </Collapse>
                   </Paper>
                 );
               })}

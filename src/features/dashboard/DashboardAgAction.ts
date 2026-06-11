@@ -29,6 +29,18 @@ export type DashboardAgKpiDto = {
   avancePromedio: number;
 };
 
+
+export type DashboardAgIndicadorResumenDto = {
+  idAgPoRecoInpr: number;
+  idIndicadorNombre: number;
+  codigoIndicador: string;
+  nombreIndicador: string;
+  meta: number;
+  ejecutado: number;
+  avance: number;
+  semaforo: string;
+};
+
 export type DashboardAgJerarquiaDto = {
   idAgPoRecoInpr: number;
   idIndicadorNombre: number;
@@ -41,6 +53,7 @@ export type DashboardAgJerarquiaDto = {
   cantidadIndicadores: number;
   avancePromedio: number;
   semaforo: string;
+  indicadores?: DashboardAgIndicadorResumenDto[];
 };
 
 export type DashboardAgTendenciaDto = {

@@ -5,6 +5,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Collapse,
   IconButton,
   LinearProgress,
   Paper,
@@ -28,6 +29,7 @@ import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import DonutLargeRoundedIcon from "@mui/icons-material/DonutLargeRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 
 import {
   ResponsiveContainer,
@@ -42,6 +44,7 @@ import {
 
 import DashboardAgAction, {
   type DashboardAgDto,
+  type DashboardAgIndicadorResumenDto,
   type DashboardAgJerarquiaDto,
 } from "../DashboardAgAction";
 import DashboardIndicadorDrawer from "../components/drawers/DashboardIndicadorDrawer";
@@ -57,6 +60,63 @@ import type {
 function formatPercent(value: number | null | undefined): string {
   const n = Number(value ?? 0);
   return `${n.toFixed(2)}%`;
+}
+
+function getAvanceTheme(avance?: number | null) {
+  const value = Number(avance ?? 0);
+
+  if (value < 75) {
+    return {
+      accent: DASHBOARD_COLORS.danger,
+      text: "rgb(153,27,27)",
+      border: "rgba(239,68,68,0.58)",
+      borderSoft: "rgba(239,68,68,0.32)",
+      bg: "linear-gradient(135deg, rgba(254,242,242,.92) 0%, rgba(255,255,255,.97) 68%, rgba(255,247,247,.88) 100%)",
+      chipBg: "rgba(254,226,226,.86)",
+      chipBorder: "rgba(239,68,68,.45)",
+      shadow: "0 12px 28px rgba(239,68,68,.08)",
+    };
+  }
+
+  if (value < 95) {
+    return {
+      accent: DASHBOARD_COLORS.warning,
+      text: "rgb(146,64,14)",
+      border: "rgba(245,158,11,0.60)",
+      borderSoft: "rgba(245,158,11,0.34)",
+      bg: "linear-gradient(135deg, rgba(255,251,235,.93) 0%, rgba(255,255,255,.97) 68%, rgba(255,247,237,.88) 100%)",
+      chipBg: "rgba(254,243,199,.88)",
+      chipBorder: "rgba(245,158,11,.52)",
+      shadow: "0 12px 28px rgba(245,158,11,.09)",
+    };
+  }
+
+  return {
+    accent: DASHBOARD_COLORS.success,
+    text: "rgb(21,128,61)",
+    border: "rgba(34,197,94,0.58)",
+    borderSoft: "rgba(34,197,94,0.32)",
+    bg: "linear-gradient(135deg, rgba(240,253,244,.93) 0%, rgba(255,255,255,.97) 68%, rgba(236,253,245,.88) 100%)",
+    chipBg: "rgba(220,252,231,.88)",
+    chipBorder: "rgba(34,197,94,.48)",
+    shadow: "0 12px 28px rgba(34,197,94,.08)",
+  };
+}
+
+function getAvanceChipSx(avance?: number | null) {
+  const theme = getAvanceTheme(avance);
+
+  return {
+    bgcolor: theme.chipBg,
+    color: theme.text,
+    borderColor: theme.chipBorder,
+    fontWeight: 900,
+    "& .MuiChip-icon": {
+      color: theme.text,
+      fontSize: 16,
+      ml: 0.7,
+    },
+  };
 }
 
 function formatNumber(value: number | null | undefined): string {
@@ -82,60 +142,10 @@ type IndicadorDrawerState = {
   idIndicadorNombre: number;
 };
 
-function getSemaforoChipSx(semaforo?: string | null) {
-  const value = (semaforo ?? "").toUpperCase();
-
-  if (value === "ROJO") {
-    return {
-      bgcolor: "rgba(239,68,68,0.12)",
-      color: "rgb(153,27,27)",
-      borderColor: "rgba(239,68,68,0.45)",
-      fontWeight: 900,
-    };
-  }
-
-  if (value === "AMARILLO") {
-    return {
-      bgcolor: "rgba(245,158,11,0.15)",
-      color: "rgb(146,64,14)",
-      borderColor: "rgba(245,158,11,0.55)",
-      fontWeight: 900,
-    };
-  }
-
-  return {
-    bgcolor: "rgba(34,197,94,0.13)",
-    color: "rgb(21,128,61)",
-    borderColor: "rgba(34,197,94,0.50)",
-    fontWeight: 900,
-  };
-}
-
-function getAvanceChipSx() {
-  return {
-    bgcolor: "rgba(255,255,255,0.92)",
-    color: "text.secondary",
-    borderColor: "rgba(148,163,184,0.55)",
-    fontWeight: 800,
-    "& .MuiChip-icon": {
-      color: "text.secondary",
-      fontSize: 16,
-      ml: 0.7,
-    },
-  };
-}
-
 function getAvanceBarColor(avance?: number | null): string {
-  const value = Number(avance ?? 0);
-
-  if (value < 75) return DASHBOARD_COLORS.danger;
-  if (value < 95) return DASHBOARD_COLORS.warning;
-  return DASHBOARD_COLORS.success;
+  return getAvanceTheme(avance).accent;
 }
 
-function getAgCardBorderColor(): string {
-  return "rgba(37,99,235,0.72)";
-}
 
 function getAgNivelChipSx() {
   return {
@@ -291,6 +301,8 @@ export default function DashboardAgPage(): React.ReactElement {
     idRegistro: 0,
     idIndicadorNombre: 0,
   });
+
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   async function loadCombos() {
     setLoadingCombos(true);
@@ -496,12 +508,16 @@ export default function DashboardAgPage(): React.ReactElement {
   };
 
 
-  function openIndicadorDrawer(item: DashboardAgJerarquiaDto) {
+  function toggleIndicadoresCard(itemKey: string) {
+    setExpandedItems((prev) => ({ ...prev, [itemKey]: !prev[itemKey] }));
+  }
+
+  function openIndicadorDrawer(item: DashboardAgJerarquiaDto, indicador: DashboardAgIndicadorResumenDto) {
     setDrawerState({
       open: true,
       instrumento: "AG",
       idRegistro: item.idAgPoRecoInpr,
-      idIndicadorNombre: item.idIndicadorNombre,
+      idIndicadorNombre: indicador.idIndicadorNombre,
     });
   }
 
@@ -785,7 +801,12 @@ export default function DashboardAgPage(): React.ReactElement {
               ) : null}
 
               {jerarquiaData.map((item) => {
+                const itemKey = String(item.idAgPoRecoInpr);
+                const indicadores = item.indicadores ?? [];
+                const expanded = Boolean(expandedItems[itemKey]);
+                const avanceTheme = getAvanceTheme(item.avancePromedio);
                 const barColor = getAvanceBarColor(item.avancePromedio);
+                const avanceLimitado = clampProgress(item.avancePromedio);
 
                 return (
                   <Paper
@@ -794,23 +815,23 @@ export default function DashboardAgPage(): React.ReactElement {
                     sx={{
                       p: { xs: 1.4, md: 1.7 },
                       borderRadius: 3,
-                      borderColor: getAgCardBorderColor(),
-                      bgcolor: "rgba(239,246,255,.72)",
-                      boxShadow: "0 10px 26px rgba(15,23,42,.045)",
+                      borderColor: avanceTheme.border,
+                      background: avanceTheme.bg,
+                      boxShadow: avanceTheme.shadow,
                       position: "relative",
                       overflow: "hidden",
                       "&:before": {
-                        content: '""',
+                        content: '\"\"',
                         position: "absolute",
                         top: 0,
                         left: 0,
                         width: 4,
                         bottom: 0,
-                        bgcolor: getAgCardBorderColor(),
+                        bgcolor: avanceTheme.accent,
                       },
                     }}
                   >
-                    <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "flex-start" }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={1.4} justifyContent="space-between" alignItems={{ xs: "stretch", md: "flex-start" }}>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" useFlexGap>
                           <Chip
@@ -840,9 +861,9 @@ export default function DashboardAgPage(): React.ReactElement {
                           <Chip
                             size="small"
                             icon={<FormatListBulletedRoundedIcon />}
-                            label={`Indicadores: ${item.cantidadIndicadores}`}
+                            label={`Indicadores: ${indicadores.length || item.cantidadIndicadores}`}
                             variant="outlined"
-                            sx={{ borderRadius: 999, ...getAvanceChipSx() }}
+                            sx={{ borderRadius: 999, ...getAvanceChipSx(item.avancePromedio) }}
                           />
 
                           <Chip
@@ -850,21 +871,14 @@ export default function DashboardAgPage(): React.ReactElement {
                             icon={<SpeedRoundedIcon />}
                             label={`Avance: ${formatPercent(item.avancePromedio)}`}
                             variant="outlined"
-                            sx={{ borderRadius: 999, ...getAvanceChipSx() }}
-                          />
-
-                          <Chip
-                            size="small"
-                            label={item.semaforo}
-                            variant="outlined"
-                            sx={{ borderRadius: 999, ...getSemaforoChipSx(item.semaforo) }}
+                            sx={{ borderRadius: 999, ...getAvanceChipSx(item.avancePromedio) }}
                           />
                         </Stack>
 
                         <Box sx={{ mt: 1.2 }}>
                           <LinearProgress
                             variant="determinate"
-                            value={clampProgress(item.avancePromedio)}
+                            value={avanceLimitado}
                             sx={{
                               height: 8,
                               borderRadius: 999,
@@ -881,28 +895,192 @@ export default function DashboardAgPage(): React.ReactElement {
                         </Box>
                       </Box>
 
-                      <Tooltip title="Abrir estadística del indicador">
+                      <Tooltip title={expanded ? "Ocultar indicadores asociados" : "Ver indicadores asociados"}>
                         <IconButton
                           size="small"
-                          onClick={() => openIndicadorDrawer(item)}
+                          onClick={() => toggleIndicadoresCard(itemKey)}
                           sx={{
                             width: 38,
                             height: 38,
-                            borderRadius: "13px",
-                            border: "1px solid rgba(59,130,246,.28)",
-                            color: "rgb(37,99,235)",
-                            bgcolor: "rgba(59,130,246,.10)",
-                            boxShadow: "0 8px 18px rgba(37,99,235,.10)",
+                            borderRadius: "14px",
+                            border: `1px solid ${avanceTheme.borderSoft}`,
+                            color: avanceTheme.text,
+                            bgcolor: avanceTheme.chipBg,
+                            boxShadow: "0 10px 20px rgba(15,23,42,.08)",
+                            alignSelf: { xs: "flex-end", md: "flex-start" },
+                            transition: "all .18s ease",
                             "&:hover": {
-                              bgcolor: "rgba(59,130,246,.16)",
+                              bgcolor: avanceTheme.chipBg,
                               transform: "translateY(-1px)",
                             },
                           }}
                         >
-                          <QueryStatsRoundedIcon sx={{ fontSize: 20 }} />
+                          <KeyboardArrowUpRoundedIcon
+                            sx={{
+                              fontSize: 22,
+                              transform: expanded ? "rotate(0deg)" : "rotate(180deg)",
+                              transition: "transform .18s ease",
+                            }}
+                          />
                         </IconButton>
                       </Tooltip>
                     </Stack>
+
+                    <Collapse in={expanded} timeout="auto" unmountOnExit>
+                      <Box
+                        sx={{
+                          mt: 1.4,
+                          pt: 1.2,
+                          borderTop: `1px solid ${avanceTheme.borderSoft}`,
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                          <FormatListBulletedRoundedIcon sx={{ fontSize: 17, color: avanceTheme.text }} />
+                          <Typography sx={{ fontSize: 13, fontWeight: 950, color: "rgb(51,65,85)" }}>
+                            Indicadores asociados
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={`${indicadores.length} registro(s)`}
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              borderRadius: 999,
+                              ...getAvanceChipSx(item.avancePromedio),
+                              "& .MuiChip-label": { px: 0.75, fontSize: 10.5 },
+                            }}
+                          />
+                        </Stack>
+
+                        {indicadores.length === 0 ? (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            No se encontraron indicadores asociados para este registro AG.
+                          </Alert>
+                        ) : null}
+
+                        <Stack spacing={0.85}>
+                          {indicadores.map((indicador) => {
+                            const indicadorTheme = getAvanceTheme(indicador.avance);
+                            const indicadorBarColor = getAvanceBarColor(indicador.avance);
+
+                            return (
+                              <Paper
+                                key={`${item.idAgPoRecoInpr}-${indicador.idIndicadorNombre}`}
+                                variant="outlined"
+                                sx={{
+                                  p: { xs: 1.15, md: 1.25 },
+                                  borderRadius: 2.6,
+                                  borderColor: "rgba(148,163,184,.28)",
+                                  bgcolor: "rgba(255,255,255,.78)",
+                                  boxShadow: "0 8px 18px rgba(15,23,42,.04)",
+                                }}
+                              >
+                                <Stack
+                                  direction={{ xs: "column", md: "row" }}
+                                  spacing={1}
+                                  alignItems={{ xs: "stretch", md: "center" }}
+                                  justifyContent="space-between"
+                                >
+                                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                                      <Chip
+                                        size="small"
+                                        label={indicador.codigoIndicador || `ID-${indicador.idIndicadorNombre}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 20,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.8, fontSize: 10.5 },
+                                        }}
+                                      />
+                                      <Typography sx={{ fontSize: 13.1, fontWeight: 950, color: "rgb(15,23,42)" }}>
+                                        {indicador.nombreIndicador}
+                                      </Typography>
+                                    </Stack>
+
+                                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mt: 0.75 }}>
+                                      <Chip
+                                        size="small"
+                                        label={`Meta: ${formatNumber(indicador.meta)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                      <Chip
+                                        size="small"
+                                        label={`Ejecutado: ${formatNumber(indicador.ejecutado)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                      <Chip
+                                        size="small"
+                                        icon={<SpeedRoundedIcon />}
+                                        label={`Avance: ${formatPercent(indicador.avance)}`}
+                                        variant="outlined"
+                                        sx={{
+                                          height: 22,
+                                          borderRadius: 999,
+                                          ...getAvanceChipSx(indicador.avance),
+                                          "& .MuiChip-label": { px: 0.75, fontSize: 10.7 },
+                                        }}
+                                      />
+                                    </Stack>
+
+                                    <Box sx={{ mt: 0.85, maxWidth: { xs: "100%", md: 520 } }}>
+                                      <LinearProgress
+                                        variant="determinate"
+                                        value={clampProgress(indicador.avance)}
+                                        sx={{
+                                          height: 6,
+                                          borderRadius: 999,
+                                          bgcolor: "rgba(148,163,184,0.18)",
+                                          "& .MuiLinearProgress-bar": {
+                                            borderRadius: 999,
+                                            bgcolor: indicadorBarColor,
+                                          },
+                                        }}
+                                      />
+                                    </Box>
+                                  </Box>
+
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<QueryStatsRoundedIcon />}
+                                    onClick={() => openIndicadorDrawer(item, indicador)}
+                                    sx={{
+                                      alignSelf: { xs: "flex-start", md: "center" },
+                                      borderRadius: 2.3,
+                                      fontWeight: 950,
+                                      whiteSpace: "nowrap",
+                                      color: indicadorTheme.text,
+                                      borderColor: indicadorTheme.borderSoft,
+                                      bgcolor: "rgba(255,255,255,.76)",
+                                      "&:hover": {
+                                        borderColor: indicadorTheme.border,
+                                        bgcolor: indicadorTheme.chipBg,
+                                      },
+                                    }}
+                                  >
+                                    Ver resumen
+                                  </Button>
+                                </Stack>
+                              </Paper>
+                            );
+                          })}
+                        </Stack>
+                      </Box>
+                    </Collapse>
                   </Paper>
                 );
               })}

@@ -599,7 +599,7 @@ export default function PrcpOpPiMpPage(): React.ReactElement {
                 lineHeight: 1.05,
               }}
             >
-              P.R.C.P.: OP / PI / MP
+              P.R.C.P.: OP / MP / HITO / INDICADOR
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Vista por Horizonte, Objetivo Prioritario y Medida Política
