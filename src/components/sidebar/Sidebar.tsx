@@ -133,6 +133,11 @@ export default function Sidebar({
       icon: <CloudUploadRoundedIcon />,
       path: "/planeamiento/carga-masiva/pdrc",
     },
+     {
+      text: "Carga Masiva PRCP",
+      icon: <CloudUploadRoundedIcon />,
+      path: "/planeamiento/carga-masiva/prcp",
+    },
     {
       text: "Carga Masiva AG",
       icon: <CloudUploadRoundedIcon />,
