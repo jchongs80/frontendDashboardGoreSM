@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -37,6 +37,7 @@ import DashboardPoiAction, {
   type DashboardPoiAoEjecucionDto,
   type DashboardPoiCumplimientoDto,
   type DashboardPoiDto,
+  type DashboardPoiSeccion,
 } from "../DashboardPoiAction";
 import DashboardPoiHeaderFilters from "../components/DashboardPoiHeaderFilters";
 import DashboardCatalogoAction from "../DashboardCatalogoAction";
@@ -73,6 +74,8 @@ type PorcentajeFinalFiltro = "TODOS" | "0_75" | "75_90" | "90_100" | "100_MAS";
 type TablaTerritorialActiva = "ejecucion" | "programacion";
 type TablaResumenFisicoActiva = "mensual" | "periodo" | "anual";
 type TablaResumenAoActiva = "mensual" | "periodo" | "anual";
+type DashboardPoiSeccionVista = "fisica" | "territorial" | "resumen-fisico" | "ao";
+type DashboardPoiSeccionCarga = Exclude<DashboardPoiSeccion, "resumen" | "todo">;
 
 function optionKey(value: number | string | null | undefined): string {
   return value == null ? "" : String(value);
@@ -919,6 +922,36 @@ function percentageCellSx(value: number | null | undefined, baseBackground = "#f
   };
 }
 
+
+function mergeDashboardPoiData(
+  prev: DashboardPoiDto | null,
+  next: DashboardPoiDto | null,
+  preserveResumen = false
+): DashboardPoiDto | null {
+  if (!next) return prev;
+  if (!prev) return next;
+
+  return {
+    ...prev,
+    ...next,
+    kpis: preserveResumen ? prev.kpis : (next.kpis ?? prev.kpis),
+    semaforo: preserveResumen ? prev.semaforo : (next.semaforo ?? prev.semaforo),
+    comparativoPoiSiaf: preserveResumen
+      ? prev.comparativoPoiSiaf
+      : (next.comparativoPoiSiaf?.length ? next.comparativoPoiSiaf : prev.comparativoPoiSiaf),
+    ejecucionPorEjecutora: next.ejecucionPorEjecutora?.length ? next.ejecucionPorEjecutora : prev.ejecucionPorEjecutora,
+    inconsistencias: preserveResumen ? prev.inconsistencias : (next.inconsistencias?.length ? next.inconsistencias : prev.inconsistencias),
+    seguimientoPendiente: preserveResumen ? prev.seguimientoPendiente : (next.seguimientoPendiente?.length ? next.seguimientoPendiente : prev.seguimientoPendiente),
+    ejecucionFisicaPorUnidad: next.ejecucionFisicaPorUnidad?.length ? next.ejecucionFisicaPorUnidad : prev.ejecucionFisicaPorUnidad,
+    ejecucionFisicaPorOeiAei: next.ejecucionFisicaPorOeiAei?.length ? next.ejecucionFisicaPorOeiAei : prev.ejecucionFisicaPorOeiAei,
+    programacionFisicaPorUnidad: next.programacionFisicaPorUnidad?.length ? next.programacionFisicaPorUnidad : prev.programacionFisicaPorUnidad,
+    programacionFisicaPorOeiAei: next.programacionFisicaPorOeiAei?.length ? next.programacionFisicaPorOeiAei : prev.programacionFisicaPorOeiAei,
+    ejecucionFisicaPorProvinciaDistrito: next.ejecucionFisicaPorProvinciaDistrito?.length ? next.ejecucionFisicaPorProvinciaDistrito : prev.ejecucionFisicaPorProvinciaDistrito,
+    programacionFisicaPorProvinciaDistrito: next.programacionFisicaPorProvinciaDistrito?.length ? next.programacionFisicaPorProvinciaDistrito : prev.programacionFisicaPorProvinciaDistrito,
+    ejecucionFisicaPorAo: next.ejecucionFisicaPorAo?.length ? next.ejecucionFisicaPorAo : prev.ejecucionFisicaPorAo,
+  };
+}
+
 export default function DashboardPoiPage(): React.ReactElement {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingCombos, setLoadingCombos] = useState<boolean>(true);
@@ -927,6 +960,9 @@ export default function DashboardPoiPage(): React.ReactElement {
   const [downloadingExcel, setDownloadingExcel] = useState<boolean>(false);
   const [downloadingExcelAlertas, setDownloadingExcelAlertas] = useState<boolean>(false);
   const [data, setData] = useState<DashboardPoiDto | null>(null);
+  const [seccionActiva, setSeccionActiva] = useState<DashboardPoiSeccionVista | null>(null);
+  const [loadingSection, setLoadingSection] = useState<boolean>(false);
+  const [loadedSections, setLoadedSections] = useState<Record<string, boolean>>({});
   const [tablaActiva, setTablaActiva] = useState<"seguimiento" | "reprogramacion">("seguimiento");
   const [vistaTabla, setVistaTabla] = useState<"unidad" | "oeiAei">("unidad");
   const [porcentajeFinalFiltro, setPorcentajeFinalFiltro] = useState<PorcentajeFinalFiltro>("TODOS");
@@ -935,6 +971,8 @@ export default function DashboardPoiPage(): React.ReactElement {
   const [idDistritoTerritorial, setIdDistritoTerritorial] = useState<string>("");
   const [tablaResumenFisicoActiva, setTablaResumenFisicoActiva] = useState<TablaResumenFisicoActiva>("mensual");
   const [tablaResumenAoActiva, setTablaResumenAoActiva] = useState<TablaResumenAoActiva>("mensual");
+  const loadingSectionsRef = useRef<Set<string>>(new Set());
+  const lastMainLoadKeyRef = useRef<string>("");
 
 
   const [filters, setFilters] = useState<DashboardPoiHeaderFiltersValue>({
@@ -985,20 +1023,102 @@ export default function DashboardPoiPage(): React.ReactElement {
     setUnidadesEjecutoras(unidades);
   }
 
-  async function loadData(currentFilters?: DashboardPoiHeaderFiltersValue) {
+  function buildDashboardFiltros(
+    currentFilters?: DashboardPoiHeaderFiltersValue,
+    seccion?: DashboardPoiSeccion
+  ) {
     const f = currentFilters ?? filters;
 
-    setLoading(true);
+    return {
+      idPeriodo: f.idPeriodo ?? undefined,
+      idPoiAnio: f.idPoiAnio ?? undefined,
+      mes: f.mes ?? undefined,
+      idUnidadEjecutora: f.idUnidadEjecutora ?? undefined,
+      nivelCumplimiento: f.nivelCumplimiento ?? undefined,
+      seccion,
+    };
+  }
+
+  function getFiltroKey(
+    currentFilters?: DashboardPoiHeaderFiltersValue,
+    seccion?: DashboardPoiSeccion
+  ): string {
+    const f = currentFilters ?? filters;
+
+    return JSON.stringify({
+      idPeriodo: f.idPeriodo ?? null,
+      idPoiAnio: f.idPoiAnio ?? null,
+      mes: f.mes ?? null,
+      idUnidadEjecutora: f.idUnidadEjecutora ?? null,
+      nivelCumplimiento: f.nivelCumplimiento ?? null,
+      seccion: seccion ?? null,
+    });
+  }
+
+  function getSeccionCargaActual(
+    seccionVista: DashboardPoiSeccionVista | null = seccionActiva
+  ): DashboardPoiSeccionCarga | null {
+    if (!seccionVista) return null;
+    if (seccionVista === "fisica") {
+      if (tablaActiva === "seguimiento" && vistaTabla === "unidad") return "fisica-seguimiento-unidad";
+      if (tablaActiva === "seguimiento" && vistaTabla === "oeiAei") return "fisica-seguimiento-oei-aei";
+      if (tablaActiva === "reprogramacion" && vistaTabla === "unidad") return "fisica-reprogramacion-unidad";
+      return "fisica-reprogramacion-oei-aei";
+    }
+
+    if (seccionVista === "territorial") {
+      return tablaTerritorialActiva === "ejecucion"
+        ? "territorial-ejecucion"
+        : "territorial-programacion";
+    }
+
+    return seccionVista;
+  }
+
+  async function loadSection(
+    seccion: DashboardPoiSeccionCarga,
+    currentFilters?: DashboardPoiHeaderFiltersValue,
+    force = false
+  ) {
+    const sectionKey = getFiltroKey(currentFilters, seccion);
+
+    if (!force && (loadedSections[sectionKey] || loadingSectionsRef.current.has(sectionKey))) {
+      return;
+    }
+
+    loadingSectionsRef.current.add(sectionKey);
+    setLoadingSection(true);
     setErrorMsg("");
 
     try {
-      const resp = await DashboardPoiAction.getDashboard({
-        idPeriodo: f.idPeriodo ?? undefined,
-        idPoiAnio: f.idPoiAnio ?? undefined,
-        mes: f.mes ?? undefined,
-        idUnidadEjecutora: f.idUnidadEjecutora ?? undefined,
-        nivelCumplimiento: f.nivelCumplimiento ?? undefined,
-      });
+      const resp = await DashboardPoiAction.getDashboard(buildDashboardFiltros(currentFilters, seccion));
+      setData((prev) => mergeDashboardPoiData(prev, resp, true));
+      setLoadedSections((prev) => ({ ...prev, [sectionKey]: true }));
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "No se pudo cargar la sección POI seleccionada.");
+    } finally {
+      loadingSectionsRef.current.delete(sectionKey);
+      setLoadingSection(loadingSectionsRef.current.size > 0);
+    }
+  }
+
+  async function loadData(currentFilters?: DashboardPoiHeaderFiltersValue) {
+    const f = currentFilters ?? filters;
+    const mainLoadKey = getFiltroKey(f, "resumen");
+
+    if (lastMainLoadKeyRef.current === mainLoadKey && loading) {
+      return;
+    }
+
+    lastMainLoadKeyRef.current = mainLoadKey;
+    loadingSectionsRef.current.clear();
+    setLoading(true);
+    setLoadingSection(false);
+    setErrorMsg("");
+    setLoadedSections({});
+
+    try {
+      const resp = await DashboardPoiAction.getDashboard(buildDashboardFiltros(f, "resumen"));
       setData(resp);
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : "No se pudo cargar el dashboard POI.");
@@ -1087,8 +1207,17 @@ export default function DashboardPoiPage(): React.ReactElement {
   }, [data, tablaTerritorialActiva]);
 
   useEffect(() => {
-    setIdDistritoTerritorial("");
-  }, [idProvinciaTerritorial]);
+    if (!data || loading) return;
+
+    const seccionCarga = getSeccionCargaActual(seccionActiva);
+    if (!seccionCarga) return;
+
+    const sectionKey = getFiltroKey(filters, seccionCarga);
+
+    if (loadedSections[sectionKey] || loadingSectionsRef.current.has(sectionKey)) return;
+
+    void loadSection(seccionCarga, filters);
+  }, [seccionActiva, tablaActiva, vistaTabla, tablaTerritorialActiva, data, loading, loadedSections, filters]);
 
 
   const filtrosActivos = useMemo(() => {
@@ -1473,6 +1602,79 @@ export default function DashboardPoiPage(): React.ReactElement {
             </Grid>
           </Grid>
 
+
+          <Paper
+            elevation={0}
+            sx={{
+              mt: 2.2,
+              p: 2,
+              borderRadius: 4,
+              border: "1px solid rgba(148,163,184,.26)",
+              boxShadow: "0 18px 42px rgba(15,23,42,.06)",
+              background: "rgba(255,255,255,.96)",
+            }}
+          >
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: "stretch", md: "center" }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TuneRoundedIcon sx={{ color: "#2563eb" }} />
+                <Box>
+                  <Typography sx={{ fontWeight: 900 }}>
+                    Vista activa del Dashboard POI
+                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
+                    Para mejorar el rendimiento, se carga solo la sección seleccionada.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <ButtonGroup variant="outlined" size="small">
+                <Button
+                  variant={seccionActiva === "fisica" ? "contained" : "outlined"}
+                  onClick={() => setSeccionActiva("fisica")}
+                >
+                  Ejecución física
+                </Button>
+                <Button
+                  variant={seccionActiva === "territorial" ? "contained" : "outlined"}
+                  onClick={() => setSeccionActiva("territorial")}
+                >
+                  Territorial
+                </Button>
+                <Button
+                  variant={seccionActiva === "resumen-fisico" ? "contained" : "outlined"}
+                  onClick={() => setSeccionActiva("resumen-fisico")}
+                >
+                  Resumen OEI/AEI
+                </Button>
+                <Button
+                  variant={seccionActiva === "ao" ? "contained" : "outlined"}
+                  onClick={() => setSeccionActiva("ao")}
+                >
+                  Actividad Operativa
+                </Button>
+              </ButtonGroup>
+            </Stack>
+          </Paper>
+
+          {loadingSection ? (
+            <Alert severity="info" sx={{ mt: 2.2, borderRadius: 3 }}>
+              Cargando sección seleccionada del Dashboard POI...
+            </Alert>
+          ) : null}
+
+          {!seccionActiva ? (
+            <Alert severity="info" sx={{ mt: 2.2, borderRadius: 3 }}>
+              Seleccione una vista del Dashboard POI para cargar únicamente la información requerida.
+            </Alert>
+          ) : null}
+
+          {seccionActiva === "fisica" ? (
+          <>
           <Paper
             elevation={0}
             sx={{
@@ -1569,7 +1771,11 @@ export default function DashboardPoiPage(): React.ReactElement {
             comparisonLabel={tablaActiva === "seguimiento" ? "F(RE)" : "F(A)"}
             firstColumnTitle={vistaTabla === "unidad" ? "Unidad Ejecutora" : "OEI / AEI cascada"}
           />
+          </>
+          ) : null}
 
+          {seccionActiva === "territorial" ? (
+          <>
           <Paper
             elevation={0}
             sx={{
@@ -1695,7 +1901,11 @@ export default function DashboardPoiPage(): React.ReactElement {
               : "Ejecución física final (%) a nivel local: Distrital"}
             subtitle="Línea del porcentaje final agrupado por distrito, usando la ubicación registrada en la Actividad Operativa."
           />
+          </>
+          ) : null}
 
+          {seccionActiva === "resumen-fisico" ? (
+          <>
           <Paper
             elevation={0}
             sx={{
@@ -1753,7 +1963,11 @@ export default function DashboardPoiPage(): React.ReactElement {
             rows={resumenFisicoRows}
             mesLabel={mesSeleccionadoLabel}
           />
+          </>
+          ) : null}
 
+          {seccionActiva === "ao" ? (
+          <>
           <Paper
             elevation={0}
             sx={{
@@ -1811,6 +2025,8 @@ export default function DashboardPoiPage(): React.ReactElement {
             rows={resumenAoRows}
             mesLabel={mesSeleccionadoLabel}
           />
+          </>
+          ) : null}
         </>
       ) : null}
     </Box>

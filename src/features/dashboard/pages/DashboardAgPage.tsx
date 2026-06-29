@@ -33,13 +33,13 @@ import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRound
 
 import {
   ResponsiveContainer,
-  XAxis,
-  YAxis,
   Tooltip as RechartsTooltip,
-  CartesianGrid,
-  LineChart,
-  Line,
   Legend,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
 } from "recharts";
 
 import DashboardAgAction, {
@@ -133,6 +133,19 @@ type KpiCardProps = {
   subtitle?: string;
   icon: React.ReactNode;
   tone?: "purple" | "blue" | "green" | "amber";
+};
+
+
+type DashboardAgRadarDimensionDto = {
+  idDimension?: number;
+  dimension?: string;
+  avancePromedio?: number;
+  referencia75?: number;
+  referencia95?: number;
+};
+
+type DashboardAgDtoConRadar = DashboardAgDto & {
+  radarDimensiones?: DashboardAgRadarDimensionDto[];
 };
 
 type IndicadorDrawerState = {
@@ -390,6 +403,17 @@ export default function DashboardAgPage(): React.ReactElement {
 
   const jerarquiaData = useMemo(() => data?.jerarquia ?? [], [data]);
   const tendenciaData = useMemo(() => data?.tendencia ?? [], [data]);
+
+  const radarDimensionesData = useMemo(() => {
+    const radar = ((data as DashboardAgDtoConRadar | null)?.radarDimensiones ?? []).map((item) => ({
+      dimension: item.dimension || "Sin dimensión",
+      avancePromedio: Number(item.avancePromedio ?? 0),
+      referencia75: Number(item.referencia75 ?? 75),
+      referencia95: Number(item.referencia95 ?? 95),
+    }));
+
+    return radar;
+  }, [data]);
 
   const filtrosActivos = useMemo(() => {
     const result: Array<{ key: keyof DashboardCommonHeaderFiltersValue; label: string }> = [];
@@ -1119,26 +1143,89 @@ export default function DashboardAgPage(): React.ReactElement {
               Evolución del avance promedio por año de proyección. La tendencia mantiene el contexto de período, dimensión, unidad, política y nivel de avance, y no se limita por el año seleccionado.
             </Typography>
 
-            <Box sx={{ height: 340 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={tendenciaData} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
-                  <CartesianGrid stroke={DASHBOARD_COLORS.grid} strokeDasharray="3 3" />
-                  <XAxis dataKey="periodo" tick={{ fill: DASHBOARD_COLORS.text, fontSize: 12 }} />
-                  <YAxis tick={{ fill: DASHBOARD_COLORS.text, fontSize: 12 }} tickFormatter={(v: number) => `${v}%`} />
-                  <RechartsTooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === "Meta promedio") return [formatNumber(value), name];
-                      if (name === "Ejecutado promedio") return [formatNumber(value), name];
-                      return [formatPercent(value), name];
-                    }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="avancePromedio" name="Avance promedio" stroke={DASHBOARD_COLORS.primary} strokeWidth={3} dot={{ r: 4, fill: DASHBOARD_COLORS.primary }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="referencia75" name="Referencia 75%" stroke={DASHBOARD_COLORS.warning} strokeWidth={2} strokeDasharray="6 6" dot={false} activeDot={false} />
-                  <Line type="monotone" dataKey="referencia95" name="Referencia 95%" stroke={DASHBOARD_COLORS.success} strokeWidth={2} strokeDasharray="6 6" dot={false} activeDot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Box>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 1.5, md: 2 },
+                minHeight: { xs: 560, md: 625 },
+                borderRadius: 3,
+                border: "1px solid rgba(148,163,184,.22)",
+                bgcolor: "linear-gradient(135deg, rgba(240,253,250,.72), rgba(255,255,255,.98))",
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.2 }}>
+                <Box>
+                  <Typography sx={{ fontWeight: 900, fontSize: 13 }}>
+                    Radar por dimensiones
+                  </Typography>
+                  <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>
+                    Avance promedio consolidado por dimensión
+                  </Typography>
+                </Box>
+                <Chip
+                  size="small"
+                  label={`${radarDimensionesData.length} dimensión(es)`}
+                  variant="outlined"
+                  sx={{ fontWeight: 900, borderColor: "rgba(37,99,235,.28)", color: "rgb(30,64,175)" }}
+                />
+              </Stack>
+
+              {radarDimensionesData.length === 0 ? (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  No se encontraron datos por dimensión para los filtros seleccionados.
+                </Alert>
+              ) : (
+                <Box sx={{ height: { xs: 468, md: 507 }, width: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radarDimensionesData} outerRadius="88%" margin={{ top: 12, right: 56, left: 56, bottom: 12 }}>
+                      <PolarGrid stroke="rgba(148,163,184,.45)" />
+                      <PolarAngleAxis
+                        dataKey="dimension"
+                        tick={{ fill: DASHBOARD_COLORS.text, fontSize: 11, fontWeight: 800 }}
+                      />
+                      <PolarRadiusAxis
+                        angle={90}
+                        domain={[0, 150]}
+                        tick={{ fill: DASHBOARD_COLORS.text, fontSize: 10 }}
+                        tickFormatter={(value: number) => `${value}%`}
+                      />
+                      <RechartsTooltip
+                        formatter={(value: number, name: string) => {
+                          if (name === "Avance promedio") return [formatPercent(value), name];
+                          return [formatPercent(value), name];
+                        }}
+                      />
+                      <Radar
+                        name="Avance promedio"
+                        dataKey="avancePromedio"
+                        stroke={DASHBOARD_COLORS.primary}
+                        fill={DASHBOARD_COLORS.primary}
+                        fillOpacity={0.22}
+                        strokeWidth={3}
+                        dot
+                      />
+                      <Radar
+                        name="Referencia 75%"
+                        dataKey="referencia75"
+                        stroke={DASHBOARD_COLORS.warning}
+                        fill={DASHBOARD_COLORS.warning}
+                        fillOpacity={0.04}
+                        strokeDasharray="5 5"
+                      />
+                      <Radar
+                        name="Referencia 95%"
+                        dataKey="referencia95"
+                        stroke={DASHBOARD_COLORS.success}
+                        fill={DASHBOARD_COLORS.success}
+                        fillOpacity={0.04}
+                        strokeDasharray="5 5"
+                      />
+                      <Legend />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </Paper>
           </Paper>
 
           <DashboardIndicadorDrawer

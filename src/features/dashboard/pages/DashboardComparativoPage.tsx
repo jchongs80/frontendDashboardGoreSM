@@ -12,7 +12,6 @@ import {
 import Grid from "@mui/material/GridLegacy";
 import CompareArrowsRoundedIcon from "@mui/icons-material/CompareArrowsRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
-import LeaderboardRoundedIcon from "@mui/icons-material/LeaderboardRounded";
 import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import {
@@ -36,7 +35,7 @@ import DashboardComparativoAction, {
   type DashboardComparativoInstrumentoDto,
 } from "../DashboardComparativoAction";
 
-const INSTRUMENTOS = ["AG", "PDRC", "PRCP", "PEI", "POI"] as const;
+const INSTRUMENTOS = ["PDRC", "PRCP", "AG", "PEI", "POI"] as const;
 
 const lineColors: Record<string, string> = {
   AG: "#f59e0b",
@@ -51,47 +50,157 @@ function formatPercent(value: number | null | undefined): string {
   return `${n.toFixed(2)}%`;
 }
 
-function getEstado(avance: number): { label: string; color: string; bg: string } {
-  if (avance < 75) return { label: "ROJO", color: "#dc2626", bg: "#fee2e2" };
-  if (avance < 95) return { label: "AMARILLO", color: "#d97706", bg: "#fef3c7" };
-  if (avance <= 100) return { label: "VERDE", color: "#16a34a", bg: "#dcfce7" };
-  return { label: "AZUL", color: "#4f46e5", bg: "#e0e7ff" };
+function getAvanceTheme(avance: number): {
+  color: string;
+  border: string;
+  bg: string;
+  softBg: string;
+  shadow: string;
+  label: string;
+  shortLabel: string;
+} {
+  if (avance >= 95) {
+    return {
+      color: "#16a34a",
+      border: "rgba(34, 197, 94, .55)",
+      bg: "#dcfce7",
+      softBg: "linear-gradient(135deg, rgba(240,253,244,.98) 0%, rgba(220,252,231,.72) 100%)",
+      shadow: "0 16px 36px rgba(22,163,74,.10)",
+      label: "95% a más",
+      shortLabel: "Logrado",
+    };
+  }
+
+  if (avance >= 75) {
+    return {
+      color: "#d97706",
+      border: "rgba(245, 158, 11, .58)",
+      bg: "#fef3c7",
+      softBg: "linear-gradient(135deg, rgba(255,251,235,.98) 0%, rgba(254,243,199,.76) 100%)",
+      shadow: "0 16px 36px rgba(217,119,6,.10)",
+      label: "75% - 95%",
+      shortLabel: "En proceso",
+    };
+  }
+
+  return {
+    color: "#dc2626",
+    border: "rgba(248, 113, 113, .60)",
+    bg: "#fee2e2",
+    softBg: "linear-gradient(135deg, rgba(255,245,245,.98) 0%, rgba(254,226,226,.78) 100%)",
+    shadow: "0 16px 36px rgba(220,38,38,.10)",
+    label: "< 75%",
+    shortLabel: "Crítico",
+  };
+}
+
+function getDistribucionOficial(item: DashboardComparativoInstrumentoDto): {
+  critico: number;
+  enProceso: number;
+  logrado: number;
+} {
+  return {
+    critico: Number(item.rojo ?? 0),
+    enProceso: Number(item.amarillo ?? 0),
+    logrado: Number(item.verde ?? 0) + Number(item.azul ?? 0),
+  };
+}
+
+function RangeChip({ label, value, tone }: { label: string; value: number; tone: "red" | "amber" | "green" }): React.ReactElement {
+  const styles = {
+    red: { bg: "#fee2e2", color: "#991b1b", border: "#fecaca" },
+    amber: { bg: "#fef3c7", color: "#92400e", border: "#fde68a" },
+    green: { bg: "#dcfce7", color: "#166534", border: "#bbf7d0" },
+  }[tone];
+
+  return (
+    <Chip
+      size="small"
+      label={`${label}: ${value}`}
+      sx={{
+        height: 22,
+        background: styles.bg,
+        color: styles.color,
+        border: `1px solid ${styles.border}`,
+        fontSize: 10.5,
+        fontWeight: 900,
+        "& .MuiChip-label": { px: 0.75 },
+      }}
+    />
+  );
 }
 
 function InstrumentSummaryCard({ item }: { item: DashboardComparativoInstrumentoDto }): React.ReactElement {
-  const estado = getEstado(Number(item.avancePromedio ?? 0));
-  const border = lineColors[item.instrumento] ?? DASHBOARD_COLORS.primary;
+  const avance = Number(item.avancePromedio ?? 0);
+  const avanceTheme = getAvanceTheme(avance);
+  const distribucion = getDistribucionOficial(item);
 
   return (
     <Paper
       elevation={0}
       sx={{
-        p: 1.5,
-        borderRadius: 2.5,
+        p: 1.55,
+        borderRadius: 2.8,
         border: "1px solid",
-        borderColor: `${border}55`,
-        background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
+        borderColor: avanceTheme.border,
+        background: avanceTheme.softBg,
+        boxShadow: avanceTheme.shadow,
+        position: "relative",
+        overflow: "hidden",
+        minHeight: 128,
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 5,
+          background: avanceTheme.color,
+        },
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-        <Typography sx={{ fontWeight: 950, fontSize: 16, color: "#0f172a" }}>{item.instrumento}</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+        <Box>
+          <Typography sx={{ fontWeight: 950, fontSize: 16, color: "#0f172a" }}>{item.instrumento}</Typography>
+          <Typography sx={{ fontSize: 11.5, color: "#64748b", mt: 0.2 }}>
+            {item.indicadores} indicador(es)/meta(s)
+          </Typography>
+        </Box>
         <Chip
           size="small"
-          label={estado.label}
-          sx={{ background: estado.bg, color: estado.color, border: `1px solid ${estado.color}55`, fontWeight: 900 }}
+          label={avanceTheme.label}
+          sx={{
+            height: 23,
+            background: avanceTheme.bg,
+            color: avanceTheme.color,
+            border: `1px solid ${avanceTheme.border}`,
+            fontWeight: 950,
+            fontSize: 10.5,
+            "& .MuiChip-label": { px: 0.85 },
+          }}
         />
       </Stack>
-      <Typography sx={{ mt: 1, fontSize: 24, fontWeight: 950, color: border }}>
+
+      <Typography sx={{ mt: 1.2, fontSize: 25, lineHeight: 1, fontWeight: 950, color: avanceTheme.color }}>
         {formatPercent(item.avancePromedio)}
       </Typography>
-      <Typography sx={{ fontSize: 12.5, color: "#64748b", mt: 0.4 }}>
-        {item.indicadores} indicador(es)/meta(s)
-      </Typography>
-      <Stack direction="row" spacing={0.6} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-        <Chip size="small" label={`R:${item.rojo}`} sx={{ background: "#fee2e2", color: "#991b1b", fontWeight: 800 }} />
-        <Chip size="small" label={`A:${item.amarillo}`} sx={{ background: "#fef3c7", color: "#92400e", fontWeight: 800 }} />
-        <Chip size="small" label={`V:${item.verde}`} sx={{ background: "#dcfce7", color: "#166534", fontWeight: 800 }} />
-        <Chip size="small" label={`Az:${item.azul}`} sx={{ background: "#e0e7ff", color: "#3730a3", fontWeight: 800 }} />
+
+      <Stack
+        direction="row"
+        spacing={0.55}
+        flexWrap="wrap"
+        useFlexGap
+        sx={{
+          mt: 1.15,
+          p: 0.65,
+          borderRadius: 2,
+          border: "1px solid rgba(148,163,184,.22)",
+          background: "rgba(255,255,255,.62)",
+        }}
+      >
+        <RangeChip label="Crítico" value={distribucion.critico} tone="red" />
+        <RangeChip label="En proceso" value={distribucion.enProceso} tone="amber" />
+        <RangeChip label="Logrado" value={distribucion.logrado} tone="green" />
       </Stack>
     </Paper>
   );
@@ -230,13 +339,36 @@ export default function DashboardComparativoPage(): React.ReactElement {
                   border: "1px solid #dbeafe",
                   boxShadow: "0 18px 44px rgba(15,23,42,.08)",
                   background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    background: "linear-gradient(180deg, #ef4444 0%, #f59e0b 48%, #22c55e 100%)",
+                  },
                 }}
               >
-                <Stack direction="row" spacing={1.1} alignItems="center" sx={{ mb: 2 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb" }} />
-                  <Typography sx={{ fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase", color: "#334155" }}>
-                    Ranking de avance · instrumentos
-                  </Typography>
+                <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={1.4} sx={{ mb: 2 }}>
+                  <Box>
+                    <Stack direction="row" spacing={1.1} alignItems="center">
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb" }} />
+                      <Typography sx={{ fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase", color: "#334155" }}>
+                        Ranking de avance · instrumentos
+                      </Typography>
+                    </Stack>
+                    <Typography sx={{ fontSize: 12, color: "#64748b", mt: 0.45 }}>
+                      Barras coloreadas según la semaforización oficial por avance.
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={0.7} flexWrap="wrap" useFlexGap>
+                    <Chip size="small" label="Crítico: < 75%" sx={{ bgcolor: "#fee2e2", color: "#991b1b", fontWeight: 900, border: "1px solid #fecaca" }} />
+                    <Chip size="small" label="En proceso: 75% - 95%" sx={{ bgcolor: "#fef3c7", color: "#92400e", fontWeight: 900, border: "1px solid #fde68a" }} />
+                    <Chip size="small" label="Logrado: 95% a más" sx={{ bgcolor: "#dcfce7", color: "#166534", fontWeight: 900, border: "1px solid #bbf7d0" }} />
+                  </Stack>
                 </Stack>
                 <Box sx={{ height: 380 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -262,15 +394,15 @@ export default function DashboardComparativoPage(): React.ReactElement {
                         axisLine={false}
                         tickLine={false}
                       />
-                      <Tooltip formatter={(v: number) => formatPercent(v)} cursor={{ fill: "rgba(37,99,235,.06)" }} />
+                      <Tooltip formatter={(value) => formatPercent(Number(value ?? 0))} cursor={{ fill: "rgba(37,99,235,.06)" }} />
                       <Bar dataKey="avancePromedio" name="Avance promedio" radius={[0, 10, 10, 0]} barSize={30}>
                         {rankingData.map((entry) => (
-                          <Cell key={`ranking-comparativo-${entry.instrumento}`} fill={lineColors[entry.instrumento] ?? DASHBOARD_COLORS.primary} />
+                          <Cell key={`ranking-comparativo-${entry.instrumento}`} fill={getAvanceTheme(Number(entry.avancePromedio ?? 0)).color} />
                         ))}
                         <LabelList
                           dataKey="avancePromedio"
                           position="right"
-                          formatter={(value: number) => formatPercent(value)}
+                          formatter={(value) => formatPercent(Number(value ?? 0))}
                           style={{ fill: "#0f172a", fontSize: 13, fontWeight: 900 }}
                         />
                       </Bar>
@@ -281,26 +413,80 @@ export default function DashboardComparativoPage(): React.ReactElement {
             </Grid>
 
             <Grid item xs={12} lg={5}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: "1px solid #dbeafe", boxShadow: "0 16px 38px rgba(15,23,42,.07)", background: "#fff", height: "100%" }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2.2,
+                  borderRadius: 3,
+                  border: "1px solid #dbeafe",
+                  boxShadow: "0 16px 38px rgba(15,23,42,.07)",
+                  background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
+                  height: "100%",
+                }}
+              >
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                   <TableChartRoundedIcon fontSize="small" sx={{ color: "#2563eb" }} />
-                  <Typography sx={{ fontWeight: 950 }}>Resumen comparativo</Typography>
+                  <Box>
+                    <Typography sx={{ fontWeight: 950 }}>Resumen comparativo</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#64748b" }}>
+                      Distribución oficial por avance de cada instrumento.
+                    </Typography>
+                  </Box>
                 </Stack>
-                <Stack spacing={1.1}>
+                <Stack spacing={1.15}>
                   {rankingData.map((item) => {
-                    const estado = getEstado(Number(item.avancePromedio ?? 0));
+                    const avance = Number(item.avancePromedio ?? 0);
+                    const avanceTheme = getAvanceTheme(avance);
+                    const distribucion = getDistribucionOficial(item);
                     return (
-                      <Paper key={item.instrumento} variant="outlined" sx={{ p: 1.5, borderRadius: 2.5, borderColor: `${estado.color}44` }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                          <Typography sx={{ fontWeight: 950 }}>{item.instrumento}</Typography>
-                          <Chip size="small" label={estado.label} sx={{ background: estado.bg, color: estado.color, fontWeight: 900 }} />
+                      <Paper
+                        key={item.instrumento}
+                        variant="outlined"
+                        sx={{
+                          p: 1.45,
+                          borderRadius: 2.6,
+                          borderColor: avanceTheme.border,
+                          background: avanceTheme.softBg,
+                          boxShadow: avanceTheme.shadow,
+                          position: "relative",
+                          overflow: "hidden",
+                          "&::before": {
+                            content: '""',
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: 4,
+                            background: avanceTheme.color,
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 950, color: "#0f172a" }}>{item.instrumento}</Typography>
+                            <Typography sx={{ fontSize: 13, color: "#475569", mt: 0.35 }}>
+                              {item.indicadores} indicador(es)/meta(s) · Avance: {formatPercent(item.avancePromedio)}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            size="small"
+                            label={avanceTheme.label}
+                            sx={{
+                              height: 22,
+                              bgcolor: avanceTheme.bg,
+                              color: avanceTheme.color,
+                              border: `1px solid ${avanceTheme.border}`,
+                              fontWeight: 950,
+                              fontSize: 10.5,
+                              "& .MuiChip-label": { px: 0.85 },
+                            }}
+                          />
                         </Stack>
-                        <Typography sx={{ fontSize: 13, color: "#475569", mt: 0.35 }}>
-                          Indicadores/metas: {item.indicadores} · Avance: {formatPercent(item.avancePromedio)}
-                        </Typography>
-                        <Typography sx={{ fontSize: 12.5, color: "#64748b", mt: 0.25 }}>
-                          Rojo: {item.rojo} · Amarillo: {item.amarillo} · Verde: {item.verde} · Azul: {item.azul}
-                        </Typography>
+                        <Stack direction="row" spacing={0.55} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                          <RangeChip label="Crítico" value={distribucion.critico} tone="red" />
+                          <RangeChip label="En proceso" value={distribucion.enProceso} tone="amber" />
+                          <RangeChip label="Logrado" value={distribucion.logrado} tone="green" />
+                        </Stack>
                       </Paper>
                     );
                   })}
@@ -309,10 +495,57 @@ export default function DashboardComparativoPage(): React.ReactElement {
             </Grid>
 
             <Grid item xs={12}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: "1px solid #dbeafe", boxShadow: "0 16px 38px rgba(15,23,42,.07)", background: "#fff" }}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                  <TimelineRoundedIcon fontSize="small" sx={{ color: "#2563eb" }} />
-                  <Typography sx={{ fontWeight: 950 }}>Tendencia comparativa por instrumento</Typography>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2.4,
+                  borderRadius: 3,
+                  border: "1px solid #dbeafe",
+                  boxShadow: "0 16px 38px rgba(15,23,42,.07)",
+                  background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    background: "#2563eb",
+                  },
+                }}
+              >
+                <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={1.2} sx={{ mb: 2 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <TimelineRoundedIcon fontSize="small" sx={{ color: "#2563eb" }} />
+                    <Box>
+                      <Typography sx={{ fontWeight: 950 }}>Tendencia comparativa por instrumento</Typography>
+                      <Typography sx={{ fontSize: 12, color: "#64748b", mt: 0.2 }}>
+                        Evolución histórica comparativa manteniendo identidad visual por instrumento.
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                    {INSTRUMENTOS.map((instrumento) => {
+                      const item = rankingData.find((x) => x.instrumento === instrumento);
+                      const theme = getAvanceTheme(Number(item?.avancePromedio ?? 0));
+                      return (
+                        <Chip
+                          key={`trend-chip-${instrumento}`}
+                          size="small"
+                          label={`${instrumento}: ${theme.label}`}
+                          sx={{
+                            bgcolor: theme.bg,
+                            color: theme.color,
+                            border: `1px solid ${theme.border}`,
+                            fontWeight: 900,
+                            fontSize: 11,
+                          }}
+                        />
+                      );
+                    })}
+                  </Stack>
                 </Stack>
                 <Box sx={{ height: 390 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -321,7 +554,7 @@ export default function DashboardComparativoPage(): React.ReactElement {
                       <XAxis dataKey="periodo" tick={{ fill: DASHBOARD_COLORS.text, fontSize: 13, fontWeight: 700 }} />
                       <YAxis tick={{ fill: DASHBOARD_COLORS.text, fontSize: 12 }} domain={[0, 120]} />
                       <Tooltip
-                        formatter={(value: number, name: string) => [formatPercent(value), name]}
+                        formatter={(value, name) => [formatPercent(Number(value ?? 0)), name]}
                         contentStyle={{
                           borderRadius: 12,
                           border: `1px solid ${DASHBOARD_COLORS.grid}`,

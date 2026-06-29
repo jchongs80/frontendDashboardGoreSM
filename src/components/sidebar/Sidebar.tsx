@@ -24,11 +24,13 @@ import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
-
-import HubRoundedIcon from "@mui/icons-material/HubRounded";
-import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
-import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
+import AnalyticsRoundedIcon from "@mui/icons-material/AnalyticsRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
+import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
+import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
+import MapRoundedIcon from "@mui/icons-material/MapRounded";
+import TrackChangesRoundedIcon from "@mui/icons-material/TrackChangesRounded";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
 
 // ✅ ICONO NUEVO para Unidades Ejecutoras
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
@@ -83,12 +85,11 @@ export default function Sidebar({
 
   const dashboardItems: SidebarItem[] = [
     { text: "Home", icon: <SpaceDashboardRoundedIcon />, path: "/dashboard/" },
-    { text: "Comparativo", icon: <GridViewRoundedIcon />, path: "/dashboard/comparativo" },
-    { text: "A.G.", icon: <GridViewRoundedIcon />, path: "/dashboard/ag" },
-    { text: "P.D.R.C.", icon: <GridViewRoundedIcon />, path: "/dashboard/Pdrc" },
-    { text: "P.E.I.", icon: <GridViewRoundedIcon />, path: "/dashboard/Pei" },
-    { text: "P.O.I.", icon: <GridViewRoundedIcon />, path: "/dashboard/Poi" },
-    { text: "P.R.C.P.", icon: <GridViewRoundedIcon />, path: "/dashboard/Prcp" },
+    { text: "P.D.R.C.", icon: <PublicRoundedIcon />, path: "/dashboard/Pdrc" },
+    { text: "P.R.C.P.", icon: <FactCheckRoundedIcon />, path: "/dashboard/Prcp" },
+    { text: "A.G.", icon: <AnalyticsRoundedIcon />, path: "/dashboard/ag" },
+    { text: "P.E.I.", icon: <TimelineRoundedIcon />, path: "/dashboard/Pei" },
+    { text: "P.O.I.", icon: <ApartmentRoundedIcon />, path: "/dashboard/Poi" },
   ];
 
   const catalogItems: SidebarItem[] = [
@@ -101,29 +102,29 @@ export default function Sidebar({
 
   const planeamientoItems: SidebarItem[] = [
     {
-      text: "A.G.",
-      icon: <PolicyRoundedIcon />,
-      path: "/planeamiento/ag-po-reco-inpr",
-    },
-    {
       text: "P.D.R.C.",
-      icon: <HubRoundedIcon />,
+      icon: <MapRoundedIcon />,
       path: "/planeamiento/pdrc-oer-aer",
     },
     {
+      text: "P.R.C.P.",
+      icon: <AssignmentTurnedInRoundedIcon />,
+      path: "/planeamiento/prcp-op-pi-mp",
+    },
+    {
+      text: "A.G.",
+      icon: <AccountTreeRoundedIcon />,
+      path: "/planeamiento/ag-po-reco-inpr",
+    },
+    {
       text: "P.E.I.",
-      icon: <AutoGraphRoundedIcon />,
+      icon: <TrackChangesRoundedIcon />,
       path: "/planeamiento/pei-oei-aei",
     },
     {
       text: "P.O.I.",
       icon: <ApartmentRoundedIcon />,
       path: "/planeamiento/unidades-ejecutoras",
-    },
-    {
-      text: "P.R.C.P.",
-      icon: <WorkspacePremiumRoundedIcon />,
-      path: "/planeamiento/prcp-op-pi-mp",
     },
   ];
 
@@ -163,10 +164,6 @@ export default function Sidebar({
     },
   ];
 
-  const alineamientoItems: SidebarItem[] = [
-    { text: "Alineamientos Instrumentos", icon: <AccountTreeRoundedIcon />, path: "/alineamiento/instrumentos" },
-  ];
-
   const isDashboardActive = useMemo(
     () => location.pathname.startsWith("/dashboard"),
     [location.pathname]
@@ -194,17 +191,11 @@ export default function Sidebar({
     [location.pathname]
   );
 
-  const isAlineamientoActive = useMemo(
-    () => location.pathname.startsWith("/alineamiento"),
-    [location.pathname]
-  );
-
   const [openDashboards, setOpenDashboards] = useState<boolean>(isDashboardActive);
   const [openCatalogs, setOpenCatalogs] = useState<boolean>(isCatalogActive);
   const [openPlaneamiento, setOpenPlaneamiento] = useState<boolean>(isPlaneamientoActive);
   const [openCargaMasiva, setOpenCargaMasiva] = useState<boolean>(isCargaMasivaActive);
   const [openAdmin, setOpenAdmin] = useState<boolean>(isAdminActive);
-  const [openAlineamiento, setOpenAlineamiento] = useState<boolean>(isAlineamientoActive);
 
   const go = (path: string) => {
     navigate(path);
@@ -493,16 +484,6 @@ export default function Sidebar({
               openAdmin,
               setOpenAdmin,
               isAdminActive
-            )}
-
-          {isAuthenticated &&
-            renderSection(
-              "Alineamiento",
-              <HubRoundedIcon />,
-              alineamientoItems,
-              openAlineamiento,
-              setOpenAlineamiento,
-              isAlineamientoActive
             )}
 
           <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,0.10)" }} />

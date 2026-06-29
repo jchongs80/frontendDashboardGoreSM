@@ -126,6 +126,20 @@ export type DashboardPoiDto = {
   ejecucionFisicaPorAo: DashboardPoiAoEjecucionDto[];
 };
 
+export type DashboardPoiSeccion =
+  | "resumen"
+  | "fisica"
+  | "fisica-seguimiento-unidad"
+  | "fisica-seguimiento-oei-aei"
+  | "fisica-reprogramacion-unidad"
+  | "fisica-reprogramacion-oei-aei"
+  | "territorial"
+  | "territorial-ejecucion"
+  | "territorial-programacion"
+  | "resumen-fisico"
+  | "ao"
+  | "todo";
+
 export type DashboardPoiFiltros = {
   idPeriodo?: number;
   idPoiAnio?: number;
@@ -135,6 +149,7 @@ export type DashboardPoiFiltros = {
   idUnidadEjecutora?: number;
   idCentroCosto?: number;
   nivelCumplimiento?: string;
+  seccion?: DashboardPoiSeccion;
 };
 
 
@@ -218,6 +233,7 @@ const DashboardPoiAction = {
     if (filtros?.idUnidadEjecutora != null) qp.append("idUnidadEjecutora", String(filtros.idUnidadEjecutora));
     if (filtros?.idCentroCosto != null) qp.append("idCentroCosto", String(filtros.idCentroCosto));
     if (filtros?.nivelCumplimiento) qp.append("nivelCumplimiento", filtros.nivelCumplimiento);
+    if (filtros?.seccion) qp.append("seccion", filtros.seccion);
 
     const url = qp.toString()
       ? `/api/dashboard/poi?${qp.toString()}`
