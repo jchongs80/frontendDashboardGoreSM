@@ -87,8 +87,14 @@ function normalizeTipo(tipo?: string): TipoInstrumento | null {
 
 function isTipoHabilitado(
   tipo: TipoInstrumento | null,
-): tipo is Exclude<TipoInstrumento, "poi"> {
-  return tipo === "ag" || tipo === "pdrc" || tipo === "prcp" || tipo === "pei";
+): tipo is TipoInstrumento {
+  return (
+    tipo === "ag" ||
+    tipo === "pdrc" ||
+    tipo === "prcp" ||
+    tipo === "pei" ||
+    tipo === "poi"
+  );
 }
 
 function getTipoDisplay(
@@ -113,7 +119,7 @@ function getDescripcion(tipo: TipoInstrumento | null): string {
     case "pei":
       return "Carga los valores programados del Plan Estratégico Institucional.";
     case "poi":
-      return "La opción POI está preparada en el menú, pero su proceso operativo aún debe habilitarse.";
+      return "Carga la programación y ejecución mensual del Plan Operativo Institucional";
     default:
       return "Selecciona un instrumento válido para iniciar la carga masiva.";
   }
@@ -130,7 +136,7 @@ function getHojaPrincipal(tipo: TipoInstrumento | null): string {
     case "pei":
       return "01_PEI_INDICADOR_VALOR";
     case "poi":
-      return "01_POI_INDICADOR_VALOR";
+      return "POI_Por_ActividadOperativaAnual";
     default:
       return "01_INDICADOR_VALOR";
   }
@@ -141,7 +147,16 @@ function getPlantilla(tipo: TipoInstrumento | null): {
   fileName: string;
   url: string;
 } {
+  if (tipo === "poi") {
+    return {
+      label: "Descargar plantilla POI",
+      fileName: "Plantilla_POI_Por_ActividadOperativaAnual.xlsx",
+      url: "/plantillas/Plantilla_POI_Por_ActividadOperativaAnual.xlsx",
+    };
+  }
+
   const upper = getTipoDisplay(tipo);
+
   return {
     label: `Descargar plantilla ${upper}`,
     fileName: `Template_Carga_Masiva_${upper}.xlsx`,
@@ -426,6 +441,51 @@ function getExtraMetrics(
         {
           label: "Métodos cálculo",
           value: getNumber(resultado, "metodosCalculoInsertados"),
+        },
+      ];
+    case "poi":
+      return [
+        ...common,
+        {
+          label: "Cabeceras POI",
+          value: getNumber(resultado, "cabecerasPoiInsertadas"),
+          tone: "info",
+        },
+        {
+          label: "Categorías",
+          value: getNumber(resultado, "categoriasInsertadas"),
+        },
+        {
+          label: "Productos/Proyectos",
+          value: getNumber(resultado, "productosProyectosInsertados"),
+        },
+        {
+          label: "Funciones",
+          value: getNumber(resultado, "funcionesInsertadas"),
+        },
+        {
+          label: "Divisiones funcionales",
+          value: getNumber(resultado, "divisionesFuncionalesInsertadas"),
+        },
+        {
+          label: "Grupos funcionales",
+          value: getNumber(resultado, "gruposFuncionalesInsertados"),
+        },
+        {
+          label: "Actividades presupuestales",
+          value: getNumber(resultado, "actividadesPresupuestalesInsertadas"),
+        },
+        {
+          label: "Actividades operativas",
+          value: getNumber(resultado, "actividadesOperativasInsertadas"),
+        },
+        {
+          label: "Unidades ejecutoras",
+          value: getNumber(resultado, "unidadesEjecutorasInsertadas"),
+        },
+        {
+          label: "Centros de costo",
+          value: getNumber(resultado, "centrosCostoInsertados"),
         },
       ];
     default:

@@ -116,11 +116,48 @@ export type PeiCargaMasivaResultadoDto = {
   errores: CargaMasivaErrorDto[];
 };
 
+
+export type PoiCargaMasivaResultadoDto = {
+  nombreArchivo: string;
+  totalFilasLeidas: number;
+  totalFilasValidas: number;
+  totalFilasConError: number;
+
+  categoriasInsertadas: number;
+  productosProyectosInsertados: number;
+  funcionesInsertadas: number;
+  divisionesFuncionalesInsertadas: number;
+  gruposFuncionalesInsertados: number;
+  actividadesPresupuestalesInsertadas: number;
+  actividadesOperativasInsertadas: number;
+  actividadesOperativasSectorialesInsertadas: number;
+  prioridadesInsertadas: number;
+  unidadesMedidaInsertadas: number;
+  departamentosInsertados: number;
+  provinciasInsertadas: number;
+  distritosInsertados: number;
+  unidadesEjecutorasInsertadas: number;
+  centrosCostoResponsableInsertados: number;
+  centrosCostoInsertados: number;
+
+  cabecerasPoiInsertadas: number;
+
+  valoresInsertados: number;
+  valoresActualizados: number;
+  valoresOmitidos: number;
+
+  success: boolean;
+  mensaje: string;
+  errores: CargaMasivaErrorDto[];
+};
+
+
 export type CargaMasivaResultadoDto =
   | PdrcCargaMasivaResultadoDto
   | PrcpCargaMasivaResultadoDto
   | AgCargaMasivaResultadoDto
-  | PeiCargaMasivaResultadoDto;
+  | PeiCargaMasivaResultadoDto
+  | PoiCargaMasivaResultadoDto;
 
 function normalizeTipo(tipo: string | undefined): CargaMasivaTipo {
   const t = (tipo ?? "").trim().toLowerCase();
@@ -162,8 +199,8 @@ function getEndpoints(tipo: string | undefined) {
 
     case "poi":
       return {
-        validar: "",
-        procesar: "",
+        validar: "/api/PoiCargaMasiva/validar",
+        procesar: "/api/PoiCargaMasiva/procesar",
       };
 
     default:
@@ -184,7 +221,7 @@ function buildFormData(
   formData.append("archivo", archivo);
 
   const instrumento = normalizeTipo(tipo);
-  const instrumentosSoloValor: CargaMasivaTipo[] = ["ag", "pdrc", "prcp", "pei"];
+  const instrumentosSoloValor: CargaMasivaTipo[] = ["ag", "pdrc", "prcp", "pei","poi"];
 
   formData.append(
     "tipoPlantilla",
