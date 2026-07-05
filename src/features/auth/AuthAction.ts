@@ -1,8 +1,10 @@
 export type ApiResponse<T> = {
   success: boolean;
   message?: string;
+  mensaje?: string;
   data?: T;
   errors?: string[];
+  errores?: string[];
 };
 
 export type LoginRequestDto = {
@@ -16,14 +18,23 @@ export type UsuarioInfoDto = {
   email: string;
   username: string;
   nombreCompleto: string;
+
+  // El backend debe devolver este campo para controlar mejor el menú por perfil.
+  idPerfil?: number | null;
+
+  // Se mantienen ambos nombres por compatibilidad con respuestas existentes.
   perfil?: string | null;
+  perfilNombre?: string | null;
+
   nivelAcceso?: number | null;
+
   permisos?: {
     puedeCrearUsuarios: boolean;
     puedeModificarIndicadores: boolean;
     puedeEliminarRegistros: boolean;
     puedeGenerarReportes: boolean;
     puedeGestionarPoi: boolean;
+    puedeVerDashboard?: boolean;
   };
 };
 
@@ -61,7 +72,13 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const json = (await res.json()) as ApiResponse<T>;
 
   if (!res.ok || !json.success) {
-    const msg = json.message || (json.errors?.length ? json.errors.join(" | ") : "Error");
+    const msg =
+      json.message ||
+      json.mensaje ||
+      (json.errors?.length ? json.errors.join(" | ") : null) ||
+      (json.errores?.length ? json.errores.join(" | ") : null) ||
+      "Error";
+
     throw new Error(msg);
   }
 

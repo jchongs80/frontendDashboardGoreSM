@@ -1,8 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import LoginPage from "../features/auth/LoginPage";
 import RequireAuth from "../features/auth/RequireAuth";
+import { PerfilId } from "../features/auth/profileRules";
 import DashboardLayout from "../layouts/DashboardLayout";
-import Home from "../pages/dashboard/Home";
 
 import DimensionesPage from "../features/catalogos/pages/DimensionesPage";
 import FuenteDatosPage from "../features/catalogos/pages/FuenteDatosPage";
@@ -23,11 +23,8 @@ import AccionesPage from "../features/planeamiento/pages/AccionesPage";
 import PdrcOeAePage from "../features/planeamiento/pages/PdrcOeAePage";
 import UnidadesEjecutorasPage from "../features/planeamiento/pages/UnidadesEjecutorasPage";
 import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
-
-//import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage";
-//import PoiOeiAeiAoPage from "../features/planeamiento/pages/PoiOeiAeiAoPage"; // ajusta el path real
 import PdrcOerAerPage from "../features/planeamiento/pages/PdrcOerAerPage";
-// Alineamiento (Módulo 4)
+
 import AlineamientosInstrumentosPage from "../features/alineamiento/pages/AlineamientosInstrumentosPage";
 import AcuerdosGobernabilidadPoliticasPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasPage";
 import AcuerdosGobernabilidadPoliticasResponsablesResultadosPage from "../features/planeamiento/pages/AcuerdosGobernabilidadPoliticasResponsablesResultadosPage";
@@ -41,7 +38,6 @@ import PeiOeiAeiPage from "../features/planeamiento/pages/PeiOeiAeiPage";
 import UsuariosPage from "../features/administracion/pages/UsuariosPage";
 import UnidadesOrganizacionalesCentrosCostoPage from "../features/planeamiento/pages/UnidadesOrganizacionalesCentrosCostoPage";
 import UnidadesOrgPage2 from "../features/planeamiento/pages/UnidadesOrgPage2";
-//import PeiOeiAeiAoPage from "../features/planeamiento/pages/PeiOeiAeiAoPage";
 import CargaMasivaPage from "../features/planeamiento/pages/CargaMasivaPage";
 
 import AgPoRecoInprPage from "../features/planeamiento/pages/AgPoRecoInprPage";
@@ -60,6 +56,38 @@ import DashboardPrcpReportePage from "../features/dashboard/pages/DashboardPrcpR
 import DashboardAgPage from "../features/dashboard/pages/DashboardAgPage";
 import DashboardAgReportePage from "../features/dashboard/pages/DashboardAgReportePage";
 import DashboardPaisajePage from "../features/dashboard/pages/DashboardPaisajePage";
+
+const perfilesAdmin = [PerfilId.Administrador];
+const perfilesIndicadores = [PerfilId.Administrador, PerfilId.GestorIndicadores];
+const perfilesPoi = [PerfilId.Administrador, PerfilId.GestorPoi];
+const perfilesIndicadoresYPoi = [
+  PerfilId.Administrador,
+  PerfilId.GestorIndicadores,
+  PerfilId.GestorPoi,
+];
+
+function CargaMasivaProtegida() {
+  const { tipo } = useParams();
+  const tipoNormalizado = (tipo ?? "").toLowerCase();
+
+  if (tipoNormalizado === "poi") {
+    return (
+      <RequireAuth allowedProfiles={perfilesPoi}>
+        <CargaMasivaPage />
+      </RequireAuth>
+    );
+  }
+
+  if (["pdrc", "prcp", "ag", "pei"].includes(tipoNormalizado)) {
+    return (
+      <RequireAuth allowedProfiles={perfilesIndicadores}>
+        <CargaMasivaPage />
+      </RequireAuth>
+    );
+  }
+
+  return <Navigate to="/dashboard" replace />;
+}
 
 export default function App() {
   return (
@@ -95,62 +123,87 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route path="/catalogos/dimensiones" element={<DimensionesPage />} />
-          <Route path="/catalogos/fuentes-datos" element={<FuenteDatosPage />} />
-          <Route path="/catalogos/instrumentos" element={<InstrumentosPage />} />
-          <Route path="/catalogos/periodos" element={<PeriodosPage />} />
-          <Route path="/catalogos/tipos-indicador" element={<TipoIndicadorPage />} />
-          <Route path="/catalogos/unidades-medida" element={<UnidadesMedidaPage />} />
-          <Route path="/catalogos/unidades-org" element={<UnidadesOrgPage />} />
-          <Route path="/catalogos/cc-responsables-poi" element={<CentroCostosResponsablePoiPage />} />
+          {/* Catálogos para Gestor de Indicadores */}
+          <Route element={<RequireAuth allowedProfiles={perfilesIndicadores} />}>
+            <Route path="/catalogos/dimensiones" element={<DimensionesPage />} />
+            <Route path="/catalogos/fuentes-datos" element={<FuenteDatosPage />} />
+            <Route path="/catalogos/instrumentos" element={<InstrumentosPage />} />
+            <Route path="/catalogos/periodos" element={<PeriodosPage />} />
+            <Route path="/catalogos/tipos-indicador" element={<TipoIndicadorPage />} />
+            <Route path="/catalogos/unidades-medida" element={<UnidadesMedidaPage />} />
+          </Route>
+
+          {/* Catálogos compartidos entre indicadores y POI */}
+          <Route element={<RequireAuth allowedProfiles={perfilesIndicadoresYPoi} />}>
+            <Route path="/catalogos/unidades-org" element={<UnidadesOrgPage />} />
+          </Route>
+
+          {/* Catálogos propios de POI */}
+          <Route element={<RequireAuth allowedProfiles={perfilesPoi} />}>
+            <Route path="/catalogos/cc-responsables-poi" element={<CentroCostosResponsablePoiPage />} />
+          </Route>
 
           {/* Planeamiento */}
-          <Route path="/planeamiento" element={<Navigate to="/planeamiento/indicadores" replace />} />
-          <Route path="/planeamiento/indicadores" element={<IndicadoresPage />} />
-          <Route path="/planeamiento/indicadores-instrumentos" element={<IndicadoresInstrumentosPage />} />
-          <Route path="/planeamiento/indicadores-metas" element={<IndicadoresMetasPage />} />
-          <Route path="/planeamiento/ejes" element={<EjesEstrategicosPage />} />
-          <Route path="/planeamiento/politicas" element={<PoliticasPage />} />
-          <Route path="/planeamiento/objetivos" element={<ObjetivosPage />} />
-          <Route path="/planeamiento/acciones" element={<AccionesPage />} />
-          <Route path="/planeamiento/centros-costo" element={<UnidadesOrganizacionalesCentrosCostoPage />} />
-          <Route path="/planeamiento/poi" element={<UnidadesOrgPage2 />} />
-          <Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />
-          <Route path="/planeamiento/pdrc-oer-aer/ue/:idUnidadEjecutora" element={<PdrcOeAePage />} />
-          <Route path="/planeamiento/unidades-ejecutoras" element={<UnidadesEjecutorasPage />} />
-          <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
-          <Route path="/planeamiento/carga-masiva/:tipo" element={<CargaMasivaPage />} />
-          <Route path="/planeamiento/pei-oei-aei" element={<PeiOeiAeiPage />} />
-          <Route path="/pei/oei-aei" element={<PeiOeiAeiPage />} />
+          <Route path="/planeamiento" element={<Navigate to="/dashboard" replace />} />
 
-          {/* Alineamiento */}
-          <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
-          <Route path="/alineamiento/instrumentos" element={<AlineamientosInstrumentosPage />} />
-          <Route path="/:codigoInstrumento/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />
-          <Route
-            path="/acuerdos-gobernabilidad/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
-            element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
-          />
-          <Route
-            path="/prcp/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
-            element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
-          />
+          {/* Planeamiento para Gestor de Indicadores */}
+          <Route element={<RequireAuth allowedProfiles={perfilesIndicadores} />}>
+            <Route path="/planeamiento/indicadores" element={<IndicadoresPage />} />
+            <Route path="/planeamiento/indicadores-instrumentos" element={<IndicadoresInstrumentosPage />} />
+            <Route path="/planeamiento/indicadores-metas" element={<IndicadoresMetasPage />} />
+            <Route path="/planeamiento/ejes" element={<EjesEstrategicosPage />} />
+            <Route path="/planeamiento/politicas" element={<PoliticasPage />} />
+            <Route path="/planeamiento/objetivos" element={<ObjetivosPage />} />
+            <Route path="/planeamiento/acciones" element={<AccionesPage />} />
+            <Route path="/planeamiento/pdrc-oer-aer/ue/:idUnidadEjecutora" element={<PdrcOeAePage />} />
+            <Route path="/planeamiento/pdrc-oer-aer" element={<PdrcOerAerPage />} />
+            <Route path="/planeamiento/pei-oei-aei" element={<PeiOeiAeiPage />} />
+            <Route path="/pei/oei-aei" element={<PeiOeiAeiPage />} />
 
-          <Route path="/pdrc/oer" element={<PdrcObjetivosResponsablesPage />} />
-          <Route path="/pei/oei" element={<PeiObjetivosResponsablesPage />} />
+            {/* Alineamiento */}
+            <Route path="/alineamiento" element={<Navigate to="/alineamiento/instrumentos" replace />} />
+            <Route path="/alineamiento/instrumentos" element={<AlineamientosInstrumentosPage />} />
+            <Route path="/:codigoInstrumento/politica" element={<AcuerdosGobernabilidadPoliticasPage />} />
+            <Route
+              path="/acuerdos-gobernabilidad/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
+              element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
+            />
+            <Route
+              path="/prcp/instrumento/:idInstrumento/politica/:idPolitica/responsable/:idUnidad/resultados"
+              element={<AcuerdosGobernabilidadPoliticasResponsablesResultadosPage />}
+            />
 
-          <Route
-            path="/pdrc/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
-            element={<PdrcObjetivosAccionesIndicadoresPage />}
-          />
-          <Route
-            path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
-            element={<PeiObjetivosAccionesIndicadoresPage />}
-          />
-          <Route path="/planeamiento/ag-po-reco-inpr" element={<AgPoRecoInprPage />} />
-          <Route path="/planeamiento/prcp-op-pi-mp" element={<PrcpOpPiMpPage />} />
-          <Route path="/planeamiento/psj-paisajes" element={<PsjPaisajesPage />} />
-          <Route path="/admin/usuarios" element={<UsuariosPage />} />
+            <Route path="/pdrc/oer" element={<PdrcObjetivosResponsablesPage />} />
+            <Route path="/pei/oei" element={<PeiObjetivosResponsablesPage />} />
+
+            <Route
+              path="/pdrc/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
+              element={<PdrcObjetivosAccionesIndicadoresPage />}
+            />
+            <Route
+              path="/pei/instrumento/:idInstrumento/objetivo/:idObjetivo/unidad/:idUnidad/acciones-indicadores"
+              element={<PeiObjetivosAccionesIndicadoresPage />}
+            />
+            <Route path="/planeamiento/ag-po-reco-inpr" element={<AgPoRecoInprPage />} />
+            <Route path="/planeamiento/prcp-op-pi-mp" element={<PrcpOpPiMpPage />} />
+            <Route path="/planeamiento/psj-paisajes" element={<PsjPaisajesPage />} />
+          </Route>
+
+          {/* Planeamiento POI */}
+          <Route element={<RequireAuth allowedProfiles={perfilesPoi} />}>
+            <Route path="/planeamiento/centros-costo" element={<UnidadesOrganizacionalesCentrosCostoPage />} />
+            <Route path="/planeamiento/poi" element={<UnidadesOrgPage2 />} />
+            <Route path="/planeamiento/unidades-ejecutoras" element={<UnidadesEjecutorasPage />} />
+            <Route path="/poi/oei-aei-ao/ue/:idUnidadEjecutora" element={<PeiOeiAeiAoPage />} />
+          </Route>
+
+          {/* Carga masiva protegida por tipo de instrumento */}
+          <Route path="/planeamiento/carga-masiva/:tipo" element={<CargaMasivaProtegida />} />
+
+          {/* Administración */}
+          <Route element={<RequireAuth allowedProfiles={perfilesAdmin} />}>
+            <Route path="/admin/usuarios" element={<UsuariosPage />} />
+          </Route>
         </Route>
 
         {/* Fallback */}

@@ -1,9 +1,26 @@
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import {
+  puedeAcceder,
+  type PerfilId,
+  type PerfilPermission,
+} from "./profileRules";
 
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isReady, isAuthenticated } = useAuth();
+type Props = {
+  children?: React.ReactNode;
+  allowedProfiles?: PerfilId[];
+  allowedPermissions?: PerfilPermission[];
+  requireAllPermissions?: boolean;
+};
+
+export default function RequireAuth({
+  children,
+  allowedProfiles = [],
+  allowedPermissions = [],
+  requireAllPermissions = false,
+}: Props) {
+  const { isReady, isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   if (!isReady) return null;
@@ -12,5 +29,15 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return <>{children}</>;
+  const autorizado = puedeAcceder(user, {
+    perfilesPermitidos: allowedProfiles,
+    permisosPermitidos: allowedPermissions,
+    requiereTodosLosPermisos: requireAllPermissions,
+  });
+
+  if (!autorizado) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children ? <>{children}</> : <Outlet />;
 }

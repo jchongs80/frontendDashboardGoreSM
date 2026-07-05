@@ -40,6 +40,7 @@ import logoIcon from "../../assets/logo-goresam-icon.png";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 
 import { useAuth } from "./../../features/auth/AuthContext";
+import { puedeAcceder, PerfilId } from "./../../features/auth/profileRules";
 
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 
@@ -71,7 +72,21 @@ export default function Sidebar({
   const location = useLocation();
 
   const { user, isAuthenticated } = useAuth();
-  const canManageUsers = !!user?.permisos?.puedeCrearUsuarios;
+
+  const canManageUsers = puedeAcceder(user, {
+    perfilesPermitidos: [PerfilId.Administrador],
+    permisosPermitidos: ["puedeCrearUsuarios"],
+  });
+
+  const canManageIndicadores = puedeAcceder(user, {
+    perfilesPermitidos: [PerfilId.Administrador, PerfilId.GestorIndicadores],
+    permisosPermitidos: ["puedeModificarIndicadores"],
+  });
+
+  const canManagePoi = puedeAcceder(user, {
+    perfilesPermitidos: [PerfilId.Administrador, PerfilId.GestorPoi],
+    permisosPermitidos: ["puedeGestionarPoi"],
+  });
 
   const width = collapsed ? widthCollapsed : widthExpanded;
 
@@ -84,15 +99,15 @@ export default function Sidebar({
   ];
 
   const dashboardItems: SidebarItem[] = [
-    { text: "Home", icon: <SpaceDashboardRoundedIcon />, path: "/dashboard/" },
-    { text: "P.D.R.C.", icon: <PublicRoundedIcon />, path: "/dashboard/Pdrc" },
-    { text: "P.R.C.P.", icon: <FactCheckRoundedIcon />, path: "/dashboard/Prcp" },
+    { text: "Home", icon: <SpaceDashboardRoundedIcon />, path: "/dashboard" },
+    { text: "P.D.R.C.", icon: <PublicRoundedIcon />, path: "/dashboard/pdrc" },
+    { text: "P.R.C.P.", icon: <FactCheckRoundedIcon />, path: "/dashboard/prcp" },
     { text: "A.G.", icon: <AnalyticsRoundedIcon />, path: "/dashboard/ag" },
-    { text: "P.E.I.", icon: <TimelineRoundedIcon />, path: "/dashboard/Pei" },
-    { text: "P.O.I.", icon: <ApartmentRoundedIcon />, path: "/dashboard/Poi" },
+    { text: "P.E.I.", icon: <TimelineRoundedIcon />, path: "/dashboard/pei" },
+    { text: "P.O.I.", icon: <ApartmentRoundedIcon />, path: "/dashboard/poi" },
   ];
 
-  const catalogItems: SidebarItem[] = [
+  const allCatalogItems: SidebarItem[] = [
     { text: "Dimensiones", icon: <GridViewRoundedIcon />, path: "/catalogos/dimensiones" },
     { text: "Instrumentos", icon: <SpaceDashboardRoundedIcon />, path: "/catalogos/instrumentos" },
     { text: "Periodos", icon: <TableChartRoundedIcon />, path: "/catalogos/periodos" },
@@ -100,7 +115,22 @@ export default function Sidebar({
     { text: "Unidades Org.", icon: <WidgetsRoundedIcon />, path: "/catalogos/unidades-org" },
   ];
 
-  const planeamientoItems: SidebarItem[] = [
+  const catalogItems: SidebarItem[] = allCatalogItems.filter((it) => {
+    if (!isAuthenticated) return false;
+    if (canManageUsers) return true;
+
+    if (canManageIndicadores) {
+      return ["Dimensiones", "Instrumentos", "Periodos", "Unidades Org."].includes(it.text);
+    }
+
+    if (canManagePoi) {
+      return ["Resp. CC POI", "Unidades Org."].includes(it.text);
+    }
+
+    return false;
+  });
+
+  const allPlaneamientoItems: SidebarItem[] = [
     {
       text: "P.D.R.C.",
       icon: <MapRoundedIcon />,
@@ -128,13 +158,28 @@ export default function Sidebar({
     },
   ];
 
-  const cargaMasivaItems: SidebarItem[] = [
+  const planeamientoItems: SidebarItem[] = allPlaneamientoItems.filter((it) => {
+    if (!isAuthenticated) return false;
+    if (canManageUsers) return true;
+
+    if (canManageIndicadores) {
+      return ["P.D.R.C.", "P.R.C.P.", "A.G.", "P.E.I."].includes(it.text);
+    }
+
+    if (canManagePoi) {
+      return it.text === "P.O.I.";
+    }
+
+    return false;
+  });
+
+  const allCargaMasivaItems: SidebarItem[] = [
     {
       text: "Carga Masiva PDRC",
       icon: <CloudUploadRoundedIcon />,
       path: "/planeamiento/carga-masiva/pdrc",
     },
-     {
+    {
       text: "Carga Masiva PRCP",
       icon: <CloudUploadRoundedIcon />,
       path: "/planeamiento/carga-masiva/prcp",
@@ -155,6 +200,26 @@ export default function Sidebar({
       path: "/planeamiento/carga-masiva/poi",
     },
   ];
+
+  const cargaMasivaItems: SidebarItem[] = allCargaMasivaItems.filter((it) => {
+    if (!isAuthenticated) return false;
+    if (canManageUsers) return true;
+
+    if (canManageIndicadores) {
+      return [
+        "Carga Masiva PDRC",
+        "Carga Masiva PRCP",
+        "Carga Masiva AG",
+        "Carga Masiva PEI",
+      ].includes(it.text);
+    }
+
+    if (canManagePoi) {
+      return it.text === "Carga Masiva POI";
+    }
+
+    return false;
+  });
 
   const administracionItems: SidebarItem[] = [
     {
@@ -446,6 +511,7 @@ export default function Sidebar({
 
 
           {isAuthenticated &&
+            catalogItems.length > 0 &&
             renderSection(
               "Catálogos",
               <FolderOpenRoundedIcon />,
@@ -456,6 +522,7 @@ export default function Sidebar({
             )}
 
           {isAuthenticated &&
+            planeamientoItems.length > 0 &&
             renderSection(
               "Planeamiento",
               <AccountTreeRoundedIcon />,
@@ -466,6 +533,7 @@ export default function Sidebar({
             )}
 
           {isAuthenticated &&
+            cargaMasivaItems.length > 0 &&
             renderSection(
               "Carga Masiva",
               <CloudUploadRoundedIcon />,
