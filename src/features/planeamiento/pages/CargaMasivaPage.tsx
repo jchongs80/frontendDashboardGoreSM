@@ -147,15 +147,18 @@ function getPlantilla(tipo: TipoInstrumento | null): {
   fileName: string;
   url: string;
 } {
+
+   const upper = getTipoDisplay(tipo);
+
   if (tipo === "poi") {
     return {
       label: "Descargar plantilla POI",
-      fileName: "Plantilla_POI_Por_ActividadOperativaAnual.xlsx",
-      url: "/plantillas/Plantilla_POI_Por_ActividadOperativaAnual.xlsx",
+      fileName: `Template_Carga_Masiva_${upper}.xlsx`,
+      url: `/plantillas/Template_Carga_Masiva_${upper}.xlsx`,
     };
   }
 
-  const upper = getTipoDisplay(tipo);
+ 
 
   return {
     label: `Descargar plantilla ${upper}`,
