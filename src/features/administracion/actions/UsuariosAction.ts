@@ -48,8 +48,19 @@ export type UpdateUsuarioDto = {
 
 export const UsuariosAction = {
   listar: () => api.get<UsuarioDto[]>("/api/Usuarios"),
-  obtener: (id: number) => api.get<UsuarioDto>(`/api/Usuarios/${id}`),
-  crear: (dto: CreateUsuarioDto) => api.post<number>("/api/Usuarios", dto),
-  actualizar: (id: number, dto: UpdateUsuarioDto) => api.put<boolean>(`/api/Usuarios/${id}`, dto),
-  inactivar: (id: number) => api.del<boolean>(`/api/Usuarios/${id}`),
+
+  obtener: (id: number) =>
+    api.get<UsuarioDto>(`/api/Usuarios/${id}`),
+
+  crear: (dto: CreateUsuarioDto) =>
+    api.post<number>("/api/Usuarios", dto),
+
+  actualizar: (id: number, dto: UpdateUsuarioDto) =>
+    api.put<boolean>(`/api/Usuarios/${id}`, dto),
+
+  inactivar: (id: number) =>
+    api.del<boolean>(`/api/Usuarios/${id}`),
+
+  activar: (id: number) =>
+    api.put<boolean>(`/api/Usuarios/${id}/activar`, {}),
 };
