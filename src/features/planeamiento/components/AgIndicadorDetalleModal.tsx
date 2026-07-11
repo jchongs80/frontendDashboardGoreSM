@@ -11,6 +11,7 @@ import {
   DialogTitle,
   Divider,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -263,6 +264,7 @@ export default function AgIndicadorDetalleModal({
   const [data, setData] = useState<AgIndicadorDetalleResponseDto | null>(null);
   const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
   const [savingEjecutado, setSavingEjecutado] = useState<boolean>(false);
+  const [successMsg, setSuccessMsg] = useState<string>("");
   const [fichaOpen, setFichaOpen] = useState<boolean>(false);
   const [infoOpen, setInfoOpen] = useState<boolean>(false);
 
@@ -322,6 +324,7 @@ export default function AgIndicadorDetalleModal({
     try {
       setSavingEjecutado(true);
       setErrorMsg("");
+      setSuccessMsg("");
 
       await AgPoRecoInprVistaAction.guardarIndicadorEjecutado({
         idAgPoRecoInpr,
@@ -333,6 +336,10 @@ export default function AgIndicadorDetalleModal({
       });
 
       await loadDetalle(idAgPoRecoInpr, idIndicadorNombre);
+
+      setSuccessMsg(
+        "Los valores ejecutados del indicador AG se guardaron correctamente.",
+      );
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
     } finally {
@@ -573,6 +580,31 @@ export default function AgIndicadorDetalleModal({
       nombreIndicador={nombreIndicadorView}
       tipoNivel="AG"
     />
+
+    <Snackbar
+      open={Boolean(successMsg)}
+      autoHideDuration={3000}
+      onClose={(_event, reason) => {
+        if (reason === "clickaway") return;
+        setSuccessMsg("");
+      }}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert
+        severity="success"
+        variant="filled"
+        onClose={() => setSuccessMsg("")}
+        sx={{
+          width: "100%",
+          minWidth: { xs: 280, sm: 460 },
+          borderRadius: 2,
+          fontWeight: 900,
+          boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+        }}
+      >
+        {successMsg}
+      </Alert>
+    </Snackbar>
     </>
   );
 }

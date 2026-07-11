@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -18,6 +18,7 @@ import {
   Typography,
   InputAdornment,
   Skeleton,
+  Snackbar,
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -36,6 +37,14 @@ import type {
   PoiActividadOperativaNombreDto,
   PoiOeiAeiHeaderDto,
 } from "../PoiOeiAeiAoAction";
+
+type SnackSeverity = "success" | "error" | "warning" | "info";
+
+type SnackState = {
+  open: boolean;
+  message: string;
+  severity: SnackSeverity;
+};
 
 type Props = {
   open: boolean;
@@ -86,6 +95,13 @@ export default function PoiOeiAeiAoModal({
 }: Props): React.JSX.Element {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [snack, setSnack] = useState<SnackState>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const closeTimerRef = useRef<number | null>(null);
 
   // modo “Nueva AO”
   const [isCreatingNewName, setIsCreatingNewName] = useState(false);
@@ -204,6 +220,17 @@ export default function PoiOeiAeiAoModal({
   useEffect(() => {
     if (!open) return;
 
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    setSnack({
+      open: false,
+      message: "",
+      severity: "info",
+    });
+
     // reset
     setCatSel(null);
     setProdSel(null);
@@ -229,6 +256,14 @@ export default function PoiOeiAeiAoModal({
     void loadDataForEdit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEditMode, idOeiAeiAo, catOpt.length, nombreAoOpt.length]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleToggleNewAO = () => {
     setIsCreatingNewName((v) => !v);
@@ -270,6 +305,12 @@ export default function PoiOeiAeiAoModal({
     };
 
     setSaving(true);
+    setSnack({
+      open: false,
+      message: "",
+      severity: "info",
+    });
+
     try {
       if (isEditMode && idOeiAeiAo) {
         await PoiOeiAeiAoAction.actualizarAo(idOeiAeiAo, payload);
@@ -278,7 +319,36 @@ export default function PoiOeiAeiAoModal({
       }
 
       await onSaved();
-      onClose();
+
+      setSnack({
+        open: true,
+        message: isEditMode
+          ? "La actividad operativa se actualizó correctamente."
+          : "La actividad operativa se registró correctamente.",
+        severity: "success",
+      });
+
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+
+      closeTimerRef.current = window.setTimeout(() => {
+        onClose();
+        closeTimerRef.current = null;
+      }, 1800);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? "No se pudo actualizar la actividad operativa."
+            : "No se pudo registrar la actividad operativa.";
+
+      setSnack({
+        open: true,
+        message,
+        severity: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -288,7 +358,8 @@ export default function PoiOeiAeiAoModal({
   const primaryText = isEditMode ? "Actualizar" : "Guardar";
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       {/* Header premium */}
       <DialogTitle
         sx={{
@@ -731,7 +802,12 @@ export default function PoiOeiAeiAoModal({
         <Button
           variant="contained"
           startIcon={<SaveRoundedIcon />}
-          disabled={!canSave || saving || loading}
+          disabled={
+            !canSave ||
+            saving ||
+            loading ||
+            (snack.open && snack.severity === "success")
+          }
           onClick={() => void save()}
           sx={{
             borderRadius: 3,
@@ -750,6 +826,33 @@ export default function PoiOeiAeiAoModal({
           {saving ? "Guardando..." : primaryText}
         </Button>
       </DialogActions>
-    </Dialog>
+      </Dialog>
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSnack((current) => ({ ...current, open: false }));
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snack.severity}
+          variant="filled"
+          onClose={() =>
+            setSnack((current) => ({ ...current, open: false }))
+          }
+          sx={{
+            minWidth: { xs: 280, sm: 430 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
+          {snack.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

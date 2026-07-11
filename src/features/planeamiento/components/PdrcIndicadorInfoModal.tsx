@@ -11,6 +11,7 @@ import {
   DialogTitle,
   Divider,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -111,7 +112,7 @@ export default function PdrcIndicadorInfoModal({
         medidasRecomendadas,
       });
 
-      setSuccessMsg("Información guardada correctamente.");
+      setSuccessMsg("La información del indicador se guardó correctamente.");
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
     } finally {
@@ -120,7 +121,8 @@ export default function PdrcIndicadorInfoModal({
   }
 
   return (
-    <Dialog
+    <>
+      <Dialog
       open={open}
       onClose={onClose}
       fullWidth
@@ -198,12 +200,6 @@ export default function PdrcIndicadorInfoModal({
         {errorMsg ? (
           <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
             {errorMsg}
-          </Alert>
-        ) : null}
-
-        {successMsg ? (
-          <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-            {successMsg}
           </Alert>
         ) : null}
 
@@ -355,7 +351,33 @@ export default function PdrcIndicadorInfoModal({
           Cerrar
         </Button>
       </DialogActions>
-    </Dialog>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSuccessMsg("");
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSuccessMsg("")}
+          sx={{
+            width: "100%",
+            minWidth: { xs: 280, sm: 420 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
+          {successMsg}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
 

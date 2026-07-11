@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
-  Divider, InputAdornment, Paper, Stack, TextField, Typography, Autocomplete
+  Divider, InputAdornment, Paper, Snackbar, Stack, TextField, Typography, Autocomplete
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
@@ -41,6 +41,7 @@ export default function PsjIndicadorDetalleModal({ open, onClose, idPsjOerAer, i
   const [selectedTipo, setSelectedTipo] = useState<PsjIndicadorDetalleTipoValorDto | null>(null);
   const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
   const [savingEjecutado, setSavingEjecutado] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   const loadDetalle = async (tipo?: PsjIndicadorDetalleTipoValorDto | null) => {
     if (!idPsjOerAer || !idIndicadorNombre) return;
@@ -70,18 +71,26 @@ export default function PsjIndicadorDetalleModal({ open, onClose, idPsjOerAer, i
   async function guardarEjecutado() {
     try {
       if (!selectedTipo) { setErrorMsg("Selecciona un tipo/fuente antes de guardar."); return; }
-      setSavingEjecutado(true); setErrorMsg("");
+      setSavingEjecutado(true);
+      setErrorMsg("");
+      setSuccessMsg("");
+
       await PsjPaisajesVistaAction.guardarIndicadorEjecutado({
         idPsjOerAer, idIndicadorNombre, idFuenteIndicador: selectedTipo.idFuenteIndicador,
         valores: (data?.valoresEjecutadoPorAnio ?? []).map(x => ({ idAnioProyeccion: x.idAnioProyeccion, valor: parseDecimalInput(ejecutadoForm[x.idAnioProyeccion] ?? "0") }))
       });
+
       await loadDetalle(selectedTipo);
+      setSuccessMsg(
+        "Los valores ejecutados del indicador PAISAJES se guardaron correctamente.",
+      );
     } catch (e) { setErrorMsg(getErrorMessage(e)); }
     finally { setSavingEjecutado(false); }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
+    <>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
       <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(180deg, rgba(27,111,238,0.10) 0%, rgba(27,111,238,0) 100%)" }}>
         <Stack spacing={0.55} sx={{ pr: 2, minWidth: 0 }}>
           <Stack direction="row" spacing={1} alignItems="flex-start">
@@ -156,6 +165,32 @@ export default function PsjIndicadorDetalleModal({ open, onClose, idPsjOerAer, i
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} color="inherit">Cerrar</Button></DialogActions>
-    </Dialog>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSuccessMsg("");
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSuccessMsg("")}
+          sx={{
+            width: "100%",
+            minWidth: { xs: 280, sm: 500 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
+          {successMsg}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

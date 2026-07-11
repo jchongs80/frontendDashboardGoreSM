@@ -13,6 +13,7 @@ import {
   IconButton,
   InputAdornment,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -141,6 +142,7 @@ export default function PdrcIndicadorDetalleModal({
     {},
   );
   const [savingEjecutado, setSavingEjecutado] = useState<boolean>(false);
+  const [successMsg, setSuccessMsg] = useState<string>("");
   const [fichaOpen, setFichaOpen] = useState<boolean>(false);
   const [infoOpen, setInfoOpen] = useState<boolean>(false);
 
@@ -250,6 +252,7 @@ export default function PdrcIndicadorDetalleModal({
     try {
       setSavingEjecutado(true);
       setErrorMsg("");
+      setSuccessMsg("");
 
       await PdrcOerAerVistaAction.guardarIndicadorEjecutado({
         idPdrcOerAer,
@@ -267,6 +270,8 @@ export default function PdrcIndicadorDetalleModal({
         anioSel.idAnioProyeccion,
         true,
       );
+
+      setSuccessMsg("Los valores se guardaron correctamente.");
     } catch (error) {
       setErrorMsg(getErrorMessage(error));
     } finally {
@@ -939,6 +944,31 @@ export default function PdrcIndicadorDetalleModal({
         nombreIndicador={nombreIndicadorView}
         tipoNivel={data?.tipoNivel ?? "PDRC"}
       />
+
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSuccessMsg("");
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSuccessMsg("")}
+          sx={{
+            width: "100%",
+            minWidth: { xs: 280, sm: 380 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
+          {successMsg}
+        </Alert>
+      </Snackbar>
     </>
   );
 }

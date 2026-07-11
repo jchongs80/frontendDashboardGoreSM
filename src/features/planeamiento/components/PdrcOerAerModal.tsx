@@ -63,9 +63,11 @@ export default function PdrcOerAerModal({
   idPeriodo,
   unidadLabel,
   onClose,
+  onSaved,
 }: Props) {
   const [loadingOer, setLoadingOer] = useState(false);
   const [loadingAer, setLoadingAer] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [oer, setOer] = useState<PdrcOerListDto[]>([]);
   const [acciones, setAcciones] = useState<PdrcAccionUnidadListDto[]>([]);
@@ -152,6 +154,68 @@ export default function PdrcOerAerModal({
       else next.add(idAccion);
       return next;
     });
+  };
+
+  const idsAccionesNuevas = useMemo(
+    () =>
+      acciones
+        .filter(
+          (a) =>
+            selectedAcciones.has(a.idAccion) &&
+            !isAsignadaAUnidad(a),
+        )
+        .map((a) => a.idAccion),
+    [acciones, selectedAcciones],
+  );
+
+  const guardarAsignaciones = async () => {
+    if (!oerSelected) {
+      setSnack({
+        open: true,
+        msg: "Selecciona un OER antes de guardar.",
+        sev: "warning",
+      });
+      return;
+    }
+
+    if (idsAccionesNuevas.length === 0) {
+      setSnack({
+        open: true,
+        msg: "Selecciona al menos una acción nueva para asignar.",
+        sev: "info",
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await PdrcOeAeAction.asignarAccionesPoi(
+        idUe,
+        idCc,
+        idPoiAnio,
+        idPeriodo,
+        oerSelected.idObjetivo,
+        idsAccionesNuevas,
+      );
+
+      await loadAcciones(oerSelected.idObjetivo);
+      onSaved?.();
+
+      setSnack({
+        open: true,
+        msg: "Las acciones estratégicas regionales se guardaron correctamente.",
+        sev: "success",
+      });
+    } catch (e: unknown) {
+      setSnack({
+        open: true,
+        msg: errorMsg(e, "No se pudieron guardar las acciones seleccionadas."),
+        sev: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
 
@@ -306,27 +370,51 @@ export default function PdrcOerAerModal({
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, justifyContent: "flex-end" }}>
-        <Button
-          onMouseDown={(e) => e.currentTarget.blur()}
-          onClick={onClose}
-          sx={{ fontWeight: 800, borderRadius: 2 }}
-        >
-          CERRAR
-        </Button>
-      </DialogActions>
+        <DialogActions sx={{ p: 2, justifyContent: "flex-end", gap: 1 }}>
+          <Button
+            onMouseDown={(e) => e.currentTarget.blur()}
+            onClick={onClose}
+            disabled={saving}
+            sx={{ fontWeight: 800, borderRadius: 2 }}
+          >
+            CERRAR
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => void guardarAsignaciones()}
+            disabled={
+              saving ||
+              loadingAer ||
+              !oerSelected ||
+              idsAccionesNuevas.length === 0
+            }
+            sx={{ minWidth: 130, fontWeight: 900, borderRadius: 2 }}
+          >
+            {saving ? "GUARDANDO..." : "GUARDAR"}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Snackbar
         open={snack.open}
-        autoHideDuration={3500}
-        onClose={() => setSnack((p) => ({ ...p, open: false }))}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSnack((p) => ({ ...p, open: false }));
+        }}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snack.sev}
           variant="filled"
           onClose={() => setSnack((p) => ({ ...p, open: false }))}
+          sx={{
+            minWidth: { xs: 280, sm: 430 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
         >
           {snack.msg}
         </Alert>

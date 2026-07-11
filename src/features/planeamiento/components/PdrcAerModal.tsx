@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -75,7 +75,13 @@ export default function PdrcAerModal({
   const [selectedAcciones, setSelectedAcciones] = useState<Set<number>>(new Set());
 
   const [saving, setSaving] = useState(false);
-  const [snack, setSnack] = useState<SnackState>({ open: false, msg: "", sev: "info" });
+  const [snack, setSnack] = useState<SnackState>({
+    open: false,
+    msg: "",
+    sev: "info",
+  });
+
+  const closeTimerRef = useRef<number | null>(null);
 
   const isAllChecked = useMemo(() => {
     if (acciones.length === 0) return false;
@@ -117,6 +123,14 @@ export default function PdrcAerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, idUe, idCc, idPoiAnio, idPeriodo, oer?.idObjetivo]);
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
   const toggleAccion = (idAccion: number) => {
     setSelectedAcciones((prev) => {
       const next = cloneSet(prev);
@@ -149,10 +163,32 @@ export default function PdrcAerModal({
 
     setSaving(true);
     try {
-      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, idPeriodo, oer.idObjetivo, idsAccion);
-      setSnack({ open: true, msg: "AER asignadas correctamente.", sev: "success" });
+      await PdrcOeAeAction.asignarAccionesPoi(
+        idUe,
+        idCc,
+        idPoiAnio,
+        idPeriodo,
+        oer.idObjetivo,
+        idsAccion
+      );
+
+      setSnack({
+        open: true,
+        msg: "Las acciones estratégicas regionales (AER) se guardaron correctamente.",
+        sev: "success",
+      });
+
       onSaved?.();
-      onClose();
+
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+
+      closeTimerRef.current = window.setTimeout(() => {
+        setSnack((current) => ({ ...current, open: false }));
+        onClose();
+        closeTimerRef.current = null;
+      }, 1800);
     } catch (e: unknown) {
       setSnack({ open: true, msg: toMsg(e, "No se pudo guardar la asignación."), sev: "error" });
     } finally {
@@ -286,11 +322,26 @@ export default function PdrcAerModal({
 
       <Snackbar
         open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSnack((current) => ({ ...current, open: false }));
+        }}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={snack.sev} onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ borderRadius: 2 }}>
+        <Alert
+          severity={snack.sev}
+          variant="filled"
+          onClose={() =>
+            setSnack((current) => ({ ...current, open: false }))
+          }
+          sx={{
+            minWidth: { xs: 280, sm: 460 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
           {snack.msg}
         </Alert>
       </Snackbar>

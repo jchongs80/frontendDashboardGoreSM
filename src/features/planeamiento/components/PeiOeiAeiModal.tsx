@@ -10,6 +10,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -42,6 +43,11 @@ export type AeiDto = {
 };
 
 type SnackbarSeverity = "success" | "info" | "warning" | "error";
+type LocalSnackState = {
+  open: boolean;
+  message: string;
+  severity: SnackbarSeverity;
+};
 type Mode = "edit" | "view";
 
 type Props = {
@@ -84,9 +90,26 @@ export default function PeiOeiAeiModal({
 }: Props) {
   const readOnly = mode === "view";
 
-  const notifySafe = (message: string, severity: SnackbarSeverity = "info") => {
-    if (notify) notify(message, severity);
-    else console.log(`[${severity}] ${message}`);
+  const [localSnack, setLocalSnack] = useState<LocalSnackState>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const notifySafe = (
+    message: string,
+    severity: SnackbarSeverity = "info",
+  ) => {
+    if (notify) {
+      notify(message, severity);
+      return;
+    }
+
+    setLocalSnack({
+      open: true,
+      message,
+      severity,
+    });
   };
 
   const [loadingOei, setLoadingOei] = useState(false);
@@ -125,12 +148,12 @@ export default function PeiOeiAeiModal({
     [oeiList, selectedOeiId]
   );
 
-  async function loadOeiByAer() {
+  async function loadOeiByAer(): Promise<boolean> {
     if (!idAer) {
       setOeiList([]);
       setAeiList([]);
       setSelectedOeiId(0);
-      return;
+      return false;
     }
 
     setLoadingOei(true);
@@ -149,12 +172,15 @@ export default function PeiOeiAeiModal({
 
       if (first) await loadAeiByOeiCc(first);
       else setAeiList([]);
+
+      return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "No se pudo cargar OEI.";
       notifySafe(msg, "error");
       setOeiList([]);
       setAeiList([]);
       setSelectedOeiId(0);
+      return false;
     } finally {
       setLoadingOei(false);
     }
@@ -200,8 +226,20 @@ export default function PeiOeiAeiModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, idAer, idCc]);
 
+  async function handleRefresh() {
+    const ok = await loadOeiByAer();
+
+    if (ok) {
+      notifySafe(
+        "La información OEI y AEI se actualizó correctamente.",
+        "success",
+      );
+    }
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+    <>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle sx={{ pr: 7 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Box>
@@ -232,7 +270,7 @@ export default function PeiOeiAeiModal({
           </Box>
 
           <Stack direction="row" spacing={0.5} alignItems="center">
-            <IconButton onClick={() => void loadOeiByAer()} aria-label="refresh">
+            <IconButton onClick={() => void handleRefresh()} aria-label="refresh">
               <RefreshRoundedIcon />
             </IconButton>
             <IconButton onClick={onClose} aria-label="close">
@@ -386,6 +424,35 @@ export default function PeiOeiAeiModal({
           </Button>
         )}
       </DialogActions>
-    </Dialog>
+      </Dialog>
+
+      {!notify && (
+        <Snackbar
+          open={localSnack.open}
+          autoHideDuration={3000}
+          onClose={(_event, reason) => {
+            if (reason === "clickaway") return;
+            setLocalSnack((current) => ({ ...current, open: false }));
+          }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity={localSnack.severity}
+            variant="filled"
+            onClose={() =>
+              setLocalSnack((current) => ({ ...current, open: false }))
+            }
+            sx={{
+              minWidth: { xs: 280, sm: 420 },
+              borderRadius: 2,
+              fontWeight: 900,
+              boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+            }}
+          >
+            {localSnack.message}
+          </Alert>
+        </Snackbar>
+      )}
+    </>
   );
 }

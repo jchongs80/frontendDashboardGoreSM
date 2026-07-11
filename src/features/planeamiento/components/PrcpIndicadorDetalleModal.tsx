@@ -11,6 +11,7 @@ import {
   DialogTitle,
   InputAdornment,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -140,6 +141,7 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
   const [savingInfo, setSavingInfo] = useState(false);
   const [savingLineaBase, setSavingLineaBase] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [data, setData] = useState<PrcpIndicadorDetalleResponseDto | null>(null);
   const [ejecutadoForm, setEjecutadoForm] = useState<Record<number, string>>({});
   const [unidadMedidaForm, setUnidadMedidaForm] = useState("");
@@ -234,13 +236,19 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
     try {
       setSavingInfo(true);
       setErrorMsg("");
+      setSuccessMsg("");
+
       await PrcpOpPiMpVistaAction.guardarIndicadorInfoEditable({
         idPrcpOpPiMp,
         idIndicadorNombre,
         unidadMedida: unidadMedidaForm.trim() || null,
         tipoIndicador: tipoIndicadorForm.trim() || null,
       });
+
       await loadDetalle();
+      setSuccessMsg(
+        "La información del indicador PRCP se guardó correctamente.",
+      );
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "No se pudo guardar la información editable.");
     } finally {
@@ -252,6 +260,8 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
     try {
       setSavingLineaBase(true);
       setErrorMsg("");
+      setSuccessMsg("");
+
       const anio = parseIntegerInput(anioLineaBaseForm);
       if (anioLineaBaseForm.trim() && anio == null) {
         setErrorMsg("El año de proyección debe ser un número entero.");
@@ -270,7 +280,11 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
         tipoValor: tipoValorLineaBaseForm.trim() || null,
         valorLineaBase: valorLineaBaseForm.trim() ? parseDecimalInput(valorLineaBaseForm) : null,
       });
+
       await loadDetalle();
+      setSuccessMsg(
+        "La línea base del indicador PRCP se guardó correctamente.",
+      );
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "No se pudo guardar la línea base editable.");
     } finally {
@@ -282,6 +296,8 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
     try {
       setSaving(true);
       setErrorMsg("");
+      setSuccessMsg("");
+
       await PrcpOpPiMpVistaAction.guardarIndicadorEjecutado({
         idPrcpOpPiMp,
         idIndicadorNombre,
@@ -290,7 +306,11 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
           valor: parseDecimalInput(ejecutadoForm[x.idAnioProyeccion] ?? "0"),
         })),
       });
+
       await loadDetalle();
+      setSuccessMsg(
+        "Los valores ejecutados del indicador PRCP se guardaron correctamente.",
+      );
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "No se pudo guardar.");
     } finally {
@@ -299,7 +319,8 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
   }
 
   return (
-    <Dialog
+    <>
+      <Dialog
       open={open}
       onClose={onClose}
       fullWidth
@@ -769,6 +790,32 @@ export default function PrcpIndicadorDetalleModal(props: Props): React.ReactElem
           Cerrar
         </Button>
       </DialogActions>
-    </Dialog>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={(_event, reason) => {
+          if (reason === "clickaway") return;
+          setSuccessMsg("");
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSuccessMsg("")}
+          sx={{
+            width: "100%",
+            minWidth: { xs: 280, sm: 480 },
+            borderRadius: 2,
+            fontWeight: 900,
+            boxShadow: "0 14px 35px rgba(15,23,42,.22)",
+          }}
+        >
+          {successMsg}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -31,12 +32,24 @@ import {
   type CreateUsuarioDto,
   type UpdateUsuarioDto,
 } from "../actions/UsuariosAction";
-import {
-  PerfilesAction,
-  type PerfilDto,
-} from "../actions/PerfilesActions";
+import { PerfilesAction, type PerfilDto } from "../actions/PerfilesActions";
 
 type FormMode = "new" | "edit";
+
+type FormField =
+  | "nombre"
+  | "apellidoPaterno"
+  | "apellidoMaterno"
+  | "email"
+  | "username"
+  | "password"
+  | "idPerfil"
+  | "telefono"
+  | "cargo";
+
+type FormErrors = Partial<Record<FormField, string>>;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function safe(v: unknown) {
   return (v ?? "").toString();
@@ -44,6 +57,79 @@ function safe(v: unknown) {
 
 function obtenerNombreUsuario(row: UsuarioDto) {
   return row.nombreCompleto ?? row.username;
+}
+
+function obtenerMensajeErrorApi(error: unknown): {
+  message: string;
+  fieldErrors: FormErrors;
+} {
+  const fallback = {
+    message: "No se pudo guardar el usuario. Revisa los datos ingresados.",
+    fieldErrors: {} as FormErrors,
+  };
+
+  if (!error) return fallback;
+
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : JSON.stringify(error);
+
+  let payload: any = error;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    // El error no siempre llega como JSON.
+  }
+
+  const validationErrors = payload?.errors ?? payload?.response?.data?.errors;
+  const fieldErrors: FormErrors = {};
+
+  if (validationErrors && typeof validationErrors === "object") {
+    for (const [field, messages] of Object.entries(validationErrors)) {
+      const message = Array.isArray(messages)
+        ? String(messages[0] ?? "")
+        : String(messages ?? "");
+      const normalized = field.toLowerCase();
+
+      if (normalized === "email") fieldErrors.email = message;
+      else if (normalized === "nombre") fieldErrors.nombre = message;
+      else if (normalized === "username") fieldErrors.username = message;
+      else if (normalized === "password") fieldErrors.password = message;
+      else if (normalized === "idperfil") fieldErrors.idPerfil = message;
+      else if (normalized === "telefono") fieldErrors.telefono = message;
+      else if (normalized === "cargo") fieldErrors.cargo = message;
+      else if (normalized === "apellidopaterno")
+        fieldErrors.apellidoPaterno = message;
+      else if (normalized === "apellidomaterno")
+        fieldErrors.apellidoMaterno = message;
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      message: "Corrige los campos señalados antes de guardar.",
+      fieldErrors,
+    };
+  }
+
+  const apiMessage =
+    payload?.message ??
+    payload?.response?.data?.message ??
+    payload?.title ??
+    payload?.response?.data?.title;
+
+  if (typeof apiMessage === "string" && apiMessage.trim()) {
+    return { message: apiMessage, fieldErrors };
+  }
+
+  if (typeof raw === "string" && raw.trim() && raw !== "[object Object]") {
+    return { message: raw, fieldErrors };
+  }
+
+  return fallback;
 }
 
 export default function UsuariosPage() {
@@ -60,6 +146,8 @@ export default function UsuariosPage() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<FormMode>("new");
   const [saving, setSaving] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   const [form, setForm] = useState<CreateUsuarioDto>({
     nombre: "",
@@ -78,7 +166,7 @@ export default function UsuariosPage() {
 
   const title = useMemo(
     () => (mode === "new" ? "Nuevo usuario" : "Editar usuario"),
-    [mode]
+    [mode],
   );
 
   async function cargar() {
@@ -106,10 +194,81 @@ export default function UsuariosPage() {
     }
   }, [canManageUsers]);
 
+  function limpiarErrorCampo(field: FormField) {
+    setFormErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function actualizarCampo<K extends keyof CreateUsuarioDto>(
+    field: K,
+    value: CreateUsuarioDto[K],
+  ) {
+    setForm((previous) => ({ ...previous, [field]: value }));
+    setDialogError(null);
+    limpiarErrorCampo(field as FormField);
+  }
+
+  function validarFormulario(): boolean {
+    const errors: FormErrors = {};
+
+    if (!form.nombre.trim()) {
+      errors.nombre = "Ingresa el nombre del usuario.";
+    }
+
+    const email = form.email.trim();
+    if (!email) {
+      errors.email = "Ingresa el correo electrónico.";
+    } else if (!EMAIL_REGEX.test(email)) {
+      errors.email =
+        "Ingresa un correo válido, por ejemplo: usuario@dominio.com";
+    }
+
+    if (mode === "new") {
+      if (!form.username.trim()) {
+        errors.username = "Ingresa el nombre de usuario.";
+      } else if (form.username.trim().length < 4) {
+        errors.username = "El usuario debe tener al menos 4 caracteres.";
+      }
+
+      if (!form.password) {
+        errors.password = "Ingresa una contraseña.";
+      } else if (form.password.length < 8) {
+        errors.password = "La contraseña debe tener al menos 8 caracteres.";
+      }
+    }
+
+    if (!form.idPerfil) {
+      errors.idPerfil = "Selecciona un perfil.";
+    }
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      setDialogError("Corrige los campos señalados antes de guardar.");
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  }
+
+  function cerrarDialogo() {
+    if (saving) return;
+    setOpen(false);
+    setDialogError(null);
+    setFormErrors({});
+  }
+
   function openNew() {
     setMode("new");
     setEditId(null);
     setError(null);
+    setDialogError(null);
+    setFormErrors({});
 
     setForm({
       nombre: "",
@@ -136,6 +295,8 @@ export default function UsuariosPage() {
     setMode("edit");
     setEditId(row.idUsuario);
     setError(null);
+    setDialogError(null);
+    setFormErrors({});
 
     setForm({
       nombre: row.nombre ?? "",
@@ -144,7 +305,7 @@ export default function UsuariosPage() {
       email: row.email ?? "",
       username: row.username ?? "",
       password: "",
-      idPerfil: row.idPerfil ?? (perfiles[0]?.idPerfil ?? 0),
+      idPerfil: row.idPerfil ?? perfiles[0]?.idPerfil ?? 0,
       idUnidad: null,
       telefono: row.telefono ?? "",
       cargo: row.cargo ?? "",
@@ -154,35 +315,42 @@ export default function UsuariosPage() {
   }
 
   async function guardar() {
+    setDialogError(null);
+
+    if (!validarFormulario()) return;
+
     setSaving(true);
-    setError(null);
 
     try {
       if (mode === "new") {
-        if (!form.password || form.password.length < 8) {
-          throw new Error("Password mínimo 8 caracteres");
-        }
-
-        if (!form.idPerfil) {
-          throw new Error("Selecciona un perfil");
-        }
-
-        await UsuariosAction.crear(form);
+        await UsuariosAction.crear({
+          ...form,
+          nombre: form.nombre.trim(),
+          apellidoPaterno: form.apellidoPaterno?.trim(),
+          apellidoMaterno: form.apellidoMaterno?.trim(),
+          email: form.email.trim(),
+          username: form.username.trim(),
+          telefono: form.telefono?.trim(),
+          cargo: form.cargo?.trim(),
+        });
       } else {
         if (!editId) {
-          throw new Error("Id de usuario inválido");
+          setDialogError(
+            "No se pudo identificar al usuario que deseas editar.",
+          );
+          return;
         }
 
         const dto: UpdateUsuarioDto = {
           idUsuario: editId,
-          nombre: form.nombre,
-          apellidoPaterno: form.apellidoPaterno,
-          apellidoMaterno: form.apellidoMaterno,
-          email: form.email,
+          nombre: form.nombre.trim(),
+          apellidoPaterno: form.apellidoPaterno?.trim(),
+          apellidoMaterno: form.apellidoMaterno?.trim(),
+          email: form.email.trim(),
           idPerfil: form.idPerfil,
           idUnidad: form.idUnidad,
-          telefono: form.telefono,
-          cargo: form.cargo,
+          telefono: form.telefono?.trim(),
+          cargo: form.cargo?.trim(),
           fotoUrl: null,
         };
 
@@ -190,9 +358,16 @@ export default function UsuariosPage() {
       }
 
       setOpen(false);
+      setDialogError(null);
+      setFormErrors({});
       await cargar();
-    } catch (e: any) {
-      setError(e?.message ?? "Error guardando");
+    } catch (e: unknown) {
+      const result = obtenerMensajeErrorApi(e);
+      setDialogError(result.message);
+      setFormErrors((previous) => ({
+        ...previous,
+        ...result.fieldErrors,
+      }));
     } finally {
       setSaving(false);
     }
@@ -241,9 +416,7 @@ export default function UsuariosPage() {
   if (!canManageUsers) {
     return (
       <Paper sx={{ p: 3, borderRadius: 3 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-          Usuarios
-        </Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>Usuarios</Typography>
 
         <Typography sx={{ mt: 1, color: "text.secondary" }}>
           No tienes permisos para gestionar usuarios.
@@ -358,8 +531,7 @@ export default function UsuariosPage() {
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns:
-                      "1.6fr 1.2fr 1.2fr 0.8fr 0.8fr",
+                    gridTemplateColumns: "1.6fr 1.2fr 1.2fr 0.8fr 0.8fr",
                     gap: 1,
                     alignItems: "center",
                   }}
@@ -370,20 +542,14 @@ export default function UsuariosPage() {
                         `${r.nombre} ${r.apellidoPaterno ?? ""}`.trim()}
                     </Typography>
 
-                    <Typography
-                      sx={{ fontSize: 12, color: "text.secondary" }}
-                    >
+                    <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
                       {r.cargo ?? ""}
                     </Typography>
                   </Box>
 
-                  <Typography sx={{ fontSize: 13 }}>
-                    {r.email}
-                  </Typography>
+                  <Typography sx={{ fontSize: 13 }}>{r.email}</Typography>
 
-                  <Typography sx={{ fontSize: 13 }}>
-                    {r.username}
-                  </Typography>
+                  <Typography sx={{ fontSize: 13 }}>{r.username}</Typography>
 
                   <Typography sx={{ fontSize: 13 }}>
                     {r.perfilNombre ?? "-"}
@@ -459,17 +625,16 @@ export default function UsuariosPage() {
         </Box>
       </Paper>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>
-          {title}
-        </DialogTitle>
+      <Dialog open={open} onClose={cerrarDialogo} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 900 }}>{title}</DialogTitle>
 
         <DialogContent>
+          {dialogError && (
+            <Alert severity="error" sx={{ mt: 1, mb: 1.5 }}>
+              {dialogError}
+            </Alert>
+          )}
+
           <Box
             sx={{
               display: "grid",
@@ -481,18 +646,18 @@ export default function UsuariosPage() {
             <TextField
               label="Nombre"
               value={form.nombre}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, nombre: e.target.value }))
-              }
+              onChange={(e) => actualizarCampo("nombre", e.target.value)}
+              error={!!formErrors.nombre}
+              helperText={formErrors.nombre}
               fullWidth
             />
 
             <TextField
               label="Email"
               value={form.email}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, email: e.target.value }))
-              }
+              onChange={(e) => actualizarCampo("email", e.target.value)}
+              error={!!formErrors.email}
+              helperText={formErrors.email}
               fullWidth
             />
 
@@ -500,11 +665,10 @@ export default function UsuariosPage() {
               label="Apellido paterno"
               value={safe(form.apellidoPaterno)}
               onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  apellidoPaterno: e.target.value,
-                }))
+                actualizarCampo("apellidoPaterno", e.target.value)
               }
+              error={!!formErrors.apellidoPaterno}
+              helperText={formErrors.apellidoPaterno}
               fullWidth
             />
 
@@ -512,20 +676,19 @@ export default function UsuariosPage() {
               label="Apellido materno"
               value={safe(form.apellidoMaterno)}
               onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  apellidoMaterno: e.target.value,
-                }))
+                actualizarCampo("apellidoMaterno", e.target.value)
               }
+              error={!!formErrors.apellidoMaterno}
+              helperText={formErrors.apellidoMaterno}
               fullWidth
             />
 
             <TextField
               label="Username"
               value={form.username}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, username: e.target.value }))
-              }
+              onChange={(e) => actualizarCampo("username", e.target.value)}
+              error={!!formErrors.username}
+              helperText={formErrors.username}
               fullWidth
               disabled={mode === "edit"}
             />
@@ -535,11 +698,10 @@ export default function UsuariosPage() {
               label="Perfil"
               value={form.idPerfil}
               onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  idPerfil: Number(e.target.value),
-                }))
+                actualizarCampo("idPerfil", Number(e.target.value))
               }
+              error={!!formErrors.idPerfil}
+              helperText={formErrors.idPerfil}
               fullWidth
             >
               {perfiles.map((p) => (
@@ -552,18 +714,18 @@ export default function UsuariosPage() {
             <TextField
               label="Teléfono"
               value={safe(form.telefono)}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, telefono: e.target.value }))
-              }
+              onChange={(e) => actualizarCampo("telefono", e.target.value)}
+              error={!!formErrors.telefono}
+              helperText={formErrors.telefono}
               fullWidth
             />
 
             <TextField
               label="Cargo"
               value={safe(form.cargo)}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, cargo: e.target.value }))
-              }
+              onChange={(e) => actualizarCampo("cargo", e.target.value)}
+              error={!!formErrors.cargo}
+              helperText={formErrors.cargo}
               fullWidth
             />
 
@@ -572,22 +734,17 @@ export default function UsuariosPage() {
                 label="Password"
                 type="password"
                 value={form.password}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, password: e.target.value }))
-                }
+                onChange={(e) => actualizarCampo("password", e.target.value)}
+                error={!!formErrors.password}
                 fullWidth
-                helperText="Mínimo 8 caracteres"
+                helperText={formErrors.password ?? "Mínimo 8 caracteres"}
               />
             )}
           </Box>
         </DialogContent>
 
         <DialogActions sx={{ p: 2 }}>
-          <Button
-            onClick={() => setOpen(false)}
-            variant="outlined"
-            disabled={saving}
-          >
+          <Button onClick={cerrarDialogo} variant="outlined" disabled={saving}>
             Cancelar
           </Button>
 
