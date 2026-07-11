@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -79,7 +79,6 @@ export default function PeiOeiAeiModal({
   aerCodigo,
   aerEnunciado,
   titulo,
-  onSaved,
   mode = "view",
   notify,
 }: Props) {

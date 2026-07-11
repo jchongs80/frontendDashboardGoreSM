@@ -1,5 +1,4 @@
 // AJUSTE_POI_AO_DETALLE_ESTILO_IGUAL_PeiAoIndicadores_20260520
-import React from "react";
 import {
   Box,
   Button,
@@ -8,7 +7,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   IconButton,
   Paper,
   Stack,
@@ -20,11 +18,8 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
-import TagRoundedIcon from "@mui/icons-material/TagRounded";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
-import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 
 import type { PeiOeiAeiAoByIdDto } from "../PeiOeiAeiAOAction";
 
@@ -128,19 +123,6 @@ const summaryCardSx = {
   boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
 } as const;
 
-const blueSectionCardSx = {
-  ...sectionCardSx,
-  border: "1px solid rgba(191,219,254,.95)",
-  background: "linear-gradient(180deg, rgba(239,246,255,.62), rgba(255,255,255,.95))",
-  boxShadow: "0 12px 28px rgba(37,99,235,.055)",
-} as const;
-
-const greenSectionCardSx = {
-  ...sectionCardSx,
-  border: "1px solid rgba(187,247,208,.92)",
-  background: "linear-gradient(180deg, rgba(240,253,244,.70), rgba(255,255,255,.96))",
-  boxShadow: "0 12px 28px rgba(34,197,94,.055)",
-} as const;
 
 export default function PeiOeiAeiAoDetalleModal({
   open,

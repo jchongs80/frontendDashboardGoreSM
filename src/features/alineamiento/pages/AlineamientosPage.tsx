@@ -14,10 +14,11 @@ import {
 import CatalogoTablePage, { type ColumnDef } from "../../catalogos/components/CatalogoTablePage";
 import { CatalogoAction } from "../../catalogos/CatalogoAction";
 import {
-  PlaneamientoAction,
-  type AlineamientoInstrumentoCreateUpdateDto,
-  type AlineamientoInstrumentoListDto,
-} from "../PlaneamientoAction";
+  AlineamientoAction,
+  type AlineamientoCreateUpdateDto,
+  type AlineamientoListDto,
+} from "../AlineamientoAction";
+import { PlaneamientoAction } from "../../planeamiento/PlaneamientoAction";
 
 type InstrumentoDto = { idInstrumento: number; codigo?: string | null; nombre: string };
 type ObjetivoDto = { idObjetivo: number; idInstrumento: number; codigo: string; enunciado: string; estado: string };
@@ -51,7 +52,7 @@ function formatEntidad(inst?: InstrumentoDto | null, objetivo?: ObjetivoDto | nu
 }
 
 export default function AlineamientosPage() {
-  const [rows, setRows] = useState<AlineamientoInstrumentoListDto[]>([]);
+  const [rows, setRows] = useState<AlineamientoListDto[]>([]);
   const [instrumentos, setInstrumentos] = useState<InstrumentoDto[]>([]);
   const [objetivos, setObjetivos] = useState<ObjetivoDto[]>([]);
   const [acciones, setAcciones] = useState<AccionDto[]>([]);
@@ -61,12 +62,12 @@ export default function AlineamientosPage() {
 
   // VIEW
   const [openView, setOpenView] = useState(false);
-  const [viewRow, setViewRow] = useState<AlineamientoInstrumentoListDto | null>(null);
+  const [viewRow, setViewRow] = useState<AlineamientoListDto | null>(null);
 
   // EDIT
   const [openEdit, setOpenEdit] = useState(false);
-  const [editing, setEditing] = useState<AlineamientoInstrumentoListDto | null>(null);
-  const [form, setForm] = useState<AlineamientoInstrumentoCreateUpdateDto>({
+  const [editing, setEditing] = useState<AlineamientoListDto | null>(null);
+  const [form, setForm] = useState<AlineamientoCreateUpdateDto>({
     idInstrumentoOrigen: 0,
     idObjetivoOrigen: null,
     idAccionOrigen: null,
@@ -76,7 +77,7 @@ export default function AlineamientosPage() {
     tipoAlineamiento: "DIRECTO",
     nivelAlineamiento: "ESTRATEGICO",
     porcentajeContribucion: 100,
-    descripcion: "",
+    descripcionAlineamiento: "",
     estado: "ACTIVO",
   });
   const [saving, setSaving] = useState(false);
@@ -86,7 +87,7 @@ export default function AlineamientosPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createForm, setCreateForm] = useState<AlineamientoInstrumentoCreateUpdateDto>({
+  const [createForm, setCreateForm] = useState<AlineamientoCreateUpdateDto>({
     idInstrumentoOrigen: 0,
     idObjetivoOrigen: null,
     idAccionOrigen: null,
@@ -96,7 +97,7 @@ export default function AlineamientosPage() {
     tipoAlineamiento: "DIRECTO",
     nivelAlineamiento: "ESTRATEGICO",
     porcentajeContribucion: 100,
-    descripcion: "",
+    descripcionAlineamiento: "",
     estado: "ACTIVO",
   });
 
@@ -106,7 +107,7 @@ export default function AlineamientosPage() {
       setError(null);
 
       const [alineamientos, inst, obj, acc] = await Promise.all([
-        PlaneamientoAction.getAlineamientosInstrumentos(),
+        AlineamientoAction.getAlineamientos(),
         CatalogoAction.getInstrumentos(),
         PlaneamientoAction.getObjetivos(),
         PlaneamientoAction.getAcciones(),
@@ -130,7 +131,7 @@ export default function AlineamientosPage() {
   const accById = useMemo(() => byId(acciones, "idAccion"), [acciones]);
 
   const resolveRow = useCallback(
-    (r: AlineamientoInstrumentoListDto) => {
+    (r: AlineamientoListDto) => {
       const instO = instById.get(r.idInstrumentoOrigen) ?? null;
       const instD = instById.get(r.idInstrumentoDestino) ?? null;
       const objO = r.idObjetivoOrigen ? (objById.get(r.idObjetivoOrigen) ?? null) : null;
@@ -142,7 +143,7 @@ export default function AlineamientosPage() {
     [instById, objById, accById]
   );
 
-  const columns = useMemo<ColumnDef<AlineamientoInstrumentoListDto>[]>(
+  const columns = useMemo<ColumnDef<AlineamientoListDto>[]>(
     () => [
       {
         key: "origen",
@@ -192,7 +193,7 @@ export default function AlineamientosPage() {
     [acciones]
   );
 
-  const validate = (p: AlineamientoInstrumentoCreateUpdateDto) => {
+  const validate = (p: AlineamientoCreateUpdateDto) => {
     if (!p.idInstrumentoOrigen) return "Selecciona Instrumento ORIGEN";
     if (!p.idInstrumentoDestino) return "Selecciona Instrumento DESTINO";
 
@@ -209,7 +210,7 @@ export default function AlineamientosPage() {
     return null;
   };
 
-  const openEditDialog = (r: AlineamientoInstrumentoListDto) => {
+  const openEditDialog = (r: AlineamientoListDto) => {
     setEditing(r);
     setSaveError(null);
     setForm({
@@ -222,7 +223,7 @@ export default function AlineamientosPage() {
       tipoAlineamiento: r.tipoAlineamiento ?? "DIRECTO",
       nivelAlineamiento: r.nivelAlineamiento ?? "ESTRATEGICO",
       porcentajeContribucion: r.porcentajeContribucion ?? 100,
-      descripcion: r.descripcion ?? "",
+      descripcionAlineamiento: r.descripcionAlineamiento ?? "",
       estado: r.estado ?? "ACTIVO",
     });
     setOpenEdit(true);
@@ -236,7 +237,7 @@ export default function AlineamientosPage() {
     try {
       setSaving(true);
       setSaveError(null);
-      await PlaneamientoAction.updateAlineamientoInstrumento(editing.idAlineamiento, form);
+      await AlineamientoAction.updateAlineamiento(editing.idAlineamiento, form);
       setOpenEdit(false);
       await load();
     } catch (e: any) {
@@ -253,7 +254,7 @@ export default function AlineamientosPage() {
     try {
       setCreating(true);
       setCreateError(null);
-      await PlaneamientoAction.createAlineamientoInstrumento(createForm);
+      await AlineamientoAction.createAlineamiento(createForm);
       setOpenCreate(false);
       await load();
     } catch (e: any) {
@@ -270,8 +271,8 @@ export default function AlineamientosPage() {
     side,
   }: {
     label: string;
-    payload: AlineamientoInstrumentoCreateUpdateDto;
-    setPayload: (p: AlineamientoInstrumentoCreateUpdateDto) => void;
+    payload: AlineamientoCreateUpdateDto;
+    setPayload: (p: AlineamientoCreateUpdateDto) => void;
     side: "O" | "D";
   }) => {
     const isO = side === "O";
@@ -357,7 +358,7 @@ export default function AlineamientosPage() {
 
   return (
     <>
-      <CatalogoTablePage<AlineamientoInstrumentoListDto>
+      <CatalogoTablePage<AlineamientoListDto>
         title="Alineamiento CEPLAN"
         subtitle="Articulación entre instrumentos (origen → destino) a nivel de objetivo o acción."
         rows={rows}
@@ -365,7 +366,7 @@ export default function AlineamientosPage() {
         error={error}
         columns={columns}
         getRowId={(r) => r.idAlineamiento}
-        searchKeys={["tipoAlineamiento", "nivelAlineamiento", "estado", "descripcion"]}
+        searchKeys={["tipoAlineamiento", "nivelAlineamiento", "estado", "descripcionAlineamiento"]}
         onRefresh={load}
         onView={(r) => {
           setViewRow(r);
@@ -384,7 +385,7 @@ export default function AlineamientosPage() {
             tipoAlineamiento: "DIRECTO",
             nivelAlineamiento: "ESTRATEGICO",
             porcentajeContribucion: 100,
-            descripcion: "",
+            descripcionAlineamiento: "",
             estado: "ACTIVO",
           });
           setOpenCreate(true);
@@ -427,7 +428,7 @@ export default function AlineamientosPage() {
 
                   <Box>
                     <Typography sx={{ fontSize: 12, color: "text.secondary", fontWeight: 900 }}>Descripción</Typography>
-                    <Typography sx={{ fontWeight: 800 }}>{viewRow.descripcion ?? "—"}</Typography>
+                    <Typography sx={{ fontWeight: 800 }}>{viewRow.descripcionAlineamiento ?? "—"}</Typography>
                   </Box>
 
                   <Box>
@@ -494,8 +495,8 @@ export default function AlineamientosPage() {
 
             <TextField
               size="small" label="Descripción"
-              value={createForm.descripcion ?? ""}
-              onChange={(e) => setCreateForm((p) => ({ ...p, descripcion: e.target.value }))}
+              value={createForm.descripcionAlineamiento ?? ""}
+              onChange={(e) => setCreateForm((p) => ({ ...p, descripcionAlineamiento: e.target.value }))}
               multiline minRows={3}
             />
 
@@ -565,8 +566,8 @@ export default function AlineamientosPage() {
 
             <TextField
               size="small" label="Descripción"
-              value={form.descripcion ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, descripcion: e.target.value }))}
+              value={form.descripcionAlineamiento ?? ""}
+              onChange={(e) => setForm((p) => ({ ...p, descripcionAlineamiento: e.target.value }))}
               multiline minRows={3}
             />
 

@@ -1,5 +1,5 @@
 // AJUSTE_POI_MODAL_INDICADORES_ESTILO_PEI_20260520
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   IconButton,
   Paper,
   Stack,
@@ -20,10 +19,7 @@ import {
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
@@ -184,12 +180,6 @@ const greenSectionCardSx = {
   boxShadow: "0 12px 28px rgba(37,99,235,.05)",
 } as const;
 
-const orangeSectionCardSx = {
-  ...sectionCardSx,
-  border: "1px solid rgba(147,197,253,.85)",
-  background: "rgba(239,246,255,.78)",
-  boxShadow: "0 12px 28px rgba(37,99,235,.06)",
-} as const;
 
 const monthlyOrangeCardSx = {
   ...sectionCardSx,

@@ -14,7 +14,6 @@ import {
   LinearProgress,
   MenuItem,
   Paper,
-  Select,
   Table,
   TableBody,
   TableCell,

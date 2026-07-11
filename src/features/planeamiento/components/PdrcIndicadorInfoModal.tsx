@@ -19,7 +19,6 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
-import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 
 import { PdrcOerAerVistaAction } from "../PdrcOerAerVistaAction";
@@ -48,29 +47,6 @@ function getErrorMessage(error: unknown): string {
     return "Error no controlado.";
   }
 }
-
-const fieldSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: 2.5,
-    backgroundColor: "rgba(255,255,255,0.96)",
-  },
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(0,0,0,0.18)",
-  },
-  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.45)",
-  },
-  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.7)",
-  },
-} as const;
-
-const sectionCardSx = {
-  borderRadius: 3,
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "rgba(255,255,255,0.92)",
-  boxShadow: "0 10px 24px rgba(0,0,0,.06)",
-} as const;
 
 export default function PdrcIndicadorInfoModal({
   open,

@@ -14,7 +14,6 @@ import {
   Typography,
 } from "@mui/material";
 import Grid from "@mui/material/GridLegacy";
-import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
 import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
@@ -289,7 +288,7 @@ export default function DashboardAgPage(): React.ReactElement {
   const [loadingCombos, setLoadingCombos] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [reporteMsg, setReporteMsg] = useState<string>("");
-  const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+  const [downloadingPdf] = useState<boolean>(false);
   const [downloadingExcel, setDownloadingExcel] = useState<boolean>(false);
   const [data, setData] = useState<DashboardAgDto | null>(null);
 
@@ -402,7 +401,7 @@ export default function DashboardAgPage(): React.ReactElement {
   }, [filters]);
 
   const jerarquiaData = useMemo(() => data?.jerarquia ?? [], [data]);
-  const tendenciaData = useMemo(() => data?.tendencia ?? [], [data]);
+ 
 
   const radarDimensionesData = useMemo(() => {
     const radar = ((data as DashboardAgDtoConRadar | null)?.radarDimensiones ?? []).map((item) => ({

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -63,7 +63,6 @@ export default function PdrcOerAerModal({
   idPeriodo,
   unidadLabel,
   onClose,
-  onSaved,
 }: Props) {
   const [loadingOer, setLoadingOer] = useState(false);
   const [loadingAer, setLoadingAer] = useState(false);
@@ -75,7 +74,6 @@ export default function PdrcOerAerModal({
   const [filterOer, setFilterOer] = useState("");
   const [selectedAcciones, setSelectedAcciones] = useState<Set<number>>(new Set());
 
-  const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState<SnackState>({ open: false, msg: "", sev: "info" });
 
   const oerFiltered = useMemo(() => {
@@ -156,31 +154,6 @@ export default function PdrcOerAerModal({
     });
   };
 
-
-  const handleAgregar = async () => {
-    if (!oerSelected) {
-      setSnack({ open: true, msg: "Selecciona un OER.", sev: "warning" });
-      return;
-    }
-
-    const idsAccion = Array.from(selectedAcciones.values());
-    if (idsAccion.length === 0) {
-      setSnack({ open: true, msg: "Selecciona al menos una AER.", sev: "warning" });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await PdrcOeAeAction.asignarAccionesPoi(idUe, idCc, idPoiAnio, idPeriodo, oerSelected.idObjetivo, idsAccion);
-      setSnack({ open: true, msg: "Asignación guardada correctamente.", sev: "success" });
-      onSaved?.();
-      onClose();
-    } catch (e: unknown) {
-      setSnack({ open: true, msg: errorMsg(e, "No se pudo guardar la asignación."), sev: "error" });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <>

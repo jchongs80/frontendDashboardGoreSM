@@ -142,7 +142,7 @@ export default function IndicadoresMetasPage() {
   const iiLabel = (id: number) => {
     const x = iiList.find((z) => z.idIndicadorInstrumento === id);
     if (!x) return `#${id}`;
-    return `${x.codigoIndicador ?? ""} - ${x.nombreIndicador ?? ""} (${x.nombreInstrumento ?? ""})`.trim();
+    return `${x.idIndicador ?? ""} - ${x.nombreIndicador ?? ""} (${x.nombreInstrumento ?? ""})`.trim();
   };
 
   const onNew = () => {

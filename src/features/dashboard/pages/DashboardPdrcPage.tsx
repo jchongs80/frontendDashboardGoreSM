@@ -131,11 +131,6 @@ type KpiCardProps = {
   tone?: "purple" | "blue" | "green" | "amber" | "teal";
 };
 
-function getNivelBorderColor(item: DashboardPdrcJerarquiaDto): string {
-  return item.codigoAer || item.enunciadoAer
-    ? "rgba(37,99,235,0.75)"
-    : "rgba(20,184,166,0.75)";
-}
 
 function getNivelChipSx(item: DashboardPdrcJerarquiaDto) {
   return item.codigoAer || item.enunciadoAer

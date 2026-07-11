@@ -1,4 +1,3 @@
-// src/features/alineamiento/AlineamientoAction.ts
 import { api } from "../../shared/api";
 
 const BASE = "/api/AlineamientosInstrumentos";
@@ -27,11 +26,11 @@ export type AlineamientoListDto = {
   tipoAlineamiento?: string | null;
   nivelAlineamiento?: string | null;
   porcentajeContribucion?: number | null;
+  descripcionAlineamiento?: string | null;
   estado?: string | null;
 };
 
 export type AlineamientoDetailDto = AlineamientoListDto & {
-  descripcionAlineamiento?: string | null;
   fechaCreacion?: string | null;
   fechaModificacion?: string | null;
   usuarioCreacion?: string | null;

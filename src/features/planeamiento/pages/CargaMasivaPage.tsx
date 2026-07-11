@@ -251,45 +251,6 @@ function MetricCard({
   );
 }
 
-function StepLabel({
-  number,
-  title,
-  helper,
-}: {
-  number: number;
-  title: string;
-  helper?: string;
-}): React.ReactElement {
-  return (
-    <Stack direction="row" spacing={1.2} alignItems="flex-start">
-      <Box
-        sx={{
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
-          display: "grid",
-          placeItems: "center",
-          flexShrink: 0,
-          bgcolor: alpha(COLOR_PRIMARY, 0.1),
-          color: COLOR_PRIMARY,
-          fontWeight: 900,
-        }}
-      >
-        {number}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 900, color: COLOR_TEXT }}>
-          {title}
-        </Typography>
-        {helper && (
-          <Typography variant="body2" sx={{ mt: 0.2, color: COLOR_MUTED }}>
-            {helper}
-          </Typography>
-        )}
-      </Box>
-    </Stack>
-  );
-}
 
 function ErrorTable({
   errores,

@@ -35,7 +35,6 @@ import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRound
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import BusinessRoundedIcon from "@mui/icons-material/BusinessRounded";
-import AnalyticsRoundedIcon from "@mui/icons-material/AnalyticsRounded";
 import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
 import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";

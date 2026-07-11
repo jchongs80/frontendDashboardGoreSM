@@ -17,9 +17,6 @@ import {
 } from "@mui/material";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";

@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   Collapse,
-  Divider,
   IconButton,
   InputAdornment,
   Paper,

@@ -79,37 +79,6 @@ function parseDecimalInput(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-const fieldSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: 2.5,
-    backgroundColor: "rgba(255,255,255,0.96)",
-  },
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(0,0,0,0.18)",
-  },
-  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.45)",
-  },
-  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(37,99,235,0.7)",
-  },
-} as const;
-
-const valueTextFieldSx = {
-  ...fieldSx,
-  "& .MuiInputBase-input": {
-    py: 0.95,
-    fontSize: 13,
-    textAlign: "right",
-  },
-} as const;
-
-const sectionCardSx = {
-  borderRadius: 3,
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "rgba(255,255,255,0.92)",
-  boxShadow: "0 10px 24px rgba(0,0,0,.06)",
-} as const;
 
 type ValoresFijos = {
   valorAbsolutoA: number;
@@ -1167,54 +1136,6 @@ function PremiumAnnualCard({
   );
 }
 
-function PremiumEditableMetricRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      spacing={1}
-      alignItems={{ sm: "center" }}
-    >
-      <Chip
-        size="small"
-        label={label}
-        variant="outlined"
-        sx={{
-          minWidth: { sm: 150 },
-          height: 26,
-          borderRadius: 999,
-          fontWeight: 900,
-          color: "#15803d",
-          borderColor: "rgba(34,197,94,.35)",
-          background: "rgba(240,253,244,.92)",
-          "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
-        }}
-      />
-      <TextField
-        value={value}
-        size="small"
-        fullWidth
-        onChange={(e) => onChange(e.target.value)}
-        sx={{
-          ...premiumFieldSx,
-          "& .MuiInputBase-input": {
-            py: 0.9,
-            textAlign: "right",
-            fontWeight: 900,
-            fontSize: 13,
-          },
-        }}
-      />
-    </Stack>
-  );
-}
 
 function PremiumCardNote({ color, text }: { color: string; text: string }) {
   return (
