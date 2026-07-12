@@ -67,9 +67,9 @@ export default function LoginPage() {
         }}
       >
         <Box sx={{ textAlign: "center", mb: 2 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: 24 }}>Sign In</Typography>
+          <Typography sx={{ fontWeight: 900, fontSize: 24 }}>Iniciar Sesión</Typography>
           <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-            Sign in to your account to continue.
+            Iniciar sesión con tu cuenta para continuar
           </Typography>
         </Box>
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
         <Box component="form" onSubmit={onSubmit} sx={{ display: "grid", gap: 1.6 }}>
           <TextField
-            label="Email / Username"
+            label="Email / Usuario"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
             fullWidth
@@ -95,11 +95,11 @@ export default function LoginPage() {
 
           <FormControlLabel
             control={<Checkbox checked={recordar} onChange={(e) => setRecordar(e.target.checked)} />}
-            label="Remember me"
+            label="Recuerdame"
           />
 
           <Button type="submit" variant="contained" disabled={loading} sx={{ py: 1.2, borderRadius: 2 }}>
-            {loading ? "Ingresando..." : "Login"}
+            {loading ? "Ingresando..." : "Ingresar"}
           </Button>
         </Box>
       </Paper>

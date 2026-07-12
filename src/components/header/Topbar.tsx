@@ -102,66 +102,12 @@ export default function Topbar({
 
         {/* Search */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 1.5,
-              height: 42,
-              border: "1px solid #E2E8F0",
-              borderRadius: 999,
-              width: { xs: "100%", sm: 340, md: 430 },
-              bgcolor: "#F8FAFC",
-              boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.04)",
-              transition: "all .18s ease",
-              "&:hover": {
-                borderColor: "#CBD5E1",
-                bgcolor: "#FFFFFF",
-              },
-            }}
-          >
-            <SearchRoundedIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-            <InputBase
-              placeholder="Buscar..."
-              sx={{
-                flex: 1,
-                fontSize: 13.5,
-                "& input::placeholder": {
-                  color: "#94A3B8",
-                  opacity: 1,
-                },
-              }}
-            />
-          </Box>
+          
         </Box>
 
         {/* Right side */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Tooltip title="Modo oscuro">
-            <IconButton
-              sx={{
-                borderRadius: 2.5,
-                color: "text.secondary",
-                "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
-              }}
-            >
-              <DarkModeRoundedIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Configuración">
-            <IconButton
-              sx={{
-                borderRadius: 2.5,
-                color: "text.secondary",
-                "&:hover": { bgcolor: "rgba(15, 23, 42, 0.05)" },
-              }}
-            >
-              <SettingsRoundedIcon />
-            </IconButton>
-          </Tooltip>
-
+          
           {/* User pill */}
           <Box
             onClick={(e) => setAnchorEl(e.currentTarget)}
